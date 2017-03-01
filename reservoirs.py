@@ -12,7 +12,7 @@
 # - Oswald Berthold, Aleke Nolte
 
 import sys, time, argparse
-from jpype import startJVM, getDefaultJVMPath, JPackage, shutdownJVM, JArray, JDouble
+# from jpype import startJVM, getDefaultJVMPath, JPackage, shutdownJVM, JArray, JDouble
 
 import numpy as np
 import numpy.linalg as LA
@@ -100,28 +100,88 @@ class LearningRules(object):
     # http://dx.doi.org/10.1016/j.neuron.2009.07.018. (http://www.sciencedirect.com/science/article/pii/S0896627309005479)
     # Keywords: SYSNEURO
     def learnFORCE_update_P(self, P, r):
+        """Perform covariance update for FORCE learning"""
         k = np.dot(P, r)
         rPr = np.dot(r.T, k)
         c = 1.0/(1.0 + rPr)
-        # print "r.shape", self.r.shape
-        # print "k.shape", k.shape, "P.shape", self.P.shape, "rPr.shape", rPr.shape, "c.shape", c.shape
         P = P - np.dot(k, (k.T*c))
         return (P, k, c)
         
     def learnFORCE(self, target, P, k, c, r, z, channel):
         """FORCE learning rule for reservoir online supervised learning"""
-        # required arguments: 
-        # use FORCE to calc dW
-        # use EH to calc dW
-        # scalar !!!
+        # compute error
         e = z - target
-        dw = -e * k * c
-        # self.wo[:,i] = self.wo[:,i] + dw[:,0]
-        # self.wo[:,i] += dw[:]
-        # print "FORCE", LA.norm(self.wo, 2)
-        # return 0
+        # compute weight update from error times k
+        dw = -e.T * k * c
         return dw
     
+    def learnFORCEmdn(self, target, P, k, c, r, z, channel, x):
+        """FORCE learning rule for reservoir online supervised learning"""
+        # compute error
+        # e = z - target
+        
+        e = self.mdn_loss(x, z, target)
+        # compute weight update from error times k
+        dw = -e.T * k * c
+        return dw
+
+    def mixture(self, mu, sig, ps):
+        # print "sum(ps)", np.sum(ps)
+        # print "mu", mu, "sig", sig, "ps", ps
+        compidx = np.where(np.random.multinomial(1, ps) == 1.0)[0][0]
+        print "sig[compidx]", np.abs(sig[compidx])
+        y = np.random.normal(mu[compidx], np.abs(sig[compidx]) + np.random.uniform(-1e-3, 1e-3, size=sig[compidx].shape))
+        return y
+
+    def mdn_loss(self, x, z, y):
+        # data in X are columns
+        # print "z.shape", z.shape
+        # forward pass
+        # h = np.tanh(np.dot(m['Wxh'], x) + m['bxh'])
+        # self.r
+        # predict mean
+        # mu = np.dot(m['Whu'], h) + m['bhu']
+        mu = z[:5,[0]]
+        # print("mu.shape", mu.shape)
+        #pl.clf()
+        #pl.plot(mu)
+        #pl.draw()
+        # predict log variance
+        # logsig = np.dot(m['Whs'], h) + m['bhs']
+        logsig = z[5:10,[0]]
+        sig = np.exp(logsig)
+        # predict mixture priors
+        # piu = np.dot(m['Whp'], h) + m['bhp'] # unnormalized pi
+        piu = z[10:,[0]]
+        pi = self.softmax(piu)
+        # print mu, sig, pi
+        # compute the loss: mean negative data log likelihood
+        k,n = mu.shape # number of mixture components
+        n = float(n)
+        # print "(y-mu).shape", (y-mu).shape
+        ps = np.exp(-((y - mu)**2)/(2*sig**2))/(sig*np.sqrt(2*np.pi))
+        pin = ps * pi
+        lp = -np.log(np.sum(pin, axis=0, keepdims=True))
+        loss = np.sum(lp)/n
+        print "lp", lp
+        
+        # # compute the gradients on nn outputs
+        # grad = {}
+        # gammas are pi_i's in bishop94
+        gammas = pin / np.sum(pin, axis=0, keepdims = True)
+        dmu = gammas * ((mu - y)/sig**2) / n
+        dlogsig = gammas * (1.0 - (y-mu)**2/(sig**2)) /n
+        dpiu = (pi - gammas) /n
+        # print dmu.shape, dlogsig.shape, dpiu.shape
+        print "|dmu| = %f" % (np.linalg.norm(dmu))
+        return np.vstack((dmu, dlogsig, dpiu))
+    
+    def softmax(self, x):
+        # softmaxes the columns of x
+        #z = x - np.max(x, axis=0, keepdims=True) # for safety
+        e = np.exp(x)
+        en = e / np.sum(e, axis=0, keepdims=True)
+        return en
         
 class Reservoir(object):
     def __init__(self, N=100, p = 0.1, g = 1.2, alpha = 1.0, tau = 0.1,
@@ -387,6 +447,7 @@ class Reservoir(object):
         # print "Wo", self.wo.T.shape
         # print "self.r", self.r.shape
         # print "z", self.z.shape, self.z, self.zn.shape, self.zn
+        # return clean output, no noise
         return self.z
 
     # ############################################################
@@ -417,41 +478,57 @@ class Reservoir(object):
 
     # def dwFORCE(self, P, r, z, target):
 
+    # ############################################################
+    # # learn: FORCE, EH, recursive regression (RLS)?
+    # def learnFORCE(self, target):
+    #     # get some target
+    #     # use FORCE to calc dW
+    #     # use EH to calc dW
+    #     k = np.dot(self.P, self.r)
+    #     rPr = np.dot(self.r.T, k)
+    #     c = 1.0/(1.0 + rPr)
+    #     # print "r.shape", self.r.shape
+    #     # print "k.shape", k.shape, "P.shape", self.P.shape, "rPr.shape", rPr.shape, "c.shape", c.shape
+    #     self.P = self.P - np.dot(k, (k.T*c))
+        
+    #     for i in range(self.output_num):
+    #         # print "self.P", self.P
+    #         # print "target.shape", target.shape
+    #         e = self.z[i,0] - target[i,0]
+    #         # print "error e =", e, self.z[i,0]
+
+    #         # print "err", e, "k", k, "c", c
+    #         # print "e.shape", e.shape, "k.shape", k.shape, "c.shape", c.shape
+    #         # dw = np.zeros_like(self.wo)
+    #         dw = -e * k * c
+    #         # dw = -e * np.dot(k, c)
+    #         # print "dw", dw.shape
+    #         # print "shapes", self.wo.shape, dw.shape # .reshape((self.N, 1))
+    #         # print i
+    #         # print "shapes", self.wo[:,0].shape, dw[:,0].shape # .reshape((self.N, 1))
+    #         # print "types", type(self.wo), type(dw)
+    #         self.wo[:,i] += dw[:,0]
+    #         # self.wo[:,i] = self.wo[:,i] + dw[:,0]
+    #         # self.wo[:,i] += dw[:]
+    #     # print "FORCE", LA.norm(self.wo, 2)
+    #     # return 0
+
     ############################################################
     # learn: FORCE, EH, recursive regression (RLS)?
     def learnFORCE(self, target):
-        # get some target
-        # use FORCE to calc dW
-        # use EH to calc dW
+        # update statistics
         k = np.dot(self.P, self.r)
         rPr = np.dot(self.r.T, k)
         c = 1.0/(1.0 + rPr)
-        # print "r.shape", self.r.shape
-        # print "k.shape", k.shape, "P.shape", self.P.shape, "rPr.shape", rPr.shape, "c.shape", c.shape
         self.P = self.P - np.dot(k, (k.T*c))
-        
-        for i in range(self.output_num):
-            # print "self.P", self.P
-            # print "target.shape", target.shape
-            e = self.z[i,0] - target[i,0]
-            # print "error e =", e, self.z[i,0]
 
-            # print "err", e, "k", k, "c", c
-            # print "e.shape", e.shape, "k.shape", k.shape, "c.shape", c.shape
-            # dw = np.zeros_like(self.wo)
-            dw = -e * k * c
-            # dw = -e * np.dot(k, c)
-            # print "dw", dw.shape
-            # print "shapes", self.wo.shape, dw.shape # .reshape((self.N, 1))
-            # print i
-            # print "shapes", self.wo[:,0].shape, dw[:,0].shape # .reshape((self.N, 1))
-            # print "types", type(self.wo), type(dw)
-            self.wo[:,i] += dw[:,0]
-            # self.wo[:,i] = self.wo[:,i] + dw[:,0]
-            # self.wo[:,i] += dw[:]
-        # print "FORCE", LA.norm(self.wo, 2)
-        # return 0
-
+        # compute error
+        e = self.z - target
+        # compute dw
+        dw = -e.T * k * c
+        # apply update
+        self.wo += dw
+                        
     def learnRLSsetup(self,wo_init, P0_init):
         # Attention! not using function parameters
          
@@ -472,45 +549,43 @@ class Reservoir(object):
         #self.wo = np.random.uniform(0,1, size=(self.N, self.output_num))
 
     def learnRLS(self, target):
-        self.rls_E.update(self.r.T, target, self.theta_state) 
+        # print "%s.learnRLS, target.shape = %s" % (self.__class__.__name__, target.shape)
+        self.rls_E.update(self.r.T, target.T, self.theta_state) 
         self.wo = self.rls_E.x
         
     def learnEH(self, target):
+        """Exploratory Hebbian learning rule. This function computes the reward from the exploration result and modulates the Hebbian update with that reward, which can be binary or continuous. The exploratory part is happening in execute() by adding gaussian noise centered on current prediction."""
         eta = self.eta_init # 0.0003
-        # eta = self.eta_init / (1 + ()) # 0.0003
+        
         self.perf = -np.square(self.zn - target)
-        # self.perf = self.zn - target
-        # print (self.zn, target)
-        # print self.perf.shape, self.perf_lp
-        for i in range(self.output_num):
-            if self.perf[i,0] > self.perf_lp[i,0]:
-                # print "mdltr", self.perf[i,0], self.perf_lp[i,0]
-                self.mdltr[i,0] = 1
-            else:
-                self.mdltr[i,0] = 0
-            dW = eta * (self.zn[i,0] - self.zn_lp[i,0]) * self.mdltr[i,0] * self.r
-            # dW = eta * (self.zn[i,0] - self.zn_lp[i,0]) * -self.perf * self.r
-            # print dW
-            # print dW.shape, self.x.shape, self.wo[:,i].shape
-            # print np.reshape(dW, (self.N, )).shape
-            self.wo[:,i] += dW[:,0]
-            # self.wo[:,i] += np.reshape(dW, (self.N, ))
-            
+
+        # binary modulator
+        mdltr = (np.clip(self.perf - self.perf_lp, 0, 1) > 0) * 1.0
+        # # continuous modulator
+        # vmdltr = (self.perf - self.perf_lp)
+        # vmdltr /= np.sum(np.abs(vmdltr))
+        # OR  modulator
+        # mdltr = np.ones_like(self.zn) * np.clip(np.sum(mdltr), 0, 1)
+        # AND modulator
+        mdltr = np.ones_like(self.zn) * (np.sum(mdltr) > 1)
+
+        # compute dw
+        dw = eta * np.dot(self.r, np.transpose((self.zn - self.zn_lp) * mdltr))
+        # update weights
+        self.wo += dw
+        # update performance prediction
         self.perf_lp = ((1 - self.coeff_a) * self.perf_lp) + (self.coeff_a * self.perf)
         
-        # return 0
-
-    def learnPISetup(self):
+    # def learnPISetup(self):
         
-        self.piCalcClassD = JPackage("infodynamics.measures.discrete").PredictiveInformationCalculatorDiscrete
-        self.piCalcClass = JPackage("infodynamics.measures.continuous.kernel").MutualInfoCalculatorMultiVariateKernel
-        self.entCalcClass = JPackage("infodynamics.measures.continuous.kernel").EntropyCalculatorKernel
-        self.base = 20
-        self.piCalcD = self.piCalcClassD(self.base,3)
-        # self.aisCalcD = self.aisCalcClassD(self.base,5)
-        self.piCalc = self.piCalcClass();
-        self.entCalc = self.entCalcClass();
-
+    #     self.piCalcClassD = JPackage("infodynamics.measures.discrete").PredictiveInformationCalculatorDiscrete
+    #     self.piCalcClass = JPackage("infodynamics.measures.continuous.kernel").MutualInfoCalculatorMultiVariateKernel
+    #     self.entCalcClass = JPackage("infodynamics.measures.continuous.kernel").EntropyCalculatorKernel
+    #     self.base = 20
+    #     self.piCalcD = self.piCalcClassD(self.base,3)
+    #     # self.aisCalcD = self.aisCalcClassD(self.base,5)
+    #     self.piCalc = self.piCalcClass();
+    #     self.entCalc = self.entCalcClass();    
 
     def perfVar(self, x):
         # self.eta_init = 1.2e-3
@@ -551,63 +626,63 @@ class Reservoir(object):
         self.perf_lp = ((1 - self.coeff_a) * self.perf_lp) + (self.coeff_a * self.perf)
         
                         
-    def learnPI(self, x):
-        eta = self.eta_init
+    # def learnPI(self, x):
+    #     eta = self.eta_init
         
-        # dmax = np.max(x)
-        # dmin = np.min(x)
-        # # print self.dmax, self.dmin
-        # # bins = np.arange(self.dmin, self.dmax, 0.1)
-        # bins = np.linspace(dmin, dmax, 20) # FIXME: determine binnum
-        # # print "x.shape", x.shape
-        # x_d = np.digitize(x[0,:], bins).reshape(x.shape)
-        # # print "x_d.shape", x_d.shape
-        # # pi = list(self.piCalcD.computeLocal(x_d))
-        # pi = self.piCalcD.computeAverageLocal(x_d)
-        # # print pi
-        # # base = np.max(x_d)+1 # 1000
+    #     # dmax = np.max(x)
+    #     # dmin = np.min(x)
+    #     # # print self.dmax, self.dmin
+    #     # # bins = np.arange(self.dmin, self.dmax, 0.1)
+    #     # bins = np.linspace(dmin, dmax, 20) # FIXME: determine binnum
+    #     # # print "x.shape", x.shape
+    #     # x_d = np.digitize(x[0,:], bins).reshape(x.shape)
+    #     # # print "x_d.shape", x_d.shape
+    #     # # pi = list(self.piCalcD.computeLocal(x_d))
+    #     # pi = self.piCalcD.computeAverageLocal(x_d)
+    #     # # print pi
+    #     # # base = np.max(x_d)+1 # 1000
         
-        # # compute PI
-        # self.piCalc.setProperty("NORMALISE", "true"); # Normalise the individual variables
-        # self.piCalc.initialise(1, 1, 0.25); # Use history length 1 (Schreiber k=1), kernel width of 0.5 normalised units
-        # # print "x", x.shape
-        # src = np.atleast_2d(x[0,0:-100]).T # start to end - 1
-        # dst = np.atleast_2d(x[0,100:]).T # 1 to end
-        # # print "src, dst", src, dst
-        # # print "src, dst", src.shape, dst.shape
-        # self.piCalc.setObservations(src, dst)
-        # pi = self.piCalc.computeAverageLocalOfObservations()
+    #     # # compute PI
+    #     # self.piCalc.setProperty("NORMALISE", "true"); # Normalise the individual variables
+    #     # self.piCalc.initialise(1, 1, 0.25); # Use history length 1 (Schreiber k=1), kernel width of 0.5 normalised units
+    #     # # print "x", x.shape
+    #     # src = np.atleast_2d(x[0,0:-100]).T # start to end - 1
+    #     # dst = np.atleast_2d(x[0,100:]).T # 1 to end
+    #     # # print "src, dst", src, dst
+    #     # # print "src, dst", src.shape, dst.shape
+    #     # self.piCalc.setObservations(src, dst)
+    #     # pi = self.piCalc.computeAverageLocalOfObservations()
         
         
-        # compute differential entropy
-        # self.entCalc.setProperty("NORMALISE", "true"); # Normalise the individual variables
-        self.entCalc.initialise(0.5); # Use history length 1 (Schreiber k=1), kernel width of 0.5 normalised units
-        # print "x", x.shape
-        # src = np.atleast_2d(x[0,0:-10]).T # start to end - 1
-        # dst = np.atleast_2d(x[0,10:]).T # 1 to end
-        # print "src, dst", src, dst
-        # print "src, dst", src.shape, dst.shape
-        self.entCalc.setObservations(JArray(JDouble, 1)(x.T))
-        pi = self.entCalc.computeAverageLocalOfObservations()
+    #     # compute differential entropy
+    #     # self.entCalc.setProperty("NORMALISE", "true"); # Normalise the individual variables
+    #     self.entCalc.initialise(0.5); # Use history length 1 (Schreiber k=1), kernel width of 0.5 normalised units
+    #     # print "x", x.shape
+    #     # src = np.atleast_2d(x[0,0:-10]).T # start to end - 1
+    #     # dst = np.atleast_2d(x[0,10:]).T # 1 to end
+    #     # print "src, dst", src, dst
+    #     # print "src, dst", src.shape, dst.shape
+    #     self.entCalc.setObservations(JArray(JDouble, 1)(x.T))
+    #     pi = self.entCalc.computeAverageLocalOfObservations()
         
-        self.perf = np.array([pi]).reshape((self.output_num, 1))
+    #     self.perf = np.array([pi]).reshape((self.output_num, 1))
         
-        # print "perf", self.perf
-        for i in range(self.output_num):
-            if self.perf[i,0] > self.perf_lp[i,0]:
-                # print "mdltr", self.perf[i,0], self.perf_lp[i,0]
-                self.mdltr[i,0] = 1
-            else:
-                self.mdltr[i,0] = 0
-            dW = eta * (self.zn[i,0] - self.zn_lp[i,0]) * self.mdltr[i,0] * self.r
-            # dW = eta * (self.zn[i,0] - self.zn_lp[i,0]) * -self.perf * self.r
-            # print dW
-            # print dW.shape, self.x.shape, self.wo[:,i].shape
-            # print np.reshape(dW, (self.N, )).shape
-            self.wo[:,i] += dW[:,0]
-            # self.wo[:,i] += np.reshape(dW, (self.N, ))
+    #     # print "perf", self.perf
+    #     for i in range(self.output_num):
+    #         if self.perf[i,0] > self.perf_lp[i,0]:
+    #             # print "mdltr", self.perf[i,0], self.perf_lp[i,0]
+    #             self.mdltr[i,0] = 1
+    #         else:
+    #             self.mdltr[i,0] = 0
+    #         dW = eta * (self.zn[i,0] - self.zn_lp[i,0]) * self.mdltr[i,0] * self.r
+    #         # dW = eta * (self.zn[i,0] - self.zn_lp[i,0]) * -self.perf * self.r
+    #         # print dW
+    #         # print dW.shape, self.x.shape, self.wo[:,i].shape
+    #         # print np.reshape(dW, (self.N, )).shape
+    #         self.wo[:,i] += dW[:,0]
+    #         # self.wo[:,i] += np.reshape(dW, (self.N, ))
             
-        self.perf_lp = ((1 - self.coeff_a) * self.perf_lp) + (self.coeff_a * self.perf)
+    #     self.perf_lp = ((1 - self.coeff_a) * self.perf_lp) + (self.coeff_a * self.perf)
     
     def learnPCA_init(self, eta=1e-4):
         # self.ro_dim = 2
@@ -782,31 +857,44 @@ class Reservoir2(Reservoir):
     # load network
     def load(self, filename):
         super(Reservoir2, self).load(filename)
-        
-def get_ds_MSO(elen, outdim, mode="MSO_s1"):
+
+# usage examples
+def get_frequencies(numcomp = 1):
+    f_step = 0.001
+    f_start = 0.001
+    f_numcomp = numcomp
+    f_end   = (f_numcomp + 1) * f_step
+    freqs = np.linspace(f_start, f_end, f_numcomp) #.reshape((1, -1))
+    # freqs_full = np.tile(freqs, (1, outdim)).T
+    return freqs
+                
+def get_data(elen, outdim, mode="MSO_s1"):
     """Get target data from a datasource"""
-    # t_dur = 1
-    # t_s = 1000
-    # t_numsteps = t_dur * t_s + 1
-    # t = np.linspace(0, t_dur, t_numsteps)
-    # t = np.linspace(0, 100, elen)
-    # t = np.arange(0, elen)
+
+    # time / index
     t = np.linspace(0, int(elen), elen)
-    # print t
 
     d_sig_freqs = np.array([1.]) * 1.0
+    f_step = 0.001
+    f_start = 0.001
     if mode == "MSO_s1":
         # simple
-        d_sig_freqs = np.array([0.1, 0.2]) * 0.01
-        # d_sig_freqs = np.array([0.13, 0.26]) * 0.1
+        # d_sig_freqs = np.array([0.1, 0.2]) * 0.01
+        f_numcomp = 1
+        f_end   = (f_numcomp + 1) * f_step
+        # d_sig_freqs = np.tile(np.linspace(f_start, f_end, f_numcomp), (outdim, f_numcomp))
     elif mode == "MSO_s2":
         # simple
-        d_sig_freqs = np.array([0.1, 0.2, 0.31]) * 0.01
+        # d_sig_freqs = np.array([0.1, 0.2]) * 0.01
         # d_sig_freqs = np.array([0.13, 0.26]) * 0.1
+        f_numcomp = 2
+        f_end   = (f_numcomp + 1) * f_step
     elif mode == "MSO_s3":
         # simple
-        d_sig_freqs = np.array([0.1, 0.2,  0.3]) * 0.02
+        # d_sig_freqs = np.array([0.1, 0.2,  0.3]) * 0.02
         # d_sig_freqs = np.array([0.13, 0.26]) * 0.1
+        f_numcomp = 3
+        f_end   = (f_numcomp + 1) * f_step
     elif mode == "MSO_s4":
         # simple
         # f(t)=(1.3/1.5)*sin(2*pi*t)+(1.3/3)*sin(4*pi*t)+(1.3/9)*sin(6*pi*t)+(1.3/3)*sin(8*pi*t)        
@@ -870,13 +958,54 @@ def get_ds_MSO(elen, outdim, mode="MSO_s1"):
         # print data.shape
         # sys.exit()
         return data
-    
-    d_sig_a = np.zeros(shape=(elen, len(d_sig_freqs)))
-    for j in range(len(d_sig_freqs)):
-        d_sig_a[:,j] = np.sin(2*np.pi*d_sig_freqs[j]*t)
+    elif mode == "reg3t1":
+        f_numcomp = 4
+        # ds = np.zeros((outdim))
 
-    d_sig = np.sum(d_sig_a, axis=1)/len(d_sig_freqs)
-    d_sig = d_sig.reshape(1, (len(d_sig)))
+    # generate waveform from frequencies array
+    # d_sig_freqs_base = np.linspace(f_start, f_end, f_numcomp).reshape((1, -1))
+    if mode == "reg3t1":
+        freqs = np.array([0.1, 0.21, 0.307, 0.417]) * 1e-2
+    else:
+        freqs = get_frequencies(numcomp = f_numcomp)
+        
+    # print d_sig_freqs_base.shape
+    # d_sig_freqs = np.tile(d_sig_freqs_base, (1, outdim)).T
+    # print "d_sig_freqs shape = %s, data = %s" % (d_sig_freqs.shape, d_sig_freqs)
+    # print (d_sig_freqs * t).shape
+    # d_sig_a = np.zeros(shape=(elen, len(d_sig_freqs)))
+    # for j in range(len(d_sig_freqs)):
+    #     d_sig_a[:,j] = np.sin(2*np.pi*d_sig_freqs[j]*t)
+
+    d_sig = np.zeros((outdim, elen))
+    t = np.tile(t, (f_numcomp, 1))
+    # print "d_sig.shape", d_sig.shape
+    # print "freqs.shape", freqs.shape, t.shape
+    for i in range(outdim):
+        phases = np.random.uniform(0, 1, size=(f_numcomp, ))
+        # freq variation for output components
+        freqs += (np.random.randint(1, 3, size=(f_numcomp, )) * 0.001 * np.clip(i, 0, 1))
+        # amp variation for output components
+        amps = np.random.uniform(0, 1, size=(f_numcomp, ))
+        # amp normalization to sum 1
+        amps /= np.sum(amps)
+        # compute sine waveforms from freqs, phase t and phase offset phases times amp
+        sincomps = np.sin(2 * np.pi * (freqs * t.T + phases)) * amps
+        # print "sincomps.shape", sincomps.shape
+        d = np.sum(sincomps, axis = 1)
+        # print "d.shape", d.shape
+        d_sig[i] = d
+    # print "d_sig.shape", d_sig.shape
+
+    # pl.ioff()
+    # pl.subplot(211)
+    # pl.plot(d_sig_a)
+    # pl.subplot(212)
+    # pl.plot(d_sig_b.T)
+    # pl.show()
+            
+    # d_sig = np.sum(d_sig_a, axis=1)/len(d_sig_freqs)
+    # d_sig = d_sig.reshape(1, (len(d_sig)))
     return d_sig
 
 def test_ip(args):
@@ -938,36 +1067,10 @@ def test_ip(args):
     pl.show()
 
 class ReservoirTest(object):
-    modes = {"ol_rls": 0, "ol_force": 1, "ol_eh": 2, "ip": 3, "fwd": 4, "ol_pi": 5}
-    targets = {"MSO_s1": 0, "MSO_s2": 1, "MSO_s3": 2, "MSO_c1": 3, "MSO_c2": 4, "MG": 5, "wav": 6}
-
-if __name__ == "__main__":
-    import jpype
-    jarLocation = "/home/src/QK/infodynamics-dist/infodynamics.jar"
-    # print jarLocation
-    # print startJVM
-    if not jpype.isJVMStarted():
-        print "Starting JVM"
-        startJVM(getDefaultJVMPath(), "-ea", "-Xmx8192M", "-Djava.class.path=" + jarLocation)
-    else:
-        print "Attaching JVM"
-        jpype.attachThreadToJVM()
+    modes = {"ol_rls": 0, "ol_force": 1, "ol_eh": 2, "ip": 3, "fwd": 4, "ol_pi": 5, "ol_force_mdn": 6}
+    targets = {"MSO_s1": 0, "MSO_s2": 1, "MSO_s3": 2, "MSO_c1": 3, "MSO_c2": 4, "MG": 5, "wav": 6, "reg3t1": 7}
     
-    parser = argparse.ArgumentParser(description="Reservoir library: call main for testing \
-\
- - example: python reservoirs.py -t MSO_s1 -m ol_eh -rs 500 -l 100000")
-    parser.add_argument("-m", "--mode", help="Mode, one of " + str(ReservoirTest.modes.keys()),
-                        default = "ol_rls")
-    parser.add_argument("-l", "--length", help="Episode length", default=30000, type=int)
-    parser.add_argument("-lr", "--learning_ratio", help="ratio of learning to episode len", default=0.8, type=float)
-    parser.add_argument("-mt", "--multitau", dest="multitau", help="use multiple random time constants in reservoir, doesn't seem to work so well with EH", action="store_true")
-    parser.add_argument("-rs", "--ressize", help="Reservoir (hidden layer) size", default=300, type=int)
-    parser.add_argument("-s", "--seed", help="RNG seed", default=101, type=int)
-    parser.add_argument("-t", "--target", help="Target, one of " + str(ReservoirTest.targets.keys()),
-                        default = "MSO_s1")
-    
-    args = parser.parse_args()
-    
+def main(args):
     if ReservoirTest.modes[args.mode] == ReservoirTest.modes["ip"]:
         test_ip(args)
         sys.exit()
@@ -992,38 +1095,35 @@ if __name__ == "__main__":
     washout = washout_ratio * episode_len
     learning_ratio = args.learning_ratio
     testing = learning_ratio * episode_len
-    insize = 1
-    outsize = 1
+    insize = args.ndim_in
+    outsize = args.ndim_out
+    if args.mode == "ol_force_mdn":
+        mixcomps = 5
+        outsize_ = outsize * mixcomps * 3
+        out_t_mdn_sample = np.zeros(shape=(outsize, episode_len))
+    else:
+        outsize_ = outsize
     # for feedback
     percent_factor = 1./(episode_len/100.)
+    feedback_scale = args.scale_feedback
 
     eta_init_ = 5e-4
     
-    # get training target
-    # print args.target
-    ds_real = get_ds_MSO(episode_len+1, outsize, args.target)
-    ds_real2 = get_ds_MSO(episode_len+1, outsize, "MSO_s3")
-    print "ds_real.shape", ds_real.shape
+    # get training data
+    ds_real = get_data(episode_len+1, outsize, args.target)
 
-    # # plot target
-    # pl.plot(ds_real.T)
-    # pl.plot(ds_real2.T)
-    # pl.show()
-    
-    print (ds_real.shape)
-    # sys.exit()
-
-    # print ds.shape
-    # print ds
-    # sys.exit()
-    # ressize = 300
+    # compute effective tapping for these timeseries problems
+    # non AR regression setup
+    # mdn
+    # entropy
+    # loop over different hyperparams (ressize, tau, eta, ...)
     for i in [args.ressize]:
-        out_t = np.zeros(shape=(outsize, episode_len))
-        out_t_n = np.zeros(shape=(outsize, episode_len))
+        out_t = np.zeros(shape=(outsize_, episode_len))
+        out_t_n = np.zeros(shape=(outsize_, episode_len))
         r_t = np.zeros(shape=(i, episode_len))
-        perf_t = np.zeros(shape=(outsize, episode_len))
-        wo_t = np.zeros(shape=(i, outsize, episode_len))
-        wo_t_norm = np.zeros((outsize, episode_len))
+        perf_t = np.zeros(shape=(outsize_, episode_len))
+        wo_t = np.zeros(shape=(i, outsize_, episode_len))
+        wo_t_norm = np.zeros((outsize_, episode_len))
         # test save and restore
         timestamp = time.strftime("%Y-%m-%d-%H%M%S")
         filename = "reservoir-%s.bin" % timestamp
@@ -1032,31 +1132,22 @@ if __name__ == "__main__":
         # res = Reservoir(N = i, input_num = insize, output_num = outsize, g = 1.5, tau = 0.01,
         #                 feedback_scale=0.1, input_scale=2.0, bias_scale=0.2, eta_init=1e-3,
         #                 theta = 1e-1, theta_state = 1e-2, coeff_a = 0.2, mtau=args.multitau)
-        res = Reservoir(N = i, input_num = insize, output_num = outsize, g = 1.5, tau = 0.01,
-                        feedback_scale=0.1, input_scale=2.0, bias_scale=0.01, eta_init=eta_init_,
+        # tau was 0.01
+        res = Reservoir(N = i, input_num = insize, output_num = outsize_, g = 1.5, tau = 0.025, alpha = 1.0,
+                        feedback_scale = feedback_scale, input_scale=2.0, bias_scale=0.01, eta_init=eta_init_,
                         theta = 5e-1, theta_state = 5e-2, coeff_a = 0.2, mtau=args.multitau)
         
         # res.save(filename)
-        
         # print ("first", res.M)
         
         # res = Reservoir2(N=i, input_num=insize, output_num=outsize, g = 1.5, tau = 0.1,
         #                 feedback_scale=0.0, input_scale=1.0, bias_scale=0.0, eta_init=1e-3,
         #                 sparse=True, coeff_a = 0.2,
         #                 ip=False, theta = 1e-5, theta_state = 1e-2)
-
-        lr = LearningRules()
-        
-        # 2015-01-14: try eta = 1e-4, nice but still has the phase drift
-        # res.theta = 1e-1
-        # res.theta_state = 1e-3
-        # pl.title("res.wo")
-        # pl.plot(res.wo)
-        # pl.show()
+    
         # print ("second", res.M)
-        
+
         # res.load(filename)
-        
         # print "third", res.M
         
         # print "res size", res.get_reservoir_size()
@@ -1065,75 +1156,66 @@ if __name__ == "__main__":
         # print "res feedback matrix", res.get_feedback_matrix()
         # print "res readout matrix", res.get_readout_matrix()
 
+        # learning rule module
+        lr = LearningRules()
+
+        # do some setup 
         if ReservoirTest.modes[args.mode] == ReservoirTest.modes["ol_rls"]:
             res.learnRLSsetup(None, None)
         elif ReservoirTest.modes[args.mode] == ReservoirTest.modes["ol_pi"]:
-            # sys.path.insert(0, "/home/src/QK/smp/infth")
-            # from infth_playground import Meas
-            # res.learnPISetup()
-            # em = Meas(length=10000)
-            # print "shape", nlzr.X["x"][-2000:]
             print "ol_pi in development, not working yet"
-            time.sleep(3)
-            res.init_wo_random(0., 1e-5)
-            pass
+            sys.exit(1)
 
+        # interactive plotting
         pl.ion()
-        pl.plot(out_t.T)
-        pl.draw()
-        
+
+        # loop over timesteps        
         for j in range(episode_len):
-            # res.execute(np.random.uniform(size=(10, 1)))
-            # out_t[:,j] = res.execute(np.random.uniform(size=(insize, 1)))[:,0]
 
-            # if j < testing:
-            #     inputs = ds_real[:,j-1].reshape((insize, 1))
-            #     # inputs = ds_real[:,j].reshape((insize, 1))
-            # else:
-            #     inputs = out_t[:,j-1].reshape((insize, 1))
-            #     # inputs = out_t[:,j].reshape((insize, 1))
-            # print out_t.shape
-            # inputs = out_t[:,j-1].reshape((insize, 1))
-            inputs = out_t[0,j-1].reshape((insize, 1))
-
-            # inputs = ds_real[:,j-1].reshape((insize, 1))
-            # inputs = out_t[:,j-1].reshape((insize, 1))
+            inputs = out_t[:,[j-1]]
+            # teacher forcing
+            if True or (j > testing and j < washout):
+                inputs = ds_real[:,[j-1]] # .reshape((insize, 1))
+            target = ds_real[:,[j]]
             
-            # inputs = np.random.uniform(size=(insize, 1))
-            # print "inputs", inputs.shape, inputs
-            out_t[:,j] = res.execute(inputs)[:,0]
-            # res.execute(inputs)[:,0]
-            out_t_n[:,j] = res.zn
-            # print "zn", j, res.zn, out_t[:,j]
-            # print (r_t[:,j].shape, res.r[:,0].shape)
-            r_t[:,j] = res.r[:,0].reshape((args.ressize,))
-            # if j % 2 == 0:
+            # save network state
+            res_x_ = res.x.copy()
+            res_r_ = res.r.copy()
+            
+            # update network, log activations
+            out_t[:,[j]]   = res.execute(inputs)
+            out_t_n[:,[j]] = res.zn
+            r_t[:,[j]] = res.r
+            
             # start testing / freerunning mode
             if j < testing and j > washout:
                 if ReservoirTest.modes[args.mode] == ReservoirTest.modes["ol_rls"]:
-                    res.learnRLS(ds_real[:,j].reshape((outsize, 1)))
+                    res.learnRLS(target)
                 elif ReservoirTest.modes[args.mode] == ReservoirTest.modes["ol_force"]:
-                    # old: reservoir module learning rule
-                    # res.learnFORCE(ds_real[:,j].reshape((outsize, 1)))
-                    # experimental: decouple learning rule from core reservoir module
-                    # first readout
-                    (res.P, k, c) = lr.learnFORCE_update_P(res.P, res.r)
-                    dw = lr.learnFORCE(ds_real[:,j].reshape((1, 1)),
-                                  res.P, k, c, res.r, res.z[0,0], 0)
-                    res.wo[:,0] += dw[:,0]
-                    # second readout
-                    if outsize > 1:
-                        dw = lr.learnFORCE(ds_real2[:,j].reshape((1, 1)),
-                                    res.P, k, c, res.r, res.z[1,0], 1)
-                        res.wo[:,1] += dw[:,0]
+                    # reservoir class built-in learning rule
+                    # res.learnFORCE(target)
 
-                    # print np.linalg.norm(res.wo, 2)
+                    # modular learning rule (ugly call)
+                    (res.P, k, c) = lr.learnFORCE_update_P(res.P, res.r)
+                    dw = lr.learnFORCE(target, res.P, k, c, res.r, res.z, 0)
+                    res.wo += dw
+                                    
+                elif ReservoirTest.modes[args.mode] == ReservoirTest.modes["ol_force_mdn"]:
+                    # reservoir class built-in learning rule
+                    # res.learnFORCE(target)
+
+                    
+                    # modular learning rule (ugly call)
+                    (res.P, k, c) = lr.learnFORCE_update_P(res.P, res.r)
+                    dw = lr.learnFORCEmdn(target, res.P, k, c, res.r, res.z, 0, inputs)
+                    res.wo += dw
+
+                                    
                 elif ReservoirTest.modes[args.mode] == ReservoirTest.modes["ol_eh"]:
-                    j_ = j - washout
-                    res.eta_init = eta_init_ / (1 + (j_/20000.0))
-                    res.learnEH(ds_real[:,j].reshape((outsize, 1)))
+                    res.eta_init = eta_init_ / (1 + ((j - washout)/20000.0))
+                    res.learnEH(target)
+                                        
                 elif ReservoirTest.modes[args.mode] == ReservoirTest.modes["ol_pi"]:
-                    # print "out", out_t[:,j-1000:j]
                     if j > 100:
                         # em.x = out_t_n[:,j-1000:j].T # nlzr.X["x"][-10000:,0].reshape((10000,1))
                         # em.preprocess()
@@ -1144,15 +1226,28 @@ if __name__ == "__main__":
                         res.perfVar(out_t)
                         # print res.perf
                         res.learnEHPerf()
-            perf_t[0,j] = res.perf[0,0]
+
+                # recompute activations, only when learning
+                # back up states
+                res.x = res_x_
+                res.r = res_r_
+                # activations update with corrected ouput, and log
+                out_t[:,[j]] =   res.execute(inputs)
+                out_t_n[:,[j]] = res.zn
+                r_t[:,[j]] = res.r
+
+                if args.target == "reg3t1":
+                    out_t_mdn_sample[:,[j]] = lr.mixture(res.z[:5,0], res.z[5:10,0], res.z[10:,0])
+            
+            perf_t[:,[j]] = res.perf
             wo_t[:,:,j] = res.wo
-            for k in range(outsize):
+            for k in range(outsize_):
                 wo_t_norm[k,j] = LA.norm(wo_t[:,k,j])
             
             # print "state", res.x
-            if j > washout and j % 1000 == 0:
+            if j > washout and (j+1) % 1000 == 0:
                 # # old style
-                print "eta", res.eta_init
+                # print "eta", res.eta_init
                 # print("%d of %d" % (j,  episode_len))
                 # new style
                 progress = j * percent_factor
@@ -1167,6 +1262,8 @@ if __name__ == "__main__":
                 pl.plot(ds_real[:,(j-backlog):j].T, lw=0.5)
                 # pl.plot(ds_real2[:,(j-backlog):j].T, lw=0.5)
                 pl.plot(out_t[:,(j-backlog):j].T, lw=0.5)
+                if args.target == "reg3t1":
+                    pl.plot(out_t_mdn_sample[:,(j-backlog):j].T, lw=0.5)
                 pl.subplot(312)
                 pl.gca().clear()
                 pl.plot(wo_t_norm.T)
@@ -1176,13 +1273,8 @@ if __name__ == "__main__":
                 pl.draw()
                 pl.pause(1e-9)
 
+    # final plot
     pl.ioff()
-    # print (wo_t.shape)
-    # wo_t_norm = np.zeros((outsize, episode_len))
-    for j in range(episode_len):
-        for k in range(outsize):
-            wo_t_norm[k,j] = LA.norm(wo_t[:,k,j])
-            
     pl.subplot(411)
     pl.title("Target")
     pl.plot(ds_real.T)
@@ -1190,6 +1282,8 @@ if __name__ == "__main__":
     pl.title("Target and output")
     pl.plot(ds_real.T)
     pl.plot(out_t.T)
+    if args.target == "reg3t1":
+        pl.plot(out_t_mdn_sample.T)
     # pl.axvline(testing)
     pl.axvspan(testing, episode_len, alpha=0.1)
     # pl.plot(ds_real.T - out_t.T)
@@ -1203,8 +1297,30 @@ if __name__ == "__main__":
     pl.plot(wo_t_norm.T)
     pl.show()
 
-    from scipy.io import wavfile
-    # wav_out = (out_t.T * 32767).astype(np.int16)
-    out_t /= np.max(np.abs(out_t))
-    wav_out = (out_t.T * 32767).astype(np.int16)
-    wavfile.write("res_out.wav", 44100, wav_out)
+    try:
+        from scipy.io import wavfile
+        # wav_out = (out_t.T * 32767).astype(np.int16)
+        out_t /= np.max(np.abs(out_t))
+        wav_out = (out_t.T * 32767).astype(np.int16)
+        wavfile.write("data/res_out_%s.wav" % (time.strftime("%Y%m%d_%H%M%S")), 44100, wav_out)
+    except ImportError:
+        print "ImportError for scipy.io.wavfile"
+
+if __name__ == "__main__":
+    
+    parser = argparse.ArgumentParser(description="Reservoir library, call main for testing: python reservoirs.py -t MSO_s1 -m ol_eh -rs 500 -l 100000")
+    parser.add_argument("-l", "--length", help="Episode length [30000]", default=30000, type=int)
+    parser.add_argument("-lr", "--learning_ratio", help="Ratio of learning to episode len [0.8]", default=0.8, type=float)
+    parser.add_argument("-m", "--mode", help="Mode [ol_rls], one of " + str(ReservoirTest.modes.keys()), default = "ol_rls")
+    parser.add_argument("-mt", "--multitau", dest="multitau", action="store_true",
+                        help="use multiple random time constants in reservoir, doesn't seem to work so well with EH [False]")
+    parser.add_argument("-ndo", "--ndim_out", help="Number of output dimensions [1]", default=1, type=int)
+    parser.add_argument("-ndi", "--ndim_in",  help="Number of input dimensions [1]",  default=1, type=int)
+    parser.add_argument("-rs", "--ressize", help="Reservoir (hidden layer) size [300]", default=300, type=int)
+    parser.add_argument("-s", "--seed", help="RNG seed [101]", default=101, type=int)
+    parser.add_argument("-sf", "--scale_feedback", help="Global feedback strength (auto-regressive) [0.1]", default=0.1, type=float)
+    parser.add_argument("-t", "--target", help="Target [MSO_s1], one of " + str(ReservoirTest.targets.keys()), default = "MSO_s1")
+    
+    args = parser.parse_args()
+
+    main(args)
