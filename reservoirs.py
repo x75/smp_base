@@ -129,11 +129,12 @@ class LearningRules(object):
         # print "sum(ps)", np.sum(ps)
         # print "mu", mu, "sig", sig, "ps", ps
         compidx = np.where(np.random.multinomial(1, ps) == 1.0)[0][0]
-        print "sig[compidx]", np.abs(sig[compidx])
-        y = np.random.normal(mu[compidx], np.abs(sig[compidx]) + np.random.uniform(-1e-3, 1e-3, size=sig[compidx].shape))
+        # print "sig[compidx]", np.abs(sig[compidx])
+        y = np.random.normal(mu[compidx], np.abs(sig[compidx]) + np.random.uniform(0, 1e-3, size=sig[compidx].shape))
         return y
 
-    def mdn_loss(self, x, z, y):
+    def mdn_loss(self, x, z, y, loss_only = False):
+        mixcomps = 3
         # data in X are columns
         # print "z.shape", z.shape
         # forward pass
@@ -141,18 +142,18 @@ class LearningRules(object):
         # self.r
         # predict mean
         # mu = np.dot(m['Whu'], h) + m['bhu']
-        mu = z[:5,[0]]
+        mu = z[:mixcomps,[0]]
         # print("mu.shape", mu.shape)
         #pl.clf()
         #pl.plot(mu)
         #pl.draw()
         # predict log variance
         # logsig = np.dot(m['Whs'], h) + m['bhs']
-        logsig = z[5:10,[0]]
+        logsig = z[mixcomps:(2*mixcomps),[0]]
         sig = np.exp(logsig)
         # predict mixture priors
         # piu = np.dot(m['Whp'], h) + m['bhp'] # unnormalized pi
-        piu = z[10:,[0]]
+        piu = z[(2*mixcomps):,[0]]
         pi = self.softmax(piu)
         # print mu, sig, pi
         # compute the loss: mean negative data log likelihood
@@ -162,18 +163,20 @@ class LearningRules(object):
         ps = np.exp(-((y - mu)**2)/(2*sig**2))/(sig*np.sqrt(2*np.pi))
         pin = ps * pi
         lp = -np.log(np.sum(pin, axis=0, keepdims=True))
-        loss = np.sum(lp)/n
-        print "lp", lp
+        loss = np.sum(lp) / n
+        # print "lp", lp
+        if loss_only: # do something smarter here, change calling foo and return both errors and loss
+            return loss
         
         # # compute the gradients on nn outputs
         # grad = {}
         # gammas are pi_i's in bishop94
         gammas = pin / np.sum(pin, axis=0, keepdims = True)
         dmu = gammas * ((mu - y)/sig**2) / n
-        dlogsig = gammas * (1.0 - (y-mu)**2/(sig**2)) /n
-        dpiu = (pi - gammas) /n
+        dlogsig = gammas * (1.0 - (y-mu)**2/(sig**2)) / n
+        dpiu = (pi - gammas) / n
         # print dmu.shape, dlogsig.shape, dpiu.shape
-        print "|dmu| = %f" % (np.linalg.norm(dmu))
+        # print "|dmu| = %f" % (np.linalg.norm(dmu))
         return np.vstack((dmu, dlogsig, dpiu))
     
     def softmax(self, x):
@@ -959,13 +962,15 @@ def get_data(elen, outdim, mode="MSO_s1"):
         # sys.exit()
         return data
     elif mode == "reg3t1":
-        f_numcomp = 4
+        f_numcomp = 1
+        f_end   = (f_numcomp + 1) * f_step
         # ds = np.zeros((outdim))
 
     # generate waveform from frequencies array
     # d_sig_freqs_base = np.linspace(f_start, f_end, f_numcomp).reshape((1, -1))
     if mode == "reg3t1":
-        freqs = np.array([0.1, 0.21, 0.307, 0.417]) * 1e-2
+        # freqs = np.array([0.1, 0.21, 0.307, 0.417]) * 1e-2
+        freqs = np.array([0.1]) * 1e-3
     else:
         freqs = get_frequencies(numcomp = f_numcomp)
         
@@ -1098,7 +1103,7 @@ def main(args):
     insize = args.ndim_in
     outsize = args.ndim_out
     if args.mode == "ol_force_mdn":
-        mixcomps = 5
+        mixcomps = 3
         outsize_ = outsize * mixcomps * 3
         out_t_mdn_sample = np.zeros(shape=(outsize, episode_len))
     else:
@@ -1106,7 +1111,11 @@ def main(args):
     # for feedback
     percent_factor = 1./(episode_len/100.)
     feedback_scale = args.scale_feedback
-
+    alpha = 1.0
+    input_scale = 2.0
+    if args.target == "reg3t1":
+        alpha = 1.0 # 100.0
+        input_scale = 1.0
     eta_init_ = 5e-4
     
     # get training data
@@ -1133,8 +1142,8 @@ def main(args):
         #                 feedback_scale=0.1, input_scale=2.0, bias_scale=0.2, eta_init=1e-3,
         #                 theta = 1e-1, theta_state = 1e-2, coeff_a = 0.2, mtau=args.multitau)
         # tau was 0.01
-        res = Reservoir(N = i, input_num = insize, output_num = outsize_, g = 1.5, tau = 0.025, alpha = 1.0,
-                        feedback_scale = feedback_scale, input_scale=2.0, bias_scale=0.01, eta_init=eta_init_,
+        res = Reservoir(N = i, input_num = insize, output_num = outsize_, g = 1.5, tau = 0.025, alpha = alpha,
+                        feedback_scale = feedback_scale, input_scale = input_scale, bias_scale=0.1, eta_init=eta_init_,
                         theta = 5e-1, theta_state = 5e-2, coeff_a = 0.2, mtau=args.multitau)
         
         # res.save(filename)
@@ -1208,7 +1217,7 @@ def main(args):
                     # modular learning rule (ugly call)
                     (res.P, k, c) = lr.learnFORCE_update_P(res.P, res.r)
                     dw = lr.learnFORCEmdn(target, res.P, k, c, res.r, res.z, 0, inputs)
-                    res.wo += dw
+                    res.wo += 1e-1 * dw
 
                                     
                 elif ReservoirTest.modes[args.mode] == ReservoirTest.modes["ol_eh"]:
@@ -1236,9 +1245,10 @@ def main(args):
                 out_t_n[:,[j]] = res.zn
                 r_t[:,[j]] = res.r
 
-                if args.target == "reg3t1":
-                    out_t_mdn_sample[:,[j]] = lr.mixture(res.z[:5,0], res.z[5:10,0], res.z[10:,0])
-            
+            if args.target == "reg3t1":
+                out_t_mdn_sample[:,[j]] = lr.mixture(res.z[:mixcomps,0], res.z[mixcomps:(2*mixcomps),0], res.z[(2*mixcomps):,0])
+                res.perf = lr.mdn_loss(target, res.z, inputs)
+                            
             perf_t[:,[j]] = res.perf
             wo_t[:,:,j] = res.wo
             for k in range(outsize_):
@@ -1259,17 +1269,24 @@ def main(args):
                 pl.gca().clear()
                 # backlog = 200
                 backlog = 1000
-                pl.plot(ds_real[:,(j-backlog):j].T, lw=0.5)
+                pl.title("target, %d-window" % (backlog))
+                pl.plot(ds_real[:,(j-backlog):j].T, lw=2.0, label="tgt")
                 # pl.plot(ds_real2[:,(j-backlog):j].T, lw=0.5)
-                pl.plot(out_t[:,(j-backlog):j].T, lw=0.5)
                 if args.target == "reg3t1":
-                    pl.plot(out_t_mdn_sample[:,(j-backlog):j].T, lw=0.5)
+                    pl.plot(out_t_mdn_sample[:,(j-backlog):j].T, lw=0.5, label="out_sample")
+                pl.plot(out_t[:,(j-backlog):j].T, lw=0.5, label="out")
+                pl.legend()
                 pl.subplot(312)
                 pl.gca().clear()
+                pl.title("|W|_t")
                 pl.plot(wo_t_norm.T)
+                pl.legend()
                 pl.subplot(313)
                 pl.gca().clear()
+                pl.title("perf (-loss)")
                 pl.plot(perf_t.T)
+                pl.legend()
+                
                 pl.draw()
                 pl.pause(1e-9)
 
