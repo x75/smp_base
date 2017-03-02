@@ -91,7 +91,8 @@ def res_input_matrix_disjunct_proj(idim = 1, odim = 1):
 
 class LearningRules(object):
     def __init__(self):
-        self.loss = 0
+        self.loss = None
+        self.e = None
 
     ############################################################
     # learning rule: FORCE
@@ -121,9 +122,10 @@ class LearningRules(object):
         # compute error
         # e = z - target
         
-        e = self.mdn_loss(x, z, target)
+        self.e = self.mdn_loss(x, z, target)
+        # print "e", self.e.T
         # compute weight update from error times k
-        dw = -e.T * k * c
+        dw = -self.e.T * k * c
         return dw
 
     def mixture(self, mu, sig, ps):
@@ -1167,6 +1169,10 @@ def main(args):
         # print "res feedback matrix", res.get_feedback_matrix()
         # print "res readout matrix", res.get_readout_matrix()
 
+        # output weight init
+        if args.mode.endswith("mdn"):
+            res.init_wo_random(0, 1e-3)
+        
         # learning rule module
         lr = LearningRules()
 
@@ -1230,7 +1236,7 @@ def main(args):
                     # modular learning rule (ugly call)
                     (res.P, k, c) = lr.learnFORCE_update_P(res.P, res.r)
                     dw = lr.learnFORCEmdn(target, res.P, k, c, res.r, res.z, 0, inputs)
-                    res.wo += (1e-1 * dw)
+                    res.wo += (1e-0 * dw)
 
                                     
                 elif ReservoirTest.modes[args.mode] == ReservoirTest.modes["ol_eh"]:
@@ -1263,7 +1269,7 @@ def main(args):
                 # res.perf = lr.mdn_loss(target, res.z, inputs, True)
                 mdn_loss_val = lr.loss
                 # print "mdn_loss = %s" % mdn_loss_val
-                res.perf = mdn_loss_val
+                res.perf = lr.e # mdn_loss_val
                             
             perf_t[:,[j]] = res.perf
             wo_t[:,:,j] = res.wo
@@ -1293,9 +1299,9 @@ def main(args):
                 axs[1].set_title("Target and output, %d-window" % (backlog))
                 axs[1].plot(ds_real[:,(j-backlog):j].T, lw=2.0, label="tgt")
                 if args.mode.endswith("mdn"):
-                    axs[1].plot(out_t_mdn_sample[:,(j-backlog):j].T, lw=0.5, label="out_sample")
+                    axs[1].plot(out_t_mdn_sample[:,(j-backlog):j].T, lw=0.5, label="out_")
                 axs[1].plot(out_t[:,(j-backlog):j].T, lw=0.5, label="out")
-                axs[1].legend()
+                axs[1].legend(ncol=2, fontsize=8)
 
                 axs[2].clear()
                 axs[2].set_title("reservoir traces")
@@ -1304,12 +1310,12 @@ def main(args):
                 axs[3].clear()
                 axs[3].set_title("weight norm |W|")
                 axs[3].plot(wo_t_norm.T)
-                axs[3].legend()
+                axs[3].legend(ncol=2, fontsize=8)
                 
                 axs[4].clear()
                 axs[4].set_title("perf (-loss)")
                 axs[4].plot(perf_t.T)
-                axs[4].legend()
+                axs[4].legend(ncol=2, fontsize=8)
                 
                 pl.draw()
                 pl.pause(1e-9)
@@ -1319,16 +1325,19 @@ def main(args):
     # final plot
     pl.ioff()
 
+    for axidx in range(5):
+        axs[axidx].clear()
+        
     axs[0].set_title("Target")
     axs[0].plot(ds_real.T, label="%d-dim tgt" % ds_real.shape[0])
-    axs[0].legend()
+    axs[0].legend(ncol=2, fontsize=8)
 
     axs[1].set_title("Target and output")
     axs[1].plot(ds_real.T, label="%d-dim tgt" % ds_real.shape[0])
     axs[1].plot(out_t.T, label="z")
     if args.mode.endswith("mdn"):
         axs[1].plot(out_t_mdn_sample.T, label = "sample z")
-    axs[1].legend()
+    axs[1].legend(ncol=2, fontsize=8)
     # axs[0].axvline(testing)
     axs[1].axvspan(testing, episode_len, alpha=0.1)
     # axs[0].plot(ds_real.T - out_t.T)
@@ -1338,11 +1347,11 @@ def main(args):
 
     axs[3].set_title("weight norm")
     axs[3].plot(wo_t_norm.T, label="|W|")
-    axs[3].legend()
+    axs[3].legend(ncol=2, fontsize=8)
     
     axs[4].set_title("perf (-loss)")
-    axs[4].plot(perf_t.T, label="perf")
-    axs[4].legend()
+    axs[4].plot(perf_t[6:].T, label="perf")
+    axs[4].legend(ncol=2, fontsize=8)
     
     pl.draw()
     pl.show()
