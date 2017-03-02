@@ -18,6 +18,7 @@ import numpy as np
 import numpy.linalg as LA
 import scipy.sparse as spa
 import matplotlib.pyplot as pl
+from matplotlib import gridspec
 import rlspy
 
 # if "/home/src/QK/smp/neural" not in sys.path:
@@ -90,7 +91,7 @@ def res_input_matrix_disjunct_proj(idim = 1, odim = 1):
 
 class LearningRules(object):
     def __init__(self):
-        pass
+        self.loss = 0
 
     ############################################################
     # learning rule: FORCE
@@ -164,6 +165,7 @@ class LearningRules(object):
         pin = ps * pi
         lp = -np.log(np.sum(pin, axis=0, keepdims=True))
         loss = np.sum(lp) / n
+        self.loss = loss
         # print "lp", lp
         if loss_only: # do something smarter here, change calling foo and return both errors and loss
             return loss
@@ -1113,7 +1115,7 @@ def main(args):
     feedback_scale = args.scale_feedback
     alpha = 1.0
     input_scale = 2.0
-    if args.target == "reg3t1":
+    if args.mode.endswith("mdn"):
         alpha = 1.0 # 100.0
         input_scale = 1.0
     eta_init_ = 5e-4
@@ -1177,7 +1179,18 @@ def main(args):
 
         # interactive plotting
         pl.ion()
+        gs = gridspec.GridSpec(5, 1)
+        fig = pl.figure()
+        axs = []
+        for plotrow in range(5):
+            axs.append(fig.add_subplot(gs[plotrow]))
+        fig.show()
 
+        # plotting params for res hidden activation random projection
+        selsize = 20
+        rindex = np.random.randint(i, size=selsize)
+
+        
         # loop over timesteps        
         for j in range(episode_len):
 
@@ -1217,7 +1230,7 @@ def main(args):
                     # modular learning rule (ugly call)
                     (res.P, k, c) = lr.learnFORCE_update_P(res.P, res.r)
                     dw = lr.learnFORCEmdn(target, res.P, k, c, res.r, res.z, 0, inputs)
-                    res.wo += 1e-1 * dw
+                    res.wo += (1e-1 * dw)
 
                                     
                 elif ReservoirTest.modes[args.mode] == ReservoirTest.modes["ol_eh"]:
@@ -1245,9 +1258,12 @@ def main(args):
                 out_t_n[:,[j]] = res.zn
                 r_t[:,[j]] = res.r
 
-            if args.target == "reg3t1":
+            if args.mode.endswith("mdn"):
                 out_t_mdn_sample[:,[j]] = lr.mixture(res.z[:mixcomps,0], res.z[mixcomps:(2*mixcomps),0], res.z[(2*mixcomps):,0])
-                res.perf = lr.mdn_loss(target, res.z, inputs)
+                # res.perf = lr.mdn_loss(target, res.z, inputs, True)
+                mdn_loss_val = lr.loss
+                # print "mdn_loss = %s" % mdn_loss_val
+                res.perf = mdn_loss_val
                             
             perf_t[:,[j]] = res.perf
             wo_t[:,:,j] = res.wo
@@ -1265,53 +1281,70 @@ def main(args):
                 sys.stdout.write( '\r[{0}] {1}%'.format('#'*int(progress), progress))
                 sys.stdout.flush()
                 
-                pl.subplot(311)
-                pl.gca().clear()
+                # pl.subplot(311)
+                # pl.gca().clear()
+                axs[0].clear()
                 # backlog = 200
                 backlog = 1000
-                pl.title("target, %d-window" % (backlog))
-                pl.plot(ds_real[:,(j-backlog):j].T, lw=2.0, label="tgt")
-                # pl.plot(ds_real2[:,(j-backlog):j].T, lw=0.5)
-                if args.target == "reg3t1":
-                    pl.plot(out_t_mdn_sample[:,(j-backlog):j].T, lw=0.5, label="out_sample")
-                pl.plot(out_t[:,(j-backlog):j].T, lw=0.5, label="out")
-                pl.legend()
-                pl.subplot(312)
-                pl.gca().clear()
-                pl.title("|W|_t")
-                pl.plot(wo_t_norm.T)
-                pl.legend()
-                pl.subplot(313)
-                pl.gca().clear()
-                pl.title("perf (-loss)")
-                pl.plot(perf_t.T)
-                pl.legend()
+                axs[0].set_title("target, %d-window" % (backlog))
+                axs[0].plot(ds_real[:,(j-backlog):j].T, lw=2.0, label="tgt")
+                axs[0].legend()
+                axs[1].clear()
+                axs[1].set_title("Target and output, %d-window" % (backlog))
+                axs[1].plot(ds_real[:,(j-backlog):j].T, lw=2.0, label="tgt")
+                if args.mode.endswith("mdn"):
+                    axs[1].plot(out_t_mdn_sample[:,(j-backlog):j].T, lw=0.5, label="out_sample")
+                axs[1].plot(out_t[:,(j-backlog):j].T, lw=0.5, label="out")
+                axs[1].legend()
+
+                axs[2].clear()
+                axs[2].set_title("reservoir traces")
+                axs[2].plot(r_t.T[:,rindex])
+
+                axs[3].clear()
+                axs[3].set_title("weight norm |W|")
+                axs[3].plot(wo_t_norm.T)
+                axs[3].legend()
+                
+                axs[4].clear()
+                axs[4].set_title("perf (-loss)")
+                axs[4].plot(perf_t.T)
+                axs[4].legend()
                 
                 pl.draw()
                 pl.pause(1e-9)
 
+    print "perf_t.shape", perf_t.shape
+
     # final plot
     pl.ioff()
-    pl.subplot(411)
-    pl.title("Target")
-    pl.plot(ds_real.T)
-    pl.subplot(412)
-    pl.title("Target and output")
-    pl.plot(ds_real.T)
-    pl.plot(out_t.T)
-    if args.target == "reg3t1":
-        pl.plot(out_t_mdn_sample.T)
-    # pl.axvline(testing)
-    pl.axvspan(testing, episode_len, alpha=0.1)
-    # pl.plot(ds_real.T - out_t.T)
-    pl.subplot(413)
-    pl.title("reservoir traces")
-    selsize = 20
-    rindex = np.random.randint(i, size=selsize)
-    pl.plot(r_t.T[:,rindex])
-    pl.subplot(414)
-    pl.title("weight norm")
-    pl.plot(wo_t_norm.T)
+
+    axs[0].set_title("Target")
+    axs[0].plot(ds_real.T, label="%d-dim tgt" % ds_real.shape[0])
+    axs[0].legend()
+
+    axs[1].set_title("Target and output")
+    axs[1].plot(ds_real.T, label="%d-dim tgt" % ds_real.shape[0])
+    axs[1].plot(out_t.T, label="z")
+    if args.mode.endswith("mdn"):
+        axs[1].plot(out_t_mdn_sample.T, label = "sample z")
+    axs[1].legend()
+    # axs[0].axvline(testing)
+    axs[1].axvspan(testing, episode_len, alpha=0.1)
+    # axs[0].plot(ds_real.T - out_t.T)
+
+    axs[2].set_title("reservoir traces")
+    axs[2].plot(r_t.T[:,rindex], label="r")
+
+    axs[3].set_title("weight norm")
+    axs[3].plot(wo_t_norm.T, label="|W|")
+    axs[3].legend()
+    
+    axs[4].set_title("perf (-loss)")
+    axs[4].plot(perf_t.T, label="perf")
+    axs[4].legend()
+    
+    pl.draw()
     pl.show()
 
     try:
