@@ -90,9 +90,9 @@ def res_input_matrix_disjunct_proj(idim = 1, odim = 1):
     return wi
 
 class LearningRules(object):
-    def __init__(self):
-        self.loss = None
-        self.e = None
+    def __init__(self, ndim_out = 1):
+        self.loss = 0
+        self.e = np.zeros((ndim_out, 1))
 
     ############################################################
     # learning rule: FORCE
@@ -112,9 +112,9 @@ class LearningRules(object):
     def learnFORCE(self, target, P, k, c, r, z, channel):
         """FORCE learning rule for reservoir online supervised learning"""
         # compute error
-        e = z - target
+        self.e = z - target
         # compute weight update from error times k
-        dw = -e.T * k * c
+        dw = -self.e.T * k * c
         return dw
     
     def learnFORCEmdn(self, target, P, k, c, r, z, channel, x):
@@ -127,13 +127,14 @@ class LearningRules(object):
         # print "e", self.e.shape
         # compute weight update from error times k
         dw = -self.e.T * k * c
+        # dw = np.dot(-self.e, r.T).T
         # print "dw.shape", dw.shape
         return dw
 
     def mixture(self, mu, sig, ps):
         # print "sum(ps)", np.sum(ps)
         # print "mu", mu, "sig", sig, "ps", ps
-        # print "ps", ps
+        # print "ps", ps, np.sum(ps)
         multinom_sample = np.random.multinomial(1, ps)
         multinom_sample_idx = np.where(multinom_sample == 1.0)
         # print "multinom_sample", multinom_sample, multinom_sample_idx
@@ -143,7 +144,7 @@ class LearningRules(object):
         return y
 
     def mdn_loss(self, x, r, z, y, loss_only = False):
-        mixcomps = 3
+        mixcomps = 6
         # data in X are columns
         # print "z.shape", z.shape
         # forward pass
@@ -928,12 +929,14 @@ def get_data(elen, outdim, mode="MSO_s1"):
         return data
     elif mode == "MSO_c1":
         # d_sig_freqs = np.array([0.0085, 0.0174]) * 0.1
+        f_numcomp = 2
         d_sig_freqs = np.array([0.0085, 0.011]) * 0.2
         # d_sig_freqs = np.array([0.13, 0.27, 0.53, 1.077]) * 0.3
         # d_sig_freqs = [1.002, 2.004, 3.006, 4.008]
         # d_sig_freqs = np.array([0.1, 0.2, 0.3, 0.4]) * 1.
         # d_sig_freqs = np.array([0.01, 1.01, 1.02, 1.03]) * 0.1
     elif mode == "MSO_c2":
+        f_numcomp = 4
         d_sig_freqs = np.array([0.0085, 0.0174, 0.0257, 0.0343]) * 0.1
         # d_sig_freqs = np.array([0.13, 0.27, 0.53, 1.077]) * 0.3
         # d_sig_freqs = [1.002, 2.004, 3.006, 4.008]
@@ -967,7 +970,7 @@ def get_data(elen, outdim, mode="MSO_s1"):
         from scipy.io import wavfile
         # from smp.datasets import wavdataset
         # from models import SeqData
-        rate, data = wavfile.read("notype_mono_short.wav")
+        rate, data = wavfile.read("data/notype_mono_short.wav")
         # rate, data = wavfile.read("drinksonus_mono_short.wav")
         offset = np.random.randint(0, data.shape[0] - elen)
         print data.dtype, offset
@@ -981,12 +984,36 @@ def get_data(elen, outdim, mode="MSO_s1"):
         f_numcomp = 1
         f_end   = (f_numcomp + 1) * f_step
         # ds = np.zeros((outdim))
-
+    elif mode == "reg_multimodal_1":
+        # build a sinewave with superimposed 1/4 duty cycle pulse
+        f_numcomp = 2
+        freqs = np.array([0.01])
+        phases = np.random.uniform(0, 1, size=(f_numcomp, ))
+        amps = np.random.uniform(0, 1, size=(f_numcomp, ))
+        # amp normalization to sum 1
+        amps /= np.sum(amps)
+        sincomp = np.sin(2 * np.pi * (freqs * t.T + 0.0)) # * amps
+        # freq_steps = int((2*np.pi)/freqs)
+        freq_steps = int(1/freqs)
+        print "freq_steps", freq_steps
+        pulse = (np.arange(t.shape[0]) % (2*freq_steps)) > (0.7 * freq_steps) # np.zeros_like(t)
+        pulse = pulse * 1.0 - 0.0
+        from scipy import signal
+        b, a  = signal.butter(4, 0.5)
+        pulse = signal.filtfilt(b, a, pulse)
+        print "pulse", pulse
+        # pulse *= 1.0
+        ds_real = (sincomp + pulse) * (1.0/f_numcomp)
+        print "ds_real.shape", ds_real
+        return ds_real.reshape((outdim, -1))
+        
     # generate waveform from frequencies array
     # d_sig_freqs_base = np.linspace(f_start, f_end, f_numcomp).reshape((1, -1))
     if mode == "reg3t1":
         # freqs = np.array([0.1, 0.21, 0.307, 0.417]) * 1e-2
         freqs = np.array([0.1]) * 1e-3
+    elif mode in ["MSO_c1", "MSO_c2"]:
+        freqs = d_sig_freqs
     else:
         freqs = get_frequencies(numcomp = f_numcomp)
         
@@ -1113,13 +1140,13 @@ def main(args):
     # episode_len = 10000
     episode_len = args.length
     washout_ratio = 0.1
-    washout = washout_ratio * episode_len
+    washout = min(washout_ratio * episode_len, 1000)
     learning_ratio = args.learning_ratio
     testing = learning_ratio * episode_len
     insize = args.ndim_in
     outsize = args.ndim_out
     if args.mode == "ol_force_mdn":
-        mixcomps = 3
+        mixcomps = 6
         outsize_ = outsize * mixcomps * 3
         out_t_mdn_sample = np.zeros(shape=(outsize, episode_len))
     else:
@@ -1132,10 +1159,15 @@ def main(args):
     g = 1.5
     tau = 0.025
     if args.mode.endswith("mdn"):
-        alpha = 0.1 # 100.0
-        input_scale = 1.0
-        g = 0.01
-        tau = 1.0
+        # alpha = 100.0
+        # input_scale = 1.0
+        # g = 0.01
+        # tau = 1.0
+        
+        alpha = 100.0
+        input_scale = 2.0
+        g = 1.5
+        tau = 0.025
     eta_init_ = 5e-4
     
     # get training data
@@ -1151,8 +1183,10 @@ def main(args):
         out_t_n = np.zeros(shape=(outsize_, episode_len))
         r_t = np.zeros(shape=(i, episode_len))
         perf_t = np.zeros(shape=(outsize_, episode_len))
+        loss_t = np.zeros(shape=(1, episode_len))
         wo_t = np.zeros(shape=(i, outsize_, episode_len))
         wo_t_norm = np.zeros((outsize_, episode_len))
+        dw_t_norm = np.zeros((outsize_, episode_len))
         # test save and restore
         timestamp = time.strftime("%Y-%m-%d-%H%M%S")
         filename = "reservoir-%s.bin" % timestamp
@@ -1187,10 +1221,13 @@ def main(args):
 
         # output weight init
         if args.mode.endswith("mdn"):
-            res.init_wo_random(0, 1e-2)
+            # res.init_wo_random(0, 1e-1)
+            sigmas = [1e-3] * mixcomps + [1e-3] * mixcomps + [1e-3] * mixcomps
+            print "sigmas", sigmas
+            res.init_wo_random(np.zeros((1, outsize_)), np.array(sigmas))
         
         # learning rule module
-        lr = LearningRules()
+        lr = LearningRules(ndim_out = outsize_)
 
         # do some setup 
         if ReservoirTest.modes[args.mode] == ReservoirTest.modes["ol_rls"]:
@@ -1216,10 +1253,11 @@ def main(args):
         # loop over timesteps        
         for j in range(episode_len):
 
-            inputs = out_t[:,[j-1]]
+            # inputs = out_t[:,[j-1]]
+            inputs = out_t_mdn_sample[:,[j-1]]
             # teacher forcing
-            if True or (j > testing and j < washout):
-                inputs = ds_real[:,[j-1]] # .reshape((insize, 1))
+            # if True or (j > testing and j < washout):
+            #     inputs = ds_real[:,[j-1]] # .reshape((insize, 1))
             target = ds_real[:,[j]]
             
             # save network state
@@ -1228,7 +1266,7 @@ def main(args):
             
             # update network, log activations
             res.execute(inputs)
-            if args.mode.endswith("mdn"):
+            if False and args.mode.endswith("mdn"):
                 res.z[mixcomps:(2*mixcomps),[0]] = np.exp(res.z[mixcomps:(2*mixcomps),[0]])
                 res.z[(2*mixcomps):,[0]] = lr.softmax(res.z[(2*mixcomps):,[0]])
                 res.zn[mixcomps:(2*mixcomps),[0]] = np.exp(res.zn[mixcomps:(2*mixcomps),[0]])
@@ -1249,6 +1287,7 @@ def main(args):
                     (res.P, k, c) = lr.learnFORCE_update_P(res.P, res.r)
                     dw = lr.learnFORCE(target, res.P, k, c, res.r, res.z, 0)
                     res.wo += dw
+                    res.perf = lr.e # mdn_loss_val
                                     
                 elif ReservoirTest.modes[args.mode] == ReservoirTest.modes["ol_force_mdn"]:
                     # reservoir class built-in learning rule
@@ -1260,9 +1299,18 @@ def main(args):
                     dw = lr.learnFORCEmdn(target, res.P, k, c, res.r, res.z, 0, inputs)
                     # res.wo += (1e-1 * dw)
                     # print "dw.shape", dw
-                    res.wo = res.wo + (1e-2 * dw)
-
-                                    
+                    # when using delta rule
+                    leta = (1/np.log((j*0.1)+2)) * 1e-4
+                    leta = 1.0
+                    res.wo = res.wo + (leta * dw)
+                    for k in range(outsize_):
+                        wo_t_norm[k,j] = LA.norm(wo_t[:,k,j])
+                        dw_t_norm[k,j] = LA.norm(dw[:,k])
+                    # res.perf = lr.mdn_loss(target, res.z, inputs, True)
+                    loss_t[0,j] = lr.loss
+                    # print "mdn_loss = %s" % mdn_loss_val
+                    res.perf = lr.e # mdn_loss_val
+                        
                 elif ReservoirTest.modes[args.mode] == ReservoirTest.modes["ol_eh"]:
                     res.eta_init = eta_init_ / (1 + ((j - washout)/20000.0))
                     res.learnEH(target)
@@ -1285,7 +1333,7 @@ def main(args):
                 res.r = res_r_
                 # activations update with corrected ouput, and log
                 res.execute(inputs)
-                if args.mode.endswith("mdn"):
+                if False and args.mode.endswith("mdn"):
                     res.z[mixcomps:(2*mixcomps),[0]] = np.exp(res.z[mixcomps:(2*mixcomps),[0]])
                     res.z[(2*mixcomps):,[0]] = lr.softmax(res.z[(2*mixcomps):,[0]])
                     res.zn[mixcomps:(2*mixcomps),[0]] = np.exp(res.zn[mixcomps:(2*mixcomps),[0]])
@@ -1295,11 +1343,7 @@ def main(args):
                 r_t[:,[j]] = res.r
 
             if args.mode.endswith("mdn"):
-                out_t_mdn_sample[:,[j]] = lr.mixture(res.z[:mixcomps,0], res.z[mixcomps:(2*mixcomps),0], res.z[(2*mixcomps):,0])
-                # res.perf = lr.mdn_loss(target, res.z, inputs, True)
-                mdn_loss_val = lr.loss
-                # print "mdn_loss = %s" % mdn_loss_val
-                res.perf = lr.e # mdn_loss_val
+                out_t_mdn_sample[:,[j]] = lr.mixture(res.z[:mixcomps,0], np.exp(res.z[mixcomps:(2*mixcomps),0]), lr.softmax(res.z[(2*mixcomps):,0]))
                             
             perf_t[:,[j]] = res.perf
             wo_t[:,:,j] = res.wo
@@ -1322,21 +1366,28 @@ def main(args):
                 # pl.gca().clear()
                 axs[0].clear()
                 # backlog = 200
-                backlog = 100
+                backlog = args.plot_interval
                 axs[0].set_title("target, %d-window" % (backlog))
-                axs[0].plot(ds_real[:,(j-backlog):j].T, lw=2.0, label="tgt")
+                pdata = ds_real[:,(j-backlog):j].T
+
+                axs[0].plot(pdata, "g-", lw=3.0, label="tgt", alpha=0.5)
+                axs[0].plot([0, pdata.shape[0]], [0, 0], "k-", lw=0.2)
                 axs[0].legend()
                 axs[1].clear()
                 axs[1].set_title("Target and output, %d-window" % (backlog))
-                axs[1].plot(ds_real[:,(j-backlog):j].T, lw=2.0, label="tgt")
+                axs[1].plot(pdata, "g-", lw=3.0, label="tgt", alpha=0.5)
+                axs[1].plot([0, pdata.shape[0]], [0, 0], "k-", lw=0.2)
                 if args.mode.endswith("mdn"):
-                    axs[1].plot(out_t_mdn_sample[:,(j-backlog):j].T, lw=0.5, label="out_")
+                    axs[1].plot(out_t_mdn_sample[:,(j-backlog):j].T, lw=0.5, label="out_", alpha=0.5)
                     cols = ["k", "b", "r"]
-                    for k in range(mixcomps):
-                        pdata = out_t[(k*mixcomps):((k+1)*mixcomps),(j-backlog):j]
+                    for k in range(3):
+                        pdata = out_t[(k*mixcomps):((k+1)*mixcomps),(j-backlog):j] + (k*2)
                         # print "pdata[%d].shape = %s, %s" % (k, pdata.shape, out_t.shape)
+                        if k == 1:
+                            pdata = np.exp(pdata)
+                        if k == 2:
+                            pdata = lr.softmax(pdata)
                         axs[1].plot(pdata.T, "%s-" % (cols[k]), lw=0.5, label="out%d"%k)
-                        # "%s" % (chr(k+61))
                 else:
                     axs[1].plot(out_t[:,(j-backlog):j].T, lw=0.5, label="out")
                 axs[1].legend(ncol=2, fontsize=8)
@@ -1347,18 +1398,21 @@ def main(args):
 
                 axs[3].clear()
                 axs[3].set_title("weight norm |W|")
-                axs[3].plot(wo_t_norm.T)
+                # axs[3].plot(wo_t_norm.T)
+                axs[3].plot(dw_t_norm.T)
                 axs[3].legend(ncol=2, fontsize=8)
                 
                 axs[4].clear()
                 axs[4].set_title("perf (-loss)")
                 axs[4].plot(perf_t.T)
+                if args.mode.endswith("mdn"):
+                    axs[4].plot(loss_t.T, "k-", lw=2.0, label="loss", alpha = 0.75)
                 axs[4].legend(ncol=2, fontsize=8)
                 
                 pl.draw()
                 pl.pause(1e-9)
 
-    print "perf_t.shape", perf_t.shape
+    # print "perf_t.shape", perf_t.shape
 
     # final plot
     pl.ioff()
@@ -1367,14 +1421,33 @@ def main(args):
         axs[axidx].clear()
         
     axs[0].set_title("Target")
-    axs[0].plot(ds_real.T, label="%d-dim tgt" % ds_real.shape[0])
+    pdata = ds_real.T
+    # axs[0].plot(pdata, "k-", lw=2.0, label="%d-dim tgt" % ds_real.shape[0])
+    axs[0].plot(pdata, "g-", lw=3.0, label="tgt", alpha=0.5)
+    axs[0].plot([0, pdata.shape[0]], [0, 0], "k-", lw=0.2)
     axs[0].legend(ncol=2, fontsize=8)
 
     axs[1].set_title("Target and output")
-    axs[1].plot(ds_real.T, label="%d-dim tgt" % ds_real.shape[0])
-    axs[1].plot(out_t.T, label="z")
+    # axs[1].plot(pdata, "k-", lw=2.0, label="%d-dim tgt" % ds_real.shape[0], alpha=0.25)
+    axs[1].plot(pdata, "g-", lw=3.0, label="tgt", alpha=0.5)
+    axs[1].plot([0, pdata.shape[0]], [0, 0], "k-", lw=0.2)
     if args.mode.endswith("mdn"):
-        axs[1].plot(out_t_mdn_sample.T, label = "sample z")
+        axs[1].plot(out_t_mdn_sample.T, lw = 0.5, label = "sample z", alpha=0.5)
+        # axs[1].plot(out_t_mdn_sample[:,(j-backlog):j].T, lw=0.5, label="out_", alpha=0.25)
+        cols = ["k", "b", "r"]
+        for k in range(3):
+            print "k", k
+            pdata = out_t[(k*mixcomps):((k+1)*mixcomps),:] + (k*2)
+            print "pdata[%d].shape = %s, %s" % (k, pdata.shape, out_t.shape)
+            if k == 1:
+                pdata = np.exp(pdata)
+            if k == 2:
+                pdata = lr.softmax(pdata)
+            axs[1].plot(pdata.T, "%s-" % (cols[k]), lw=1.0, label="out%d"%k)
+            # "%s" % (chr(k+61))
+    else:
+        axs[1].plot(out_t.T, label="z")
+        # axs[1].plot(out_t[:,(j-backlog):j].T, lw=0.5, label="out")
     axs[1].legend(ncol=2, fontsize=8)
     # axs[0].axvline(testing)
     axs[1].axvspan(testing, episode_len, alpha=0.1)
@@ -1385,17 +1458,21 @@ def main(args):
 
     axs[3].set_title("weight norm")
     axs[3].plot(wo_t_norm.T, label="|W|")
+    axs[3].plot(dw_t_norm.T, label="|dW|")
     axs[3].legend(ncol=2, fontsize=8)
 
     axs[4].clear()    
-    print "perf_t.shape", perf_t.shape
     axs[4].set_title("perf (-loss)")
-    print "perf_t.shape", perf_t.shape
     axs[4].plot(perf_t.T, label="perf")
-    axs[4].set_xlim((0, args.length))
+    if args.mode.endswith("mdn"):
+        axs[4].plot(loss_t.T, "k-", lw=2.0, label="loss", alpha = 0.75)
+        # axs[4].plot(loss_t.T, label="loss")
+    # axs[4].set_xlim((0, args.length))
     axs[4].legend(ncol=2, fontsize=8)
     
     pl.draw()
+    timestr = time.strftime("%Y%m%d_%H%M%S")
+    fig.savefig("data/res_plot_%s.pdf" % (timestr), dpi=300, bbox_inches="tight")
     pl.show()
 
     try:
@@ -1403,7 +1480,7 @@ def main(args):
         # wav_out = (out_t.T * 32767).astype(np.int16)
         out_t /= np.max(np.abs(out_t))
         wav_out = (out_t.T * 32767).astype(np.int16)
-        wavfile.write("data/res_out_%s.wav" % (time.strftime("%Y%m%d_%H%M%S")), 44100, wav_out)
+        wavfile.write("data/res_out_%s.wav" % (timestr), 44100, wav_out)
     except ImportError:
         print "ImportError for scipy.io.wavfile"
 
