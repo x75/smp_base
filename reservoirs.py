@@ -122,21 +122,27 @@ class LearningRules(object):
         # compute error
         # e = z - target
         
-        self.e = self.mdn_loss(x, z, target)
-        # print "e", self.e.T
+        # self.e = self.mdn_loss(x, z, target)
+        self.e = self.mdn_loss(x, r, z, target)
+        # print "e", self.e.shape
         # compute weight update from error times k
         dw = -self.e.T * k * c
+        # print "dw.shape", dw.shape
         return dw
 
     def mixture(self, mu, sig, ps):
         # print "sum(ps)", np.sum(ps)
         # print "mu", mu, "sig", sig, "ps", ps
-        compidx = np.where(np.random.multinomial(1, ps) == 1.0)[0][0]
+        # print "ps", ps
+        multinom_sample = np.random.multinomial(1, ps)
+        multinom_sample_idx = np.where(multinom_sample == 1.0)
+        # print "multinom_sample", multinom_sample, multinom_sample_idx
+        compidx = multinom_sample_idx[0][0]
         # print "sig[compidx]", np.abs(sig[compidx])
         y = np.random.normal(mu[compidx], np.abs(sig[compidx]) + np.random.uniform(0, 1e-3, size=sig[compidx].shape))
         return y
 
-    def mdn_loss(self, x, z, y, loss_only = False):
+    def mdn_loss(self, x, r, z, y, loss_only = False):
         mixcomps = 3
         # data in X are columns
         # print "z.shape", z.shape
@@ -181,7 +187,13 @@ class LearningRules(object):
         dpiu = (pi - gammas) / n
         # print dmu.shape, dlogsig.shape, dpiu.shape
         # print "|dmu| = %f" % (np.linalg.norm(dmu))
+        grad_mu  = np.dot(dmu, r.T)
+        grad_logsig = np.dot(dlogsig, r.T)
+        grad_piu  = np.dot(dpiu, r.T)
+
         return np.vstack((dmu, dlogsig, dpiu))
+        # print "grad_mu.shape", grad_mu.shape, dmu.shape
+        #return np.vstack((grad_mu, grad_logsig, grad_piu))
     
     def softmax(self, x):
         # softmaxes the columns of x
@@ -1117,9 +1129,13 @@ def main(args):
     feedback_scale = args.scale_feedback
     alpha = 1.0
     input_scale = 2.0
+    g = 1.5
+    tau = 0.025
     if args.mode.endswith("mdn"):
-        alpha = 1.0 # 100.0
+        alpha = 0.1 # 100.0
         input_scale = 1.0
+        g = 0.01
+        tau = 1.0
     eta_init_ = 5e-4
     
     # get training data
@@ -1146,8 +1162,8 @@ def main(args):
         #                 feedback_scale=0.1, input_scale=2.0, bias_scale=0.2, eta_init=1e-3,
         #                 theta = 1e-1, theta_state = 1e-2, coeff_a = 0.2, mtau=args.multitau)
         # tau was 0.01
-        res = Reservoir(N = i, input_num = insize, output_num = outsize_, g = 1.5, tau = 0.025, alpha = alpha,
-                        feedback_scale = feedback_scale, input_scale = input_scale, bias_scale=0.1, eta_init=eta_init_,
+        res = Reservoir(N = i, input_num = insize, output_num = outsize_, g = g, tau = tau, alpha = alpha,
+                        feedback_scale = feedback_scale, input_scale = input_scale, bias_scale=1.0, eta_init=eta_init_,
                         theta = 5e-1, theta_state = 5e-2, coeff_a = 0.2, mtau=args.multitau)
         
         # res.save(filename)
@@ -1171,7 +1187,7 @@ def main(args):
 
         # output weight init
         if args.mode.endswith("mdn"):
-            res.init_wo_random(0, 1e-3)
+            res.init_wo_random(0, 1e-2)
         
         # learning rule module
         lr = LearningRules()
@@ -1211,7 +1227,13 @@ def main(args):
             res_r_ = res.r.copy()
             
             # update network, log activations
-            out_t[:,[j]]   = res.execute(inputs)
+            res.execute(inputs)
+            if args.mode.endswith("mdn"):
+                res.z[mixcomps:(2*mixcomps),[0]] = np.exp(res.z[mixcomps:(2*mixcomps),[0]])
+                res.z[(2*mixcomps):,[0]] = lr.softmax(res.z[(2*mixcomps):,[0]])
+                res.zn[mixcomps:(2*mixcomps),[0]] = np.exp(res.zn[mixcomps:(2*mixcomps),[0]])
+                res.zn[(2*mixcomps):,[0]] = lr.softmax(res.zn[(2*mixcomps):,[0]])
+            out_t[:,[j]]   = res.z
             out_t_n[:,[j]] = res.zn
             r_t[:,[j]] = res.r
             
@@ -1236,7 +1258,9 @@ def main(args):
                     # modular learning rule (ugly call)
                     (res.P, k, c) = lr.learnFORCE_update_P(res.P, res.r)
                     dw = lr.learnFORCEmdn(target, res.P, k, c, res.r, res.z, 0, inputs)
-                    res.wo += (1e-0 * dw)
+                    # res.wo += (1e-1 * dw)
+                    # print "dw.shape", dw
+                    res.wo = res.wo + (1e-2 * dw)
 
                                     
                 elif ReservoirTest.modes[args.mode] == ReservoirTest.modes["ol_eh"]:
@@ -1260,7 +1284,13 @@ def main(args):
                 res.x = res_x_
                 res.r = res_r_
                 # activations update with corrected ouput, and log
-                out_t[:,[j]] =   res.execute(inputs)
+                res.execute(inputs)
+                if args.mode.endswith("mdn"):
+                    res.z[mixcomps:(2*mixcomps),[0]] = np.exp(res.z[mixcomps:(2*mixcomps),[0]])
+                    res.z[(2*mixcomps):,[0]] = lr.softmax(res.z[(2*mixcomps):,[0]])
+                    res.zn[mixcomps:(2*mixcomps),[0]] = np.exp(res.zn[mixcomps:(2*mixcomps),[0]])
+                    res.zn[(2*mixcomps):,[0]] = lr.softmax(res.zn[(2*mixcomps):,[0]])
+                out_t[:,[j]] =   res.z
                 out_t_n[:,[j]] = res.zn
                 r_t[:,[j]] = res.r
 
@@ -1287,11 +1317,12 @@ def main(args):
                 sys.stdout.write( '\r[{0}] {1}%'.format('#'*int(progress), progress))
                 sys.stdout.flush()
                 
+            if j > washout and (j+1) % args.plot_interval == 0:
                 # pl.subplot(311)
                 # pl.gca().clear()
                 axs[0].clear()
                 # backlog = 200
-                backlog = 1000
+                backlog = 100
                 axs[0].set_title("target, %d-window" % (backlog))
                 axs[0].plot(ds_real[:,(j-backlog):j].T, lw=2.0, label="tgt")
                 axs[0].legend()
@@ -1300,7 +1331,14 @@ def main(args):
                 axs[1].plot(ds_real[:,(j-backlog):j].T, lw=2.0, label="tgt")
                 if args.mode.endswith("mdn"):
                     axs[1].plot(out_t_mdn_sample[:,(j-backlog):j].T, lw=0.5, label="out_")
-                axs[1].plot(out_t[:,(j-backlog):j].T, lw=0.5, label="out")
+                    cols = ["k", "b", "r"]
+                    for k in range(mixcomps):
+                        pdata = out_t[(k*mixcomps):((k+1)*mixcomps),(j-backlog):j]
+                        # print "pdata[%d].shape = %s, %s" % (k, pdata.shape, out_t.shape)
+                        axs[1].plot(pdata.T, "%s-" % (cols[k]), lw=0.5, label="out%d"%k)
+                        # "%s" % (chr(k+61))
+                else:
+                    axs[1].plot(out_t[:,(j-backlog):j].T, lw=0.5, label="out")
                 axs[1].legend(ncol=2, fontsize=8)
 
                 axs[2].clear()
@@ -1348,9 +1386,13 @@ def main(args):
     axs[3].set_title("weight norm")
     axs[3].plot(wo_t_norm.T, label="|W|")
     axs[3].legend(ncol=2, fontsize=8)
-    
+
+    axs[4].clear()    
+    print "perf_t.shape", perf_t.shape
     axs[4].set_title("perf (-loss)")
-    axs[4].plot(perf_t[6:].T, label="perf")
+    print "perf_t.shape", perf_t.shape
+    axs[4].plot(perf_t.T, label="perf")
+    axs[4].set_xlim((0, args.length))
     axs[4].legend(ncol=2, fontsize=8)
     
     pl.draw()
@@ -1375,6 +1417,7 @@ if __name__ == "__main__":
                         help="use multiple random time constants in reservoir, doesn't seem to work so well with EH [False]")
     parser.add_argument("-ndo", "--ndim_out", help="Number of output dimensions [1]", default=1, type=int)
     parser.add_argument("-ndi", "--ndim_in",  help="Number of input dimensions [1]",  default=1, type=int)
+    parser.add_argument("-pi", "--plot_interval",  help="Time step interval at which to update plot [1000]",  default=1000, type=int)
     parser.add_argument("-rs", "--ressize", help="Reservoir (hidden layer) size [300]", default=300, type=int)
     parser.add_argument("-s", "--seed", help="RNG seed [101]", default=101, type=int)
     parser.add_argument("-sf", "--scale_feedback", help="Global feedback strength (auto-regressive) [0.1]", default=0.1, type=float)
