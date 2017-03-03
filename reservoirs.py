@@ -1,30 +1,27 @@
 """A leaky integrator rate-coded reservoir class"""
 
 # TODO
-# - switch to matrix data types?
-# - simplify and clean up
+# - FIXME: multiple timescales / tau
 # - FIXME: intrinsic plasticity: input layer, reservoir layer
 # - FIXME: correlated exploration noise
-# - FIXME: multiple timescales / tau
-# - FIXME: pooling mechanism / competition
 
 # Authors
-# - Oswald Berthold, Aleke Nolte
+# - Oswald Berthold, Aleke Nolte (learnRLS)
 
 import sys, time, argparse
-# from jpype import startJVM, getDefaultJVMPath, JPackage, shutdownJVM, JArray, JDouble
 
 import numpy as np
 import numpy.linalg as LA
 import scipy.sparse as spa
 import matplotlib.pyplot as pl
 from matplotlib import gridspec
-import rlspy
+try:
+    import rlspy
+except ImportError:
+    print "ImportError for rlspy"
+    rlspy = None
 
-# if "/home/src/QK/smp/neural" not in sys.path:
-#     sys.path.insert(0, "/home/src/QK/smp/neural")
 from learners import GHA
-
 
 ############################################################
 # utility functions
@@ -36,9 +33,7 @@ def create_matrix_reservoir(N, p):
     tmp = M[tmp_idx]
     tmp_r = np.random.normal(0, 1, size=(tmp.shape[1],))
     M[tmp_idx] = tmp_r
-    # print "type(M)", type(M)
-    # print "M.shape", M.shape
-    # M = np.array(M * self.g * self.scale)
+    # return dense representation
     return np.array(M).copy()
     # return spa.bsr_matrix(M)
 
@@ -48,17 +43,15 @@ def normalize_spectral_radius(M, g):
     [w,v] = LA.eig(M)
     # get maximum absolute eigenvalue
     lae = np.max(np.abs(w))
-    # print "lae pre", lae
-    # normalize matrix
+    # normalize matrix by max ev
     M /= lae
-    # scale to desired spectral radius
+    # scale normalized matrix to desired spectral radius
     M *= g
-    # print "type(M)", type(M)
-    # print "M.shape", M.shape
-    # # check for scaling
-    # [w,v] = LA.eig(self.M)
-    # lae = np.max(np.abs(w))
-    # print "lae post", lae
+    # check for scaling
+    [w,v] = LA.eig(M)
+    lae = np.max(np.abs(w))
+    # print "normalize_spectral_radius: lae post/desired = %f / %f" % (lae, g)
+    assert np.abs(g - lae) < 0.1
 
 ################################################################################
 # input matrix creation
@@ -73,6 +66,7 @@ def res_input_matrix_random_sparse(idim = 1, odim = 1, sparsity=0.1):
     # tmp_r = np.random.normal(0, 1, size=(tmp.shape[1],))
     tmp_r = np.random.uniform(-1, 1, size=(tmp.shape[1],))
     wi[tmp_idx] = tmp_r
+    # return dense repr
     return np.asarray(wi)
 
 def res_input_matrix_disjunct_proj(idim = 1, odim = 1):
@@ -89,10 +83,13 @@ def res_input_matrix_disjunct_proj(idim = 1, odim = 1):
     wi = np.sum(wi_, axis=0)
     return wi
 
+################################################################################
+# sep. class for learning rules, not sure yet if that's smart
 class LearningRules(object):
     def __init__(self, ndim_out = 1):
+        self.ndim_out = ndim_out
         self.loss = 0
-        self.e = np.zeros((ndim_out, 1))
+        self.e = np.zeros((self.ndim_out, 1))
 
     ############################################################
     # learning rule: FORCE
@@ -116,85 +113,72 @@ class LearningRules(object):
         # compute weight update from error times k
         dw = -self.e.T * k * c
         return dw
+
+    def learnDeltamdn(self, target, P, k, c, r, z, channel, x):
+        """quick hack delta rule for testing mdn learning"""
+        self.e = self.mdn_loss(x, r, z, target)
+        dw = np.dot(-self.e, r.T).T
+        return dw
     
+    # learning rule: FORCEmdn
+    def learnFORCEmdn_setup(self, mixcomps = 3):
+        """setup mdn variables"""
+        self.loss = 0
+        self.e = np.zeros((self.ndim_out, 1))
+        self.mixcomps = mixcomps
+        
+    # use FORCE update with mdn based gradients    
     def learnFORCEmdn(self, target, P, k, c, r, z, channel, x):
         """FORCE learning rule for reservoir online supervised learning"""
         # compute error
-        # e = z - target
-        
-        # self.e = self.mdn_loss(x, z, target)
         self.e = self.mdn_loss(x, r, z, target)
-        # print "e", self.e.shape
-        # compute weight update from error times k
+        # compute weight update from error
         dw = -self.e.T * k * c
-        # dw = np.dot(-self.e, r.T).T
-        # print "dw.shape", dw.shape
         return dw
 
+    # mixture, mdn_loss, and softmax are taken from karpathy's MixtureDensityNets.py
     def mixture(self, mu, sig, ps):
-        # print "sum(ps)", np.sum(ps)
-        # print "mu", mu, "sig", sig, "ps", ps
-        # print "ps", ps, np.sum(ps)
+        """Sample from the univariate gaussian mixture"""
         multinom_sample = np.random.multinomial(1, ps)
         multinom_sample_idx = np.where(multinom_sample == 1.0)
-        # print "multinom_sample", multinom_sample, multinom_sample_idx
         compidx = multinom_sample_idx[0][0]
-        # print "sig[compidx]", np.abs(sig[compidx])
         y = np.random.normal(mu[compidx], np.abs(sig[compidx]) + np.random.uniform(0, 1e-3, size=sig[compidx].shape))
         return y
 
     def mdn_loss(self, x, r, z, y, loss_only = False):
-        mixcomps = 6
-        # data in X are columns
-        # print "z.shape", z.shape
-        # forward pass
-        # h = np.tanh(np.dot(m['Wxh'], x) + m['bxh'])
-        # self.r
+        """Compute MDN loss"""
+        mixcomps = self.mixcomps
         # predict mean
-        # mu = np.dot(m['Whu'], h) + m['bhu']
         mu = z[:mixcomps,[0]]
-        # print("mu.shape", mu.shape)
-        #pl.clf()
-        #pl.plot(mu)
-        #pl.draw()
         # predict log variance
-        # logsig = np.dot(m['Whs'], h) + m['bhs']
         logsig = z[mixcomps:(2*mixcomps),[0]]
+        # unlog it
         sig = np.exp(logsig)
         # predict mixture priors
-        # piu = np.dot(m['Whp'], h) + m['bhp'] # unnormalized pi
         piu = z[(2*mixcomps):,[0]]
+        # softmax them
         pi = self.softmax(piu)
-        # print mu, sig, pi
         # compute the loss: mean negative data log likelihood
         k,n = mu.shape # number of mixture components
         n = float(n)
-        # print "(y-mu).shape", (y-mu).shape
+        # component likelihood
         ps = np.exp(-((y - mu)**2)/(2*sig**2))/(sig*np.sqrt(2*np.pi))
+        # mixture likelihood
         pin = ps * pi
+        # negloglikelihood, compare with batch estimate
         lp = -np.log(np.sum(pin, axis=0, keepdims=True))
         loss = np.sum(lp) / n
         self.loss = loss
-        # print "lp", lp
-        if loss_only: # do something smarter here, change calling foo and return both errors and loss
-            return loss
-        
-        # # compute the gradients on nn outputs
-        # grad = {}
+
+        # # compute component errors
         # gammas are pi_i's in bishop94
         gammas = pin / np.sum(pin, axis=0, keepdims = True)
         dmu = gammas * ((mu - y)/sig**2) / n
         dlogsig = gammas * (1.0 - (y-mu)**2/(sig**2)) / n
         dpiu = (pi - gammas) / n
-        # print dmu.shape, dlogsig.shape, dpiu.shape
         # print "|dmu| = %f" % (np.linalg.norm(dmu))
-        grad_mu  = np.dot(dmu, r.T)
-        grad_logsig = np.dot(dlogsig, r.T)
-        grad_piu  = np.dot(dpiu, r.T)
 
         return np.vstack((dmu, dlogsig, dpiu))
-        # print "grad_mu.shape", grad_mu.shape, dmu.shape
-        #return np.vstack((grad_mu, grad_logsig, grad_piu))
     
     def softmax(self, x):
         # softmaxes the columns of x
@@ -314,8 +298,6 @@ class Reservoir(object):
         self.theta_amps = np.ones(shape=(self.output_num, 1)) * self.theta
         # print "res: theta_amps", self.theta_amps
         
-
-
     ############################################################
     # save network
     def save(self, filename=""):
@@ -329,7 +311,6 @@ class Reservoir(object):
         f.close()
         return
         
-
     ############################################################
     # load network (restore from file)
     # @classmethod
@@ -470,69 +451,6 @@ class Reservoir(object):
         # return clean output, no noise
         return self.z
 
-    # ############################################################
-    # # learn: RLS
-    # # FIXME: rlspy
-    # # function [th,p] = rolsf(x,y,p,th,lam)
-    # # % function [th,p] = rolsf(x,y,p,th,lam)
-    # # %    Recursive ordinary least squares for single output case,
-    # # %       including the forgetting factor, lambda.
-    # # %    Enter with x = input, y = output, p = covariance, th = estimate, 
-    # # lam = forgetting factor
-    # # %
-    # #      a=p*x;
-    # #      g=1/(x'*a+lam);
-    # #      k=g*a;
-    # #      e=y-x'*th;
-    # #      th=th+k*e;
-    # #      p=(p-g*a*a')/lam;
-    # def learnRLS(self, target):
-    #     lam = 0.98
-    #     a = np.dot(self.P, self.r)
-    #     g = 1 / (np.dot(self.r, a) + lam)
-    #     k = np.dot(g, a)
-    #     e = target - self.z[:,0] # np.dot(self.r, self.wo)
-    #     dw = np.dot(k, e)
-    #     self.wo += dw
-    #     self.P = (self.P-np.dot(g, np.dot(a, a.T)))/lam
-
-    # def dwFORCE(self, P, r, z, target):
-
-    # ############################################################
-    # # learn: FORCE, EH, recursive regression (RLS)?
-    # def learnFORCE(self, target):
-    #     # get some target
-    #     # use FORCE to calc dW
-    #     # use EH to calc dW
-    #     k = np.dot(self.P, self.r)
-    #     rPr = np.dot(self.r.T, k)
-    #     c = 1.0/(1.0 + rPr)
-    #     # print "r.shape", self.r.shape
-    #     # print "k.shape", k.shape, "P.shape", self.P.shape, "rPr.shape", rPr.shape, "c.shape", c.shape
-    #     self.P = self.P - np.dot(k, (k.T*c))
-        
-    #     for i in range(self.output_num):
-    #         # print "self.P", self.P
-    #         # print "target.shape", target.shape
-    #         e = self.z[i,0] - target[i,0]
-    #         # print "error e =", e, self.z[i,0]
-
-    #         # print "err", e, "k", k, "c", c
-    #         # print "e.shape", e.shape, "k.shape", k.shape, "c.shape", c.shape
-    #         # dw = np.zeros_like(self.wo)
-    #         dw = -e * k * c
-    #         # dw = -e * np.dot(k, c)
-    #         # print "dw", dw.shape
-    #         # print "shapes", self.wo.shape, dw.shape # .reshape((self.N, 1))
-    #         # print i
-    #         # print "shapes", self.wo[:,0].shape, dw[:,0].shape # .reshape((self.N, 1))
-    #         # print "types", type(self.wo), type(dw)
-    #         self.wo[:,i] += dw[:,0]
-    #         # self.wo[:,i] = self.wo[:,i] + dw[:,0]
-    #         # self.wo[:,i] += dw[:]
-    #     # print "FORCE", LA.norm(self.wo, 2)
-    #     # return 0
-
     ############################################################
     # learn: FORCE, EH, recursive regression (RLS)?
     def learnFORCE(self, target):
@@ -581,7 +499,7 @@ class Reservoir(object):
 
         # binary modulator
         mdltr = (np.clip(self.perf - self.perf_lp, 0, 1) > 0) * 1.0
-        # # continuous modulator
+        # continuous modulator
         # vmdltr = (self.perf - self.perf_lp)
         # vmdltr /= np.sum(np.abs(vmdltr))
         # OR  modulator
@@ -596,32 +514,7 @@ class Reservoir(object):
         # update performance prediction
         self.perf_lp = ((1 - self.coeff_a) * self.perf_lp) + (self.coeff_a * self.perf)
         
-    # def learnPISetup(self):
-        
-    #     self.piCalcClassD = JPackage("infodynamics.measures.discrete").PredictiveInformationCalculatorDiscrete
-    #     self.piCalcClass = JPackage("infodynamics.measures.continuous.kernel").MutualInfoCalculatorMultiVariateKernel
-    #     self.entCalcClass = JPackage("infodynamics.measures.continuous.kernel").EntropyCalculatorKernel
-    #     self.base = 20
-    #     self.piCalcD = self.piCalcClassD(self.base,3)
-    #     # self.aisCalcD = self.aisCalcClassD(self.base,5)
-    #     self.piCalc = self.piCalcClass();
-    #     self.entCalc = self.entCalcClass();    
-
     def perfVar(self, x):
-        # self.eta_init = 1.2e-3
-        # self.eta_init = 2e-3
-
-        # em.plot_pi_discrete_cont()
-        # em.calc_pi_cont_windowed()
-        # em.plot_pi_cont_windowed()
-        # em.calc_global_entropy()
-        # em.calc_local_entropy()
-        # em.calc_global_entropy_cont()
-        # em.plot_measures()
-        # em.calc_pi_discrete()
-        # pi = np.mean(em.pi)
-        # em.calc_pi_discrete_avg()
-        # pi = em.pi
         perf = np.var(x)
         
         self.perf = np.array([perf]).reshape((self.output_num, 1))
@@ -637,72 +530,13 @@ class Reservoir(object):
                 self.mdltr[i,0] = 0
             dW = eta * (self.zn[i,0] - self.zn_lp[i,0]) * self.mdltr[i,0] * self.r
             # dW = eta * (self.zn[i,0] - self.zn_lp[i,0]) * -self.perf * self.r
-            # print dW
-            # print dW.shape, self.x.shape, self.wo[:,i].shape
-            # print np.reshape(dW, (self.N, )).shape
             self.wo[:,i] += dW[:,0]
             # self.wo[:,i] += np.reshape(dW, (self.N, ))
             
         self.perf_lp = ((1 - self.coeff_a) * self.perf_lp) + (self.coeff_a * self.perf)
-        
                         
-    # def learnPI(self, x):
-    #     eta = self.eta_init
-        
-    #     # dmax = np.max(x)
-    #     # dmin = np.min(x)
-    #     # # print self.dmax, self.dmin
-    #     # # bins = np.arange(self.dmin, self.dmax, 0.1)
-    #     # bins = np.linspace(dmin, dmax, 20) # FIXME: determine binnum
-    #     # # print "x.shape", x.shape
-    #     # x_d = np.digitize(x[0,:], bins).reshape(x.shape)
-    #     # # print "x_d.shape", x_d.shape
-    #     # # pi = list(self.piCalcD.computeLocal(x_d))
-    #     # pi = self.piCalcD.computeAverageLocal(x_d)
-    #     # # print pi
-    #     # # base = np.max(x_d)+1 # 1000
-        
-    #     # # compute PI
-    #     # self.piCalc.setProperty("NORMALISE", "true"); # Normalise the individual variables
-    #     # self.piCalc.initialise(1, 1, 0.25); # Use history length 1 (Schreiber k=1), kernel width of 0.5 normalised units
-    #     # # print "x", x.shape
-    #     # src = np.atleast_2d(x[0,0:-100]).T # start to end - 1
-    #     # dst = np.atleast_2d(x[0,100:]).T # 1 to end
-    #     # # print "src, dst", src, dst
-    #     # # print "src, dst", src.shape, dst.shape
-    #     # self.piCalc.setObservations(src, dst)
-    #     # pi = self.piCalc.computeAverageLocalOfObservations()
-        
-        
-    #     # compute differential entropy
-    #     # self.entCalc.setProperty("NORMALISE", "true"); # Normalise the individual variables
-    #     self.entCalc.initialise(0.5); # Use history length 1 (Schreiber k=1), kernel width of 0.5 normalised units
-    #     # print "x", x.shape
-    #     # src = np.atleast_2d(x[0,0:-10]).T # start to end - 1
-    #     # dst = np.atleast_2d(x[0,10:]).T # 1 to end
-    #     # print "src, dst", src, dst
-    #     # print "src, dst", src.shape, dst.shape
-    #     self.entCalc.setObservations(JArray(JDouble, 1)(x.T))
-    #     pi = self.entCalc.computeAverageLocalOfObservations()
-        
-    #     self.perf = np.array([pi]).reshape((self.output_num, 1))
-        
-    #     # print "perf", self.perf
-    #     for i in range(self.output_num):
-    #         if self.perf[i,0] > self.perf_lp[i,0]:
-    #             # print "mdltr", self.perf[i,0], self.perf_lp[i,0]
-    #             self.mdltr[i,0] = 1
-    #         else:
-    #             self.mdltr[i,0] = 0
-    #         dW = eta * (self.zn[i,0] - self.zn_lp[i,0]) * self.mdltr[i,0] * self.r
-    #         # dW = eta * (self.zn[i,0] - self.zn_lp[i,0]) * -self.perf * self.r
-    #         # print dW
-    #         # print dW.shape, self.x.shape, self.wo[:,i].shape
-    #         # print np.reshape(dW, (self.N, )).shape
-    #         self.wo[:,i] += dW[:,0]
-    #         # self.wo[:,i] += np.reshape(dW, (self.N, ))
-            
-    #     self.perf_lp = ((1 - self.coeff_a) * self.perf_lp) + (self.coeff_a * self.perf)
+    def learnPI(self, x):
+        pass
     
     def learnPCA_init(self, eta=1e-4):
         # self.ro_dim = 2
@@ -1118,26 +952,23 @@ class ReservoirTest(object):
     modes = {"ol_rls": 0, "ol_force": 1, "ol_eh": 2, "ip": 3, "fwd": 4, "ol_pi": 5, "ol_force_mdn": 6}
     targets = {"MSO_s1": 0, "MSO_s2": 1, "MSO_s3": 2, "MSO_c1": 3, "MSO_c2": 4, "MG": 5, "wav": 6, "reg3t1": 7}
     
+def save_wavfile(out_t, timestr):
+    try:
+        from scipy.io import wavfile
+        # wav_out = (out_t.T * 32767).astype(np.int16)
+        out_t /= np.max(np.abs(out_t))
+        wav_out = (out_t.T * 32767).astype(np.int16)
+        wavfile.write("data/res_out_%s.wav" % (timestr), 44100, wav_out)
+    except ImportError:
+        print "ImportError for scipy.io.wavfile"
+        
 def main(args):
     if ReservoirTest.modes[args.mode] == ReservoirTest.modes["ip"]:
         test_ip(args)
         sys.exit()
 
-    # FIXME: define different tasks
-    #  - signal generation: simple MSO, non-integer relation MSO, Mackey-Glass
-    #  - compare with batch learning for signal generation
-    #  - simple prediction tasks
-    #  - simultaneous learning of inverse and forward model, modulate forward learning based on variance
-    # FIXME:
-    #  - ascii progress bar
-    #  - on the fly plotting
-    #  - modularize learning rules: use Reward class?
-
-    # print args.length
-    # for i in [10, 100, 1000]:
+    # seed the run
     np.random.seed(args.seed)
-    # episode_len = 100000
-    # episode_len = 10000
     episode_len = args.length
     washout_ratio = 0.1
     washout = min(washout_ratio * episode_len, 1000)
@@ -1145,8 +976,8 @@ def main(args):
     testing = learning_ratio * episode_len
     insize = args.ndim_in
     outsize = args.ndim_out
+    mixcomps = args.mixcomps
     if args.mode == "ol_force_mdn":
-        mixcomps = 6
         outsize_ = outsize * mixcomps * 3
         out_t_mdn_sample = np.zeros(shape=(outsize, episode_len))
     else:
@@ -1231,9 +1062,16 @@ def main(args):
 
         # do some setup 
         if ReservoirTest.modes[args.mode] == ReservoirTest.modes["ol_rls"]:
+            if rlspy is None:
+                print "Dont have rlspy, exiting"
+                sys.exit()
+            # initialize rlspy
             res.learnRLSsetup(None, None)
+        if args.mode == "ol_force_mdn":
+            # initialize FORCEmdn
+            lr.learnFORCEmdn_setup(mixcomps = mixcomps)
         elif ReservoirTest.modes[args.mode] == ReservoirTest.modes["ol_pi"]:
-            print "ol_pi in development, not working yet"
+            print "ol_pi in progress, exiting"
             sys.exit(1)
 
         # interactive plotting
@@ -1266,11 +1104,6 @@ def main(args):
             
             # update network, log activations
             res.execute(inputs)
-            if False and args.mode.endswith("mdn"):
-                res.z[mixcomps:(2*mixcomps),[0]] = np.exp(res.z[mixcomps:(2*mixcomps),[0]])
-                res.z[(2*mixcomps):,[0]] = lr.softmax(res.z[(2*mixcomps):,[0]])
-                res.zn[mixcomps:(2*mixcomps),[0]] = np.exp(res.zn[mixcomps:(2*mixcomps),[0]])
-                res.zn[(2*mixcomps):,[0]] = lr.softmax(res.zn[(2*mixcomps):,[0]])
             out_t[:,[j]]   = res.z
             out_t_n[:,[j]] = res.zn
             r_t[:,[j]] = res.r
@@ -1306,7 +1139,7 @@ def main(args):
                     for k in range(outsize_):
                         wo_t_norm[k,j] = LA.norm(wo_t[:,k,j])
                         dw_t_norm[k,j] = LA.norm(dw[:,k])
-                    # res.perf = lr.mdn_loss(target, res.z, inputs, True)
+
                     loss_t[0,j] = lr.loss
                     # print "mdn_loss = %s" % mdn_loss_val
                     res.perf = lr.e # mdn_loss_val
@@ -1317,30 +1150,19 @@ def main(args):
                                         
                 elif ReservoirTest.modes[args.mode] == ReservoirTest.modes["ol_pi"]:
                     if j > 100:
-                        # em.x = out_t_n[:,j-1000:j].T # nlzr.X["x"][-10000:,0].reshape((10000,1))
-                        # em.preprocess()
-                        # em.discretize_data()
-                        # res.learnPI(out_t_n[:,j-1000:j])
-                        # res.perfVar(out_t_n[:,j-1000:j])
-                        # res.perfVar(out_t[:,j-100:j])
                         res.perfVar(out_t)
-                        # print res.perf
                         res.learnEHPerf()
 
-                # recompute activations, only when learning
-                # back up states
-                res.x = res_x_
-                res.r = res_r_
-                # activations update with corrected ouput, and log
-                res.execute(inputs)
-                if False and args.mode.endswith("mdn"):
-                    res.z[mixcomps:(2*mixcomps),[0]] = np.exp(res.z[mixcomps:(2*mixcomps),[0]])
-                    res.z[(2*mixcomps):,[0]] = lr.softmax(res.z[(2*mixcomps):,[0]])
-                    res.zn[mixcomps:(2*mixcomps),[0]] = np.exp(res.zn[mixcomps:(2*mixcomps),[0]])
-                    res.zn[(2*mixcomps):,[0]] = lr.softmax(res.zn[(2*mixcomps):,[0]])
-                out_t[:,[j]] =   res.z
-                out_t_n[:,[j]] = res.zn
-                r_t[:,[j]] = res.r
+                if True: # if recompute_output
+                    # recompute activations, only when learning
+                    # restore states
+                    res.x = res_x_
+                    res.r = res_r_
+                    # update activations with corrected ouput
+                    res.execute(inputs)
+                    out_t[:,[j]] =   res.z
+                    out_t_n[:,[j]] = res.zn
+                    r_t[:,[j]] = res.r
 
             if args.mode.endswith("mdn"):
                 out_t_mdn_sample[:,[j]] = lr.mixture(res.z[:mixcomps,0], np.exp(res.z[mixcomps:(2*mixcomps),0]), lr.softmax(res.z[(2*mixcomps):,0]))
@@ -1475,14 +1297,7 @@ def main(args):
     fig.savefig("data/res_plot_%s.pdf" % (timestr), dpi=300, bbox_inches="tight")
     pl.show()
 
-    try:
-        from scipy.io import wavfile
-        # wav_out = (out_t.T * 32767).astype(np.int16)
-        out_t /= np.max(np.abs(out_t))
-        wav_out = (out_t.T * 32767).astype(np.int16)
-        wavfile.write("data/res_out_%s.wav" % (timestr), 44100, wav_out)
-    except ImportError:
-        print "ImportError for scipy.io.wavfile"
+    save_wavfile(out_t, timestr)
 
 if __name__ == "__main__":
     
@@ -1492,6 +1307,7 @@ if __name__ == "__main__":
     parser.add_argument("-m", "--mode", help="Mode [ol_rls], one of " + str(ReservoirTest.modes.keys()), default = "ol_rls")
     parser.add_argument("-mt", "--multitau", dest="multitau", action="store_true",
                         help="use multiple random time constants in reservoir, doesn't seem to work so well with EH [False]")
+    parser.add_argument("-mc", "--mixcomps", help="Number of mixture components for mixture network [3]", type=int, default=3)
     parser.add_argument("-ndo", "--ndim_out", help="Number of output dimensions [1]", default=1, type=int)
     parser.add_argument("-ndi", "--ndim_in",  help="Number of input dimensions [1]",  default=1, type=int)
     parser.add_argument("-pi", "--plot_interval",  help="Time step interval at which to update plot [1000]",  default=1000, type=int)
