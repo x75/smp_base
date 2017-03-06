@@ -4,16 +4,25 @@
 
 * Sensorimotor learning basic lib
 
-A python library of code i use for sensorimotor learning experiments
-with simulations, robots, etc. Performing clean-up and incremental
-pull from existing private repository. The basis idea is to generate
-states (sensors) with actions (motors), learn different models from
-that data to approximate the sensorimotor dynamics and use the models
-to improve future actions.
+A python library of code I use for sensorimotor learning experiments
+with simulations, robots, etc. Performing incremental clean-up and
+pulling from existing private repository. The basis idea is to
+generate states (sensors) with actions (motors), learn different
+predictive models from that data to approximate the sensorimotor
+dynamics and use the models to compute future actions.
 
 ** reservoir lib
 
-|----------------+---|
-| reservoirs.py  |   |
-| eligibility.py |   |
-| learners.py    |   |
+|----------------+-------------------------------------------------------------------------------------------|
+| reservoirs.py  | contains Reservoir class, LearningRules class, a  few utility functions and a main method |
+|                | that demonstrates basic use of the class. It can definitely be simplified (WiP)           |
+| learners.py    | this model embeds the underlying adaptive model into the sensorimotor context             |
+| eligibility.py | basic eligibility windows used in a variant of learning rules                             |
+| smp_thread.py  | thread wrapper that provides constant dt run loop and asynchronous sensor callbacks       |
+
+This repository is in an early stages of release which I push on the
+occasion of sharing the smp_sphero code [fn:1].
+
+* Footnotes
+
+[fn:1] https://github.com/x75/smp_sphero

@@ -85,16 +85,21 @@ def res_input_matrix_disjunct_proj(idim = 1, odim = 1):
     return wi
 
 ################################################################################
-# sep. class for learning rules, not sure yet if that's smart
+# standalone class for learning rules, not sure yet if that's smart
+# - FORCE
+# - FORCEmdn: (univariate) mixture density version, using FORCE update
+# - missing: RLS (depends on rlspy.py)
+# - missing: Exploratory Hebbian
 class LearningRules(object):
+    """LearningRules class"""
     def __init__(self, ndim_out = 1):
         self.ndim_out = ndim_out
         self.loss = 0
         self.e = np.zeros((self.ndim_out, 1))
 
     ############################################################
-    # learning rule: FORCE
-    # David Sussillo, L.F. Abbott, Generating Coherent Patterns of
+    ## learning rule: FORCE
+    # - David Sussillo, L.F. Abbott, Generating Coherent Patterns of
     # Activity from Chaotic Neural Networks, Neuron, Volume 63, Issue
     # 4, 27 August 2009, Pages 544-557, ISSN 0896-6273,
     # http://dx.doi.org/10.1016/j.neuron.2009.07.018. (http://www.sciencedirect.com/science/article/pii/S0896627309005479)
@@ -192,8 +197,13 @@ class LearningRules(object):
         e = np.exp(x)
         en = e / np.sum(e, axis=0, keepdims=True)
         return en
-        
+
+################################################################################
+## Leaky integrator reservoir class
+#
+# Params: ...
 class Reservoir(object):
+    """Leaky integrator reservoir class"""
     def __init__(self, N=100, p = 0.1, g = 1.2, alpha = 1.0, tau = 0.1,
                  input_num=1, output_num=1, input_scale = 0.05,
                  feedback_scale = 0.01, bias_scale = 0.,
@@ -203,6 +213,16 @@ class Reservoir(object):
                  ip=False,
                  coeff_a = 0.2,
                  mtau=False):
+        """
+        :Arguments:
+          N
+            Model size [100]
+          p
+            Weight matrix density [0.1]
+          g
+            Spectral radius [1.2]
+        """
+        
         # reservoir size
         self.N = N
         # connection density

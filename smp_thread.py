@@ -1,5 +1,4 @@
-"""Senorimotor primitive basic threaded class. We use it for having a
-main loop side by side with ROS callbacks"""
+"""smp_base: Basic threaded class. We use it for having a main loop side by side with ROS callbacks"""
 
 import threading, signal, time, sys
 import numpy as np
