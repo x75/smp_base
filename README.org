@@ -11,6 +11,9 @@ generate states (sensors) with actions (motors), learn different
 predictive models from that data to approximate the sensorimotor
 dynamics and use the models to compute future actions.
 
+This repository is in an early stages of release which I push on the
+occasion of sharing the smp_sphero code [fn:1].
+
 ** reservoir lib
 
 |----------------+-------------------------------------------------------------------------------------------|
@@ -20,8 +23,15 @@ dynamics and use the models to compute future actions.
 | eligibility.py | basic eligibility windows used in a variant of learning rules                             |
 | smp_thread.py  | thread wrapper that provides constant dt run loop and asynchronous sensor callbacks       |
 
-This repository is in an early stages of release which I push on the
-occasion of sharing the smp_sphero code [fn:1].
+You could try and run 
+
+: python reservoirs.py
+
+or
+
+: python reservoirs.py --help
+
+to see possible options. Documentation and examples upcoming.
 
 * Footnotes
 

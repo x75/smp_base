@@ -9,6 +9,9 @@ generate states (sensors) with actions (motors), learn different
 predictive models from that data to approximate the sensorimotor
 dynamics and use the models to compute future actions.
 
+This repository is in an early stages of release which I push on the
+occasion of sharing the smp\_sphero code <sup><a id="fnr.1" class="footref" href="#fn.1">1</a></sup>.
+
 
 ## reservoir lib
 
@@ -52,8 +55,15 @@ dynamics and use the models to compute future actions.
 </tbody>
 </table>
 
-This repository is in an early stages of release which I push on the
-occasion of sharing the smp\_sphero code <sup><a id="fnr.1" class="footref" href="#fn.1">1</a></sup>.
+You could try and run 
+
+    python reservoirs.py
+
+or
+
+    python reservoirs.py --help
+
+to see possible options. Documentation and examples upcoming.
 
 
 # Footnotes
