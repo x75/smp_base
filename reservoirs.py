@@ -1,9 +1,10 @@
 """smp_base: A leaky integrator rate-coded reservoir class"""
 
 # TODO
-# - FIXME: multiple timescales / tau
-# - FIXME: intrinsic plasticity: input layer, reservoir layer
-# - FIXME: correlated exploration noise
+# - fit/predict interface, batch regression fit
+# - multiple timescales / tau
+# - intrinsic plasticity: input layer, reservoir layer
+# - correlated exploration noise
 
 # Authors
 # - Oswald Berthold, Aleke Nolte (learnRLS)
@@ -136,6 +137,11 @@ class LearningRules(object):
         dw = -self.e.T * k * c
         return dw
 
+    def mixtureMV(self, mu, sig, ps):
+        """Sample from the multivariate gaussian mixture"""
+        print "%s.mixtureMV: Implement me" % (self.__class__.__name__)
+        return None
+    
     # mixture, mdn_loss, and softmax are taken from karpathy's MixtureDensityNets.py
     def mixture(self, mu, sig, ps):
         """Sample from the univariate gaussian mixture"""
@@ -821,7 +827,7 @@ def get_data(elen, outdim, mode="MSO_s1"):
     elif mode == "reg_multimodal_1":
         # build a sinewave with superimposed 1/4 duty cycle pulse
         f_numcomp = 2
-        freqs = np.array([0.01])
+        freqs = np.array([0.001])
         phases = np.random.uniform(0, 1, size=(f_numcomp, ))
         amps = np.random.uniform(0, 1, size=(f_numcomp, ))
         # amp normalization to sum 1
@@ -948,9 +954,106 @@ def test_ip(args):
         pl.gcf().savefig("reservoir_test_ip.pdf", dpi=300, bbox_inches="tight")
     pl.show()
 
+class ReservoirPlot(object):
+    def __init__(self, args):
+        self.gs = gridspec.GridSpec(5, 1)
+        self.fig = pl.figure()
+        self.fig.suptitle("reservoirs.py mode = %s, target = %s, length = %d" % (args.mode, args.target, args.length))
+        self.axs = []
+        for plotrow in range(5):
+            self.axs.append(self.fig.add_subplot(self.gs[plotrow]))
+        self.fig.show()
+
+        self.ressize = args.ressize
+        
+        # plotting params for res hidden activation random projection
+        self.selsize = 20
+        self.rindex = np.random.randint(self.ressize, size=self.selsize)
+
+    def plot_data(self, args, data, incr = 1000, lr = None, testing = 100):
+        (ds_real, out_t, out_t_mdn_sample, r_t, perf_t, loss_t, wo_t_norm, dw_t_norm) = data
+        episode_len = args.length
+         
+        assert lr is not None
+         
+        for axidx in range(5):
+            self.axs[axidx].clear()
+
+        # mixcomp colors mu black, sigma blue, pi red
+        cols = ["k", "b", "r"]
+       
+        # self.axs[0].clear()
+        # backlog = 200
+        # print "incr, ds_real.shape", incr, ds_real.shape
+        if incr < (ds_real.shape[1] - 5):
+            backlog = args.plot_interval
+            self.axs[0].set_title("Target (%d-window)" % (backlog))
+            self.axs[1].set_title("Target and output (%d-window)" % (backlog))
+            pdata     = ds_real[:,(incr-backlog):incr].T
+            pdata_mdn = out_t_mdn_sample[:,(incr-backlog):incr].T
+            pdata_out = out_t[:,(incr-backlog):incr].T
+        else:
+            self.axs[0].set_title("Target")
+            self.axs[1].set_title("Target and output")
+            pdata     = ds_real.T
+            pdata_mdn = out_t_mdn_sample.T
+            pdata_out = out_t.T
+            self.axs[1].axvspan(testing, episode_len, alpha=0.1)
+
+        # axs[0].plot(pdata, "k-", lw=2.0, label="%d-dim tgt" % ds_real.shape[0])
+        self.axs[0].plot(pdata, "g-", lw=3.0, label="tgt", alpha=0.5)
+        self.axs[0].plot([0, pdata.shape[0]], [0, 0], "k-", lw=0.2)
+        self.axs[0].legend(ncol=2, fontsize=8)
+
+        self.axs[1].plot(pdata, "g-", lw=3.0, label="tgt", alpha=0.5)
+        self.axs[1].plot([0, pdata.shape[0]], [0, 0], "k-", lw=0.2)
+        
+        if args.mode.endswith("mdn"):
+            # the sample
+            self.axs[1].plot(pdata_mdn, "c-", lw=0.5, label="out_", alpha=0.5)
+            for k in range(3):
+                pdata = pdata_out[:,(k*args.mixcomps):((k+1)*args.mixcomps)] + (k*2)
+                # pdata =     out_t[(k*mixcomps):((k+1)*mixcomps),:] + (k*2)
+                # print "pdata[%d].shape = %s, %s" % (k, pdata.shape, out_t.shape)
+                if k == 1:
+                    pdata = np.exp(pdata)
+                if k == 2:
+                    pdata = lr.softmax(pdata)
+                self.axs[1].plot(pdata, "%s-" % (cols[k]), lw=0.5, label="out%d"%k, alpha=0.5)
+        else:
+            self.axs[1].plot(pdata_out, lw=0.5, label="out")
+            
+        self.axs[1].legend(ncol=2, fontsize=8)
+        
+        self.axs[2].set_title("reservoir traces")
+        self.axs[2].plot(r_t.T[:,self.rindex], label="r")
+
+        self.axs[3].set_title("weight norm |W|")
+        if args.mode.endswith("mdn"):
+            for k in range(3):
+                self.axs[3].plot(wo_t_norm[(k*args.mixcomps):((k+1)*args.mixcomps),:].T, "%s-" % cols[k], label="|W|")
+                self.axs[3].plot(dw_t_norm[(k*args.mixcomps):((k+1)*args.mixcomps),:].T, "%s." % cols[k], label="|dW|")
+        else:
+            self.axs[3].plot(wo_t_norm.T, label="|W|")
+            self.axs[3].plot(dw_t_norm.T, label="|dW|")
+        self.axs[3].legend(ncol=2, fontsize=8)
+        
+        self.axs[4].set_title("perf (-loss)")
+        # if args.mode.endswith("mdn"):
+        if args.mode.endswith("mdn"):
+            self.axs[4].plot(loss_t.T, "g-", lw=2.0, label="loss", alpha = 0.75)
+            for k in range(3):
+                self.axs[4].plot(perf_t[(k*args.mixcomps):((k+1)*args.mixcomps),:].T, "%s-" % (cols[k]), label="perf", alpha=0.5)
+        else:
+            self.axs[4].plot(perf_t.T, label="perf", alpha=0.5)
+        self.axs[4].legend(ncol=2, fontsize=8)
+            
+        pl.draw()
+        pl.pause(1e-9)        
+        
 class ReservoirTest(object):
     modes = {"ol_rls": 0, "ol_force": 1, "ol_eh": 2, "ip": 3, "fwd": 4, "ol_pi": 5, "ol_force_mdn": 6}
-    targets = {"MSO_s1": 0, "MSO_s2": 1, "MSO_s3": 2, "MSO_c1": 3, "MSO_c2": 4, "MG": 5, "wav": 6, "reg3t1": 7}
+    targets = {"MSO_s1": 0, "MSO_s2": 1, "MSO_s3": 2, "MSO_c1": 3, "MSO_c2": 4, "MG": 5, "wav": 6, "reg3t1": 7, "reg_multimodal_1": 8}
     
 def save_wavfile(out_t, timestr):
     try:
@@ -961,7 +1064,7 @@ def save_wavfile(out_t, timestr):
         wavfile.write("data/res_out_%s.wav" % (timestr), 44100, wav_out)
     except ImportError:
         print "ImportError for scipy.io.wavfile"
-        
+                
 def main(args):
     if args.mode == "ip":
         test_ip(args)
@@ -998,7 +1101,9 @@ def main(args):
         alpha = 100.0
         input_scale = 2.0
         g = 1.5
+        # tau = 0.05
         tau = 0.025
+        # tau = 0.01
     eta_init_ = 5e-4
     
     # get training data
@@ -1028,7 +1133,7 @@ def main(args):
         #                 theta = 1e-1, theta_state = 1e-2, coeff_a = 0.2, mtau=args.multitau)
         # tau was 0.01
         res = Reservoir(N = i, input_num = insize, output_num = outsize_, g = g, tau = tau, alpha = alpha,
-                        feedback_scale = feedback_scale, input_scale = input_scale, bias_scale=1.0, eta_init=eta_init_,
+                        feedback_scale = feedback_scale, input_scale = input_scale, bias_scale = 0.8, eta_init=eta_init_,
                         theta = 5e-1, theta_state = 5e-2, coeff_a = 0.2, mtau=args.multitau)
         
         # res.save(filename)
@@ -1076,26 +1181,20 @@ def main(args):
 
         # interactive plotting
         pl.ion()
-        gs = gridspec.GridSpec(5, 1)
-        fig = pl.figure()
-        axs = []
-        for plotrow in range(5):
-            axs.append(fig.add_subplot(gs[plotrow]))
-        fig.show()
-
-        # plotting params for res hidden activation random projection
-        selsize = 20
-        rindex = np.random.randint(i, size=selsize)
-
-        
+        # init reservoir plotting
+        rp = ReservoirPlot(args) # bad naming, i is instance of res model size
+                    
         # loop over timesteps        
         for j in range(episode_len):
 
-            # inputs = out_t[:,[j-1]]
-            inputs = out_t_mdn_sample[:,[j-1]]
+            if args.mode.endswith("mdn"):
+                inputs = out_t_mdn_sample[:,[j-1]]
+            else:
+                inputs = out_t[:,[j-1]]
+                
             # teacher forcing
-            # if True or (j > testing and j < washout):
-            #     inputs = ds_real[:,[j-1]] # .reshape((insize, 1))
+            if args.teacher_forcing and j < testing:
+                inputs = ds_real[:,[j-1]] # .reshape((insize, 1))
             target = ds_real[:,[j]]
             
             # save network state
@@ -1184,120 +1283,25 @@ def main(args):
                 sys.stdout.flush()
                 
             if j > washout and (j+1) % args.plot_interval == 0:
-                # pl.subplot(311)
-                # pl.gca().clear()
-                axs[0].clear()
-                # backlog = 200
-                backlog = args.plot_interval
-                axs[0].set_title("target, %d-window" % (backlog))
-                pdata = ds_real[:,(j-backlog):j].T
-
-                axs[0].plot(pdata, "g-", lw=3.0, label="tgt", alpha=0.5)
-                axs[0].plot([0, pdata.shape[0]], [0, 0], "k-", lw=0.2)
-                axs[0].legend()
-                axs[1].clear()
-                axs[1].set_title("Target and output, %d-window" % (backlog))
-                axs[1].plot(pdata, "g-", lw=3.0, label="tgt", alpha=0.5)
-                axs[1].plot([0, pdata.shape[0]], [0, 0], "k-", lw=0.2)
-                if args.mode.endswith("mdn"):
-                    axs[1].plot(out_t_mdn_sample[:,(j-backlog):j].T, lw=0.5, label="out_", alpha=0.5)
-                    cols = ["k", "b", "r"]
-                    for k in range(3):
-                        pdata = out_t[(k*mixcomps):((k+1)*mixcomps),(j-backlog):j] + (k*2)
-                        # print "pdata[%d].shape = %s, %s" % (k, pdata.shape, out_t.shape)
-                        if k == 1:
-                            pdata = np.exp(pdata)
-                        if k == 2:
-                            pdata = lr.softmax(pdata)
-                        axs[1].plot(pdata.T, "%s-" % (cols[k]), lw=0.5, label="out%d"%k)
-                else:
-                    axs[1].plot(out_t[:,(j-backlog):j].T, lw=0.5, label="out")
-                axs[1].legend(ncol=2, fontsize=8)
-
-                axs[2].clear()
-                axs[2].set_title("reservoir traces")
-                axs[2].plot(r_t.T[:,rindex])
-
-                axs[3].clear()
-                axs[3].set_title("weight norm |W|")
-                # axs[3].plot(wo_t_norm.T)
-                axs[3].plot(dw_t_norm.T)
-                axs[3].legend(ncol=2, fontsize=8)
-                
-                axs[4].clear()
-                axs[4].set_title("perf (-loss)")
-                axs[4].plot(perf_t.T)
-                if args.mode.endswith("mdn"):
-                    axs[4].plot(loss_t.T, "k-", lw=2.0, label="loss", alpha = 0.75)
-                axs[4].legend(ncol=2, fontsize=8)
-                
-                pl.draw()
-                pl.pause(1e-9)
+                rpdata = (ds_real, out_t, out_t_mdn_sample, r_t, perf_t, loss_t, wo_t_norm, dw_t_norm)
+                rp.plot_data(args = args, data = rpdata, incr = j, lr = lr, testing = testing)
 
     # print "perf_t.shape", perf_t.shape
 
     # final plot
     pl.ioff()
 
-    for axidx in range(5):
-        axs[axidx].clear()
-        
-    axs[0].set_title("Target")
-    pdata = ds_real.T
-    # axs[0].plot(pdata, "k-", lw=2.0, label="%d-dim tgt" % ds_real.shape[0])
-    axs[0].plot(pdata, "g-", lw=3.0, label="tgt", alpha=0.5)
-    axs[0].plot([0, pdata.shape[0]], [0, 0], "k-", lw=0.2)
-    axs[0].legend(ncol=2, fontsize=8)
-
-    axs[1].set_title("Target and output")
-    # axs[1].plot(pdata, "k-", lw=2.0, label="%d-dim tgt" % ds_real.shape[0], alpha=0.25)
-    axs[1].plot(pdata, "g-", lw=3.0, label="tgt", alpha=0.5)
-    axs[1].plot([0, pdata.shape[0]], [0, 0], "k-", lw=0.2)
-    if args.mode.endswith("mdn"):
-        axs[1].plot(out_t_mdn_sample.T, lw = 0.5, label = "sample z", alpha=0.5)
-        # axs[1].plot(out_t_mdn_sample[:,(j-backlog):j].T, lw=0.5, label="out_", alpha=0.25)
-        cols = ["k", "b", "r"]
-        for k in range(3):
-            print "k", k
-            pdata = out_t[(k*mixcomps):((k+1)*mixcomps),:] + (k*2)
-            print "pdata[%d].shape = %s, %s" % (k, pdata.shape, out_t.shape)
-            if k == 1:
-                pdata = np.exp(pdata)
-            if k == 2:
-                pdata = lr.softmax(pdata)
-            axs[1].plot(pdata.T, "%s-" % (cols[k]), lw=1.0, label="out%d"%k)
-            # "%s" % (chr(k+61))
-    else:
-        axs[1].plot(out_t.T, label="z")
-        # axs[1].plot(out_t[:,(j-backlog):j].T, lw=0.5, label="out")
-    axs[1].legend(ncol=2, fontsize=8)
-    # axs[0].axvline(testing)
-    axs[1].axvspan(testing, episode_len, alpha=0.1)
-    # axs[0].plot(ds_real.T - out_t.T)
-
-    axs[2].set_title("reservoir traces")
-    axs[2].plot(r_t.T[:,rindex], label="r")
-
-    axs[3].set_title("weight norm")
-    axs[3].plot(wo_t_norm.T, label="|W|")
-    axs[3].plot(dw_t_norm.T, label="|dW|")
-    axs[3].legend(ncol=2, fontsize=8)
-
-    axs[4].clear()    
-    axs[4].set_title("perf (-loss)")
-    axs[4].plot(perf_t.T, label="perf")
-    if args.mode.endswith("mdn"):
-        axs[4].plot(loss_t.T, "k-", lw=2.0, label="loss", alpha = 0.75)
-        # axs[4].plot(loss_t.T, label="loss")
-    # axs[4].set_xlim((0, args.length))
-    axs[4].legend(ncol=2, fontsize=8)
+    rpdata = (ds_real, out_t, out_t_mdn_sample, r_t, perf_t, loss_t, wo_t_norm, dw_t_norm)
+    rp.plot_data(args = args, data = rpdata, incr = j, lr = lr, testing = testing)
     
-    pl.draw()
     timestr = time.strftime("%Y%m%d_%H%M%S")
-    fig.savefig("data/res_plot_%s.pdf" % (timestr), dpi=300, bbox_inches="tight")
+    rp.fig.savefig("data/res_plot_%s.pdf" % (timestr), dpi=300, bbox_inches="tight")
     pl.show()
 
-    save_wavfile(out_t, timestr)
+    if args.mode.endswith("mdn"):
+        save_wavfile(out_t_mdn_sample, timestr)
+    else:
+        save_wavfile(out_t, timestr)
 
 if __name__ == "__main__":
     
@@ -1306,7 +1310,7 @@ if __name__ == "__main__":
     parser.add_argument("-lr", "--learning_ratio", help="Ratio of learning to episode len [0.8]", default=0.8, type=float)
     parser.add_argument("-m", "--mode", help="Mode [ol_rls], one of " + str(ReservoirTest.modes.keys()), default = "ol_rls")
     parser.add_argument("-mt", "--multitau", dest="multitau", action="store_true",
-                        help="use multiple random time constants in reservoir, doesn't seem to work so well with EH [False]")
+                        help="Use multiple random time constants in reservoir, doesn't seem to work so well with EH [False]")
     parser.add_argument("-mc", "--mixcomps", help="Number of mixture components for mixture network [3]", type=int, default=3)
     parser.add_argument("-ndo", "--ndim_out", help="Number of output dimensions [1]", default=1, type=int)
     parser.add_argument("-ndi", "--ndim_in",  help="Number of input dimensions [1]",  default=1, type=int)
@@ -1315,6 +1319,8 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--seed", help="RNG seed [101]", default=101, type=int)
     parser.add_argument("-sf", "--scale_feedback", help="Global feedback strength (auto-regressive) [0.1]", default=0.1, type=float)
     parser.add_argument("-t", "--target", help="Target [MSO_s1], one of " + str(ReservoirTest.targets.keys()), default = "MSO_s1")
+    parser.add_argument("-tf", "--teacher_forcing", dest="teacher_forcing", action="store_true",
+                        help="Use teacher forcing during training [False]")
     
     args = parser.parse_args()
 

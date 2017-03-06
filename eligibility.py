@@ -1,4 +1,4 @@
-"""Basic elegibility traces for EH/CACLA learner"""
+"""smp_base: Basic elegibility traces for learnerEH"""
 
 import argparse
 import numpy as np

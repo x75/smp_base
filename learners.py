@@ -1,4 +1,5 @@
-"""smp_base: An online learner"""
+"""smp_base: learner class as robot specific model integrating supervised online prediction learners
+"""
 
 import sys, time
 
@@ -17,17 +18,12 @@ from eligibility import Eligibility
     
 # TODO
 # - make proper test case and compare with batch PCA
-# - implement APEX algorithm
+# - implement APEX algorithm?
 
 TWOPI_SQRT = np.sqrt(2*np.pi)
 
 def gaussian(m, s, x):
     return 1/(s*TWOPI_SQRT) * np.exp(-0.5*np.square((m-x)/s))
-
-# class utils(object):
-#     @classmethod
-#     def gaussian(m, s, x):
-#         return 1/(s*TWOPI_SQRT) * np.exp(-0.5*np.square((m-x)/s))
 
 class learnerConf():
     """Common parameters for exploratory Hebbian learners"""
