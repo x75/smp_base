@@ -1,4 +1,4 @@
-"""A leaky integrator rate-coded reservoir class"""
+"""smp_base: A leaky integrator rate-coded reservoir class"""
 
 # TODO
 # - FIXME: multiple timescales / tau
@@ -963,7 +963,7 @@ def save_wavfile(out_t, timestr):
         print "ImportError for scipy.io.wavfile"
         
 def main(args):
-    if ReservoirTest.modes[args.mode] == ReservoirTest.modes["ip"]:
+    if args.mode == "ip":
         test_ip(args)
         sys.exit()
 

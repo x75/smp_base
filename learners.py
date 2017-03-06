@@ -1,11 +1,12 @@
+"""smp_base: An online learner"""
+
+import sys, time
 
 import numpy as np
 import numpy.linalg as LA
 import scipy.linalg as sLA
-import sys, time
 
 import ConfigParser, ast
-# import configparser as ConfigParser
 
 from jpype import startJVM, getDefaultJVMPath, JPackage, shutdownJVM
 
@@ -255,7 +256,7 @@ class learnerReward(object):
         # Use history length 1 (Schreiber k=1), kernel width of 0.5 normalised units
         # learnerReward.piCalcC.initialise(40, 1, 0.5);
         # print "perf_pi_continuous", x
-        learnerReward.piCalcC.initialise(100, 1);
+        learnerReward.piCalcC.initialise(100, 1)
         # src = np.atleast_2d(x[0:-1]).T # start to end - 1
         # dst = np.atleast_2d(x[1:]).T # 1 to end
         # learnerReward.piCalcC.setObservations(src, dst)
@@ -844,7 +845,6 @@ if __name__ == "__main__":
         tl = TestLearner()
         print tl
         unittest.main()
-            
 
     else:
         import matplotlib.pylab as pl
