@@ -8,14 +8,15 @@ from std_msgs.msg import Float32, Float32MultiArray
 from smp_msgs.msg import reservoir
 
 class smp_thread(threading.Thread):
-    def __init__(self):
+    def __init__(self, loop_time = 0.1):
         # super init
         threading.Thread.__init__(self)
         self.name = str(self.__class__).split(".")[-1].replace("'>", "")
         signal.signal(signal.SIGINT, self.shutdown_handler)
         # print self.__class__
         # print "self.name", self.name
-        rospy.init_node(self.name, anonymous=True)
+        # 20170314: remove this from base smp_thread because is is NOT ros
+        # rospy.init_node(self.name, anonymous=True)
         # rospy.init_node(self.name, anonymous=False)
         # initialize pub sub
         self.pub_sub()
@@ -24,7 +25,7 @@ class smp_thread(threading.Thread):
 
         self.isrunning = True
         self.cnt_main = 0
-        self.loop_time = 0.1
+        self.loop_time = loop_time
 
     def pub_sub(self):
         self.sub = {}
@@ -50,16 +51,34 @@ class smp_thread(threading.Thread):
 
 
 class smp_thread_ros(smp_thread):
-    def __init__(self):
-        smp_thread.__init__(self)
-        self.pub_sub_local()
+    def __init__(self, loop_time = 0.1, pubs = {}, subs = {}):
+        """init args: pubs: dict with topic / [type,], subs: dict with topic / [type, callback]"""
+        smp_thread.__init__(self, loop_time = loop_time)
+        # now init ros node
+        rospy.init_node(self.name, anonymous=True)
+        # loop frequency / sampling rate
+        self.rate = rospy.Rate(1./self.loop_time)
+        # local pub / sub
+        self.default_queue_size_pub = 2
+        self.default_queue_size_sub = 2
+        if len(pubs) == 0 and len(subs) == 0:
+            self.pub_sub_local_legacy()
+        else:
+            self.pub_sub_local(pubs, subs)
         # print "smp_thread_ros pubs", self.pub
         # print "smp_thread_ros subs", self.sub
     def __del__(self):
         del self.pub
         del self.sub
 
-    def pub_sub_local(self):
+    def pub_sub_local(self, pubs = {}, subs = {}):
+        # pass
+        for k, v in pubs.items():
+            self.pub[k.replace("/", "_")] = rospy.Publisher(k, v[0], queue_size = self.default_queue_size_pub)
+        for k, v in subs.items():
+            self.sub[k.replace("/", "_")] = rospy.Subscriber(k, v[0], v[1])
+
+    def pub_sub_local_legacy(self):
         self.pub["motor"]         = rospy.Publisher("/motor", Float32MultiArray)
         # learning signals
         # FIXME: change these names to /learner/...
@@ -183,7 +202,8 @@ class smp_thread_ros(smp_thread):
                 rospy.signal_shutdown("ending")
                 print("ending")
             
-            time.sleep(self.loop_time)
+            # time.sleep(self.loop_time)
+            self.rate.sleep()
 
 # class Terminator(object):
 #     def __init__(self):

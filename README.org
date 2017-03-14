@@ -21,7 +21,7 @@ occasion of sharing the smp_sphero code [fn:1].
 |                | that demonstrates basic use of the class. It can definitely be simplified (WiP)           |
 | learners.py    | this model embeds the underlying adaptive model into the sensorimotor context             |
 | eligibility.py | basic eligibility windows used in a variant of learning rules                             |
-| smp_thread.py  | thread wrapper that provides constant dt run loop and asynchronous sensor callbacks       |
+| smp\_thread.py | thread wrapper that provides constant dt run loop and asynchronous sensor callbacks       |
 
 You could try and run 
 
