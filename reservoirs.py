@@ -26,17 +26,33 @@ from learners import GHA
 
 ############################################################
 # utility functions
+def create_matrix_sparse_random(rows = 2, cols = 2, density = 0.1, dist = "normal"):
+    m = spa.rand(rows, cols, density)
+    m = m.todense()
+    validx = m != 0
+    valtmp = m[validx]
+    # print "validx", validx.shape
+    # print "m", m[validx]#.shape
+    if dist == "normal":
+        valtmp_rnd = np.random.normal(0,   1, size=(valtmp.shape[1], ))
+    elif dist == "uniform":
+        valtmp_rnd = np.random.uniform(-1, 1, size=(valtmp.shape[1], ))
+    # why array?
+    m[validx] = valtmp_rnd
+    return np.array(m)
+
 def create_matrix_reservoir(N, p):
     """Create an NxN reservoir recurrence matrix with density p"""
-    M = spa.rand(N, N, p)
-    M = M.todense()
-    tmp_idx = M != 0
-    tmp = M[tmp_idx]
-    tmp_r = np.random.normal(0, 1, size=(tmp.shape[1],))
-    M[tmp_idx] = tmp_r
-    # return dense representation
-    return np.array(M).copy()
-    # return spa.bsr_matrix(M)
+    # M = spa.rand(N, N, p)
+    # M = M.todense()
+    # tmp_idx = M != 0
+    # tmp = M[tmp_idx]
+    # tmp_r = np.random.normal(0, 1, size=(tmp.shape[1],))
+    # M[tmp_idx] = tmp_r
+    # # return dense representation
+    # return np.array(M).copy()
+    # # return spa.bsr_matrix(M)
+    return create_matrix_sparse_random(N, N, p, dist = "normal")
 
 def normalize_spectral_radius(M, g):
     """Normalize the spectral radius of matrix M to g"""
@@ -56,19 +72,20 @@ def normalize_spectral_radius(M, g):
 
 ################################################################################
 # input matrix creation
-def res_input_matrix_random_sparse(idim = 1, odim = 1, sparsity=0.1):
+def res_input_matrix_random_sparse(idim = 1, odim = 1, density=0.1):
     """create a sparse input matrix"""
-    p_wi = sparsity
-    wi_ = spa.rand(odim, idim, p_wi)
-    # print "sparse wi", wi_
-    wi = wi_.todense()
-    tmp_idx = wi != 0
-    tmp = wi[tmp_idx]
-    # tmp_r = np.random.normal(0, 1, size=(tmp.shape[1],))
-    tmp_r = np.random.uniform(-1, 1, size=(tmp.shape[1],))
-    wi[tmp_idx] = tmp_r
-    # return dense repr
-    return np.asarray(wi)
+    # p_wi = density
+    # wi_ = spa.rand(odim, idim, p_wi)
+    # # print "sparse wi", wi_
+    # wi = wi_.todense()
+    # tmp_idx = wi != 0
+    # tmp = wi[tmp_idx]
+    # # tmp_r = np.random.normal(0, 1, size=(tmp.shape[1],))
+    # tmp_r = np.random.uniform(-1, 1, size=(tmp.shape[1],))
+    # wi[tmp_idx] = tmp_r
+    # # return dense repr
+    # return np.asarray(wi)
+    return create_matrix_sparse_random(odim, idim, density, dist = "uniform")
 
 def res_input_matrix_disjunct_proj(idim = 1, odim = 1):
     """create an input matrix that projects inputs onto disjunct regions of hidden space"""
@@ -240,7 +257,8 @@ class Reservoir(object):
         # scale gain to spectral radius lambda
         self.scale = 1.0/np.sqrt(self.p*self.N)
         # reservoir connection matrix
-        self.M = create_matrix_reservoir(self.N, self.p)
+        # self.M = create_matrix_reservoir(self.N, self.p)
+        self.M = create_matrix_sparse_random(self.N, self.N, self.p)
 
         normalize_spectral_radius(self.M, self.g)
         self.M = spa.csr_matrix(self.M)
@@ -254,7 +272,8 @@ class Reservoir(object):
         # readout feedback term
         self.output_num = output_num
         self.wf_amp = feedback_scale
-        self.wf = np.random.uniform(-self.wf_amp, self.wf_amp, (self.N, self.output_num))
+        # self.wf = np.random.uniform(-self.wf_amp, self.wf_amp, (self.N, self.output_num))
+        self.wf = np.random.normal(0, self.wf_amp, (self.N, self.output_num))
         # outputs and readout weight matrix
         self.wo = np.zeros((self.N, self.output_num));
 
@@ -1100,16 +1119,16 @@ def main(args):
     insize = args.ndim_in
     outsize = args.ndim_out
     mixcomps = args.mixcomps
+    out_t_mdn_sample = np.zeros(shape=(outsize, episode_len))
     if args.mode == "ol_force_mdn":
         outsize_ = outsize * mixcomps * 3
-        out_t_mdn_sample = np.zeros(shape=(outsize, episode_len))
     else:
         outsize_ = outsize
     # for feedback
     percent_factor = 1./(episode_len/100.)
-    feedback_scale = args.scale_feedback
     alpha = 1.0
     input_scale = 2.0
+    feedback_scale = args.scale_feedback
     g = 1.5
     tau = 0.025
     if args.mode.endswith("mdn"):
@@ -1207,14 +1226,17 @@ def main(args):
         # loop over timesteps        
         for j in range(episode_len):
 
-            if args.mode.endswith("mdn"):
-                inputs = out_t_mdn_sample[:,[j-1]]
-            else:
-                inputs = out_t[:,[j-1]]
-                
             # teacher forcing
             if args.teacher_forcing and j < testing:
                 inputs = ds_real[:,[j-1]] # .reshape((insize, 1))
+            elif args.feedback_only:
+                inputs = np.zeros((args.ndim_in, 1))
+            else:
+                if args.mode.endswith("mdn"):
+                    inputs = out_t_mdn_sample[:,[j-1]]
+                else:
+                    inputs = out_t[:,[j-1]]
+            # target
             target = ds_real[:,[j]]
             
             # save network state
@@ -1290,7 +1312,7 @@ def main(args):
             wo_t[:,:,j] = res.wo
             for k in range(outsize_):
                 wo_t_norm[k,j] = LA.norm(wo_t[:,k,j])
-            
+
             # print "state", res.x
             if j > washout and (j+1) % 1000 == 0:
                 # # old style
@@ -1306,8 +1328,9 @@ def main(args):
                 rpdata = (ds_real, out_t, out_t_mdn_sample, r_t, perf_t, loss_t, wo_t_norm, dw_t_norm)
                 rp.plot_data(args = args, data = rpdata, incr = j, lr = lr, testing = testing)
 
-    # print "perf_t.shape", perf_t.shape
-
+    # FIXME: if testing
+    # compute performance for testing: MSE, freq match without phase
+    
     # final plot
     pl.ioff()
 
@@ -1337,10 +1360,12 @@ if __name__ == "__main__":
     parser.add_argument("-pi", "--plot_interval",  help="Time step interval at which to update plot [1000]",  default=1000, type=int)
     parser.add_argument("-rs", "--ressize", help="Reservoir (hidden layer) size [300]", default=300, type=int)
     parser.add_argument("-s", "--seed", help="RNG seed [101]", default=101, type=int)
-    parser.add_argument("-sf", "--scale_feedback", help="Global feedback strength (auto-regressive) [0.1]", default=0.1, type=float)
+    parser.add_argument("-sf", "--scale_feedback", help="Global feedback strength (auto-regressive) [2.0]", default=2.0, type=float)
     parser.add_argument("-t", "--target", help="Target [MSO_s1], one of " + str(ReservoirTest.targets.keys()), default = "MSO_s1")
     parser.add_argument("-tf", "--teacher_forcing", dest="teacher_forcing", action="store_true",
                         help="Use teacher forcing during training [False]")
+    parser.add_argument("-fo", "--feedback_only", dest="feedback_only", action="store_true",
+                        help="Use only the global output feedback [False]")
     
     args = parser.parse_args()
 
