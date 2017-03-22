@@ -1131,6 +1131,7 @@ def main(args):
     feedback_scale = args.scale_feedback
     g = 1.5
     tau = 0.025
+    tau = 0.01
     if args.mode.endswith("mdn"):
         # alpha = 100.0
         # input_scale = 1.0
