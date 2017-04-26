@@ -14,7 +14,12 @@ dynamics and use the models to compute future actions.
 This repository is in an early stages of release which I push on the
 occasion of sharing the smp_sphero code [fn:1].
 
-** reservoir lib
+New idea for structure:
+ - models: fit/predict (offline), fitpredict (online)
+ - sensorimotor loops
+ - data and logging
+
+** Reservoir lib
 
 |----------------+-------------------------------------------------------------------------------------------|
 | reservoirs.py  | contains Reservoir class, LearningRules class, a  few utility functions and a main method |
