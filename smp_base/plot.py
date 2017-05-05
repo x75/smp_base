@@ -33,17 +33,28 @@ return figure handle
             
     return fig
 
-def timeseries(ax, data):
+def timeseries(ax, data, **kwargs):
     """timeseries plot"""
     # style params
-    ax.plot(data, alpha = 0.5)
+    if kwargs.has_key('marker'):
+        marker = kwargs['marker']
+    else:
+        marker = 'None'
+    if kwargs.has_key('linestyle'):
+        linestyle = kwargs['linestyle']
+    else:
+        linestyle = 'solid'
+    if kwargs.has_key('ordinate'):
+        ax.plot(kwargs['ordinate'], data, alpha = 0.5, marker = marker, linestyle = linestyle)
+    else:
+        ax.plot(data, alpha = 0.5, marker = marker, linestyle = linestyle)
 
-def histogram(ax, data):
+def histogram(ax, data, **kwargs):
     """histogram plot"""
     # style params
     ax.hist(data, alpha = 0.5)
 
-def rp_timeseries_embedding(ax, data):
+def rp_timeseries_embedding(ax, data, **kwargs):
     """recurrence plot"""
     emb_del = 1
     emb_dim = 10
