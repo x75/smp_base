@@ -30,6 +30,7 @@ return figure handle
         for col in range(cols):
             axes[-1].append(fig.add_subplot(gs[row, col]))
     # print "fig.axes", fig.axes
+    plt.subplots_adjust(wspace=0, hspace = 0.3)
             
     return fig
 
@@ -52,7 +53,7 @@ def timeseries(ax, data, **kwargs):
 def histogram(ax, data, **kwargs):
     """histogram plot"""
     # style params
-    ax.hist(data, alpha = 0.5)
+    ax.hist(data, bins = data.shape[0]/20, alpha = 0.5)
 
 def rp_timeseries_embedding(ax, data, **kwargs):
     """recurrence plot"""
