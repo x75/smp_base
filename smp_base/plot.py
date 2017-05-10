@@ -53,7 +53,8 @@ def timeseries(ax, data, **kwargs):
 def histogram(ax, data, **kwargs):
     """histogram plot"""
     # style params
-    ax.hist(data, bins = data.shape[0]/20, alpha = 0.5)
+    ax.hist(data, bins = int(np.log(data.shape[0]/20)), alpha = 0.5)
+    ax.set_yscale('log')
 
 def rp_timeseries_embedding(ax, data, **kwargs):
     """recurrence plot"""
