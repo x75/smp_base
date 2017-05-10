@@ -13,6 +13,12 @@ import numpy as np
 
 from pyunicorn.timeseries import RecurrencePlot
 
+import seaborn as sns
+
+import pandas as pd
+from pandas.tools.plotting import scatter_matrix
+
+
 def makefig(rows = 1, cols = 1):
     """create figure and subplot structure
 
@@ -72,6 +78,45 @@ def rp_timeseries_embedding(ax, data, **kwargs):
     ax.pcolormesh(xs, ys, plotdata, cmap=plt.get_cmap("Oranges"))
     ax.set_xlabel("$n$")
     ax.set_ylabel("$n$")
+
+# visualization of multi-dimensional data
+# check
+# smq/plot
+# playground
+# infth foo
+# smp/plot
+# evoplast
+# actinf: has dimstack etc ...
+# ...? 
+def histogramnd(ax, data, **kwargs):
+    scatter_data_raw  = data
+    scatter_data_cols = ["x_%d" % (i,) for i in range(data.shape[1])]
+    df = pd.DataFrame(scatter_data_raw, columns=scatter_data_cols)
+
+    plot_scattermatrix(df, ax = None)
+
+def plot_scattermatrix(df, **kwargs):
+    """plot a scattermatrix of dataframe df"""
+    if df is None:
+        print "plot_scattermatrix: no data passed"
+        return
         
+    # df = pd.DataFrame(X, columns=['x1_t', 'x2_t', 'x1_tptau', 'x2_tptau', 'u_t'])
+    # scatter_data_raw = np.hstack((np.array(Xs), np.array(Ys)))
+    # scatter_data_raw = np.hstack((Xs, Ys))
+    # print "scatter_data_raw", scatter_data_raw.shape
+    
+    plt.ioff()
+    # df = pd.DataFrame(scatter_data_raw, columns=["x_%d" % i for i in range(scatter_data_raw.shape[1])])
+    sm = scatter_matrix(df, ax = kwargs['ax'], alpha=0.2, figsize=(10, 10), diagonal='hist')
+    print type(sm), sm.shape, sm[0,0]
+    # fig = sm[0,0].get_figure()
+    # if SAVEPLOTS:
+    # fig.savefig("fig_%03d_scattermatrix.pdf" % (fig.number), dpi=300)
+    # fig.show()
+    # plt.show()
+    
+    
+            
 if __name__ == "__main__":
     fig = makefig(2, 3)
