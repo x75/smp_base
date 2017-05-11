@@ -82,18 +82,43 @@ def rp_timeseries_embedding(ax, data, **kwargs):
 # visualization of multi-dimensional data
 # check
 # smq/plot
-# playground
-# infth foo
-# smp/plot
+# smp/doc/thesis_matrix
+# smp/im/im_quadrotor_plot
+# smp/playground
+# smp/infth
+# smp/plot?
+# smp/actinf: has dimstack etc ...
 # evoplast
-# actinf: has dimstack etc ...
 # ...? 
 def histogramnd(ax, data, **kwargs):
     scatter_data_raw  = data
     scatter_data_cols = ["x_%d" % (i,) for i in range(data.shape[1])]
-    df = pd.DataFrame(scatter_data_raw, columns=scatter_data_cols)
 
-    plot_scattermatrix(df, ax = None)
+    # prepare dataframe
+    df = pd.DataFrame(scatter_data_raw, columns=scatter_data_cols)
+        
+    g = sns.PairGrid(df)
+    # g.map_diag(plt.hist)
+    g.map_diag(sns.kdeplot)
+    g.map_offdiag(plt.hexbin, cmap="gray", gridsize=30, bins="log");
+
+    # print "dir(g)", dir(g)
+    # print g.diag_axes
+    # print g.axes
+    
+    # for i in range(data.shape[1]):
+    #     for j in range(data.shape[1]): # 1, 2; 0, 2; 0, 1
+    #         if i == j:
+    #             continue
+    #         # column gives x axis, row gives y axis, thus need to reverse the selection for plotting goal
+    #         # g.axes[i,j].plot(df["%s%d" % (self.cols_goal_base, j)], df["%s%d" % (self.cols_goal_base, i)], "ro", alpha=0.5)
+    #         g.axes[i,j].plot(df["x_%d" % (j,)], df["x_%d" % (i,)], "ro", alpha=0.5)
+                
+    plt.show()
+
+    
+    # run sns scattermatrix on dataframe
+    # plot_scattermatrix(df, ax = None)
 
 def plot_scattermatrix(df, **kwargs):
     """plot a scattermatrix of dataframe df"""
