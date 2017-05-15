@@ -45,7 +45,8 @@ class measH(meas):
     def step(self, x):
         """Assume observations in rows, variables in columns"""
         # print "%s step: x = %s" % (self.__class__.__name__, x.shape)
-        return compute_entropy(src = x)
+        # return compute_entropy(src = x)
+        return infth_mi_multivariate({'X': x, 'Y': x})
 
 
 class measMI(meas):
@@ -55,7 +56,7 @@ class measMI(meas):
     def step(self, x, y):
         """Assume observations in rows, variables in columns"""
         # print "%s step: x = %s, y = %s" % (self.__class__.__name__, x.shape, y.shape)
-        return compute_mutual_information(src = x, dest = y)
+        return compute_mutual_information(src = x, dst = y)
 
 def compute_entropy(src):
     if src.shape[1] > 1:
@@ -83,11 +84,59 @@ def compute_entropy_multivariate(src):
     ent.setObservations(src)
     h = ent.computeAverageLocalOfObservations()
     return h
+
+def prepare_data_and_attributes(data, check_shape = False): # False
+    # prepare data and attributes
+    src = np.atleast_2d(data["X"])
+    dst = np.atleast_2d(data["Y"])
+    # check orientation
+    if check_shape:
+        if src.shape[0] < src.shape[1]:
+            src = src.T
+        if dst.shape[0] < dst.shape[1]:
+            dst = dst.T
+    return src, dst
     
-def compute_mutual_information(src, dest):
+def infth_mi_multivariate(data, estimator = "kraskov1", normalize = True):
+    """compute total scalar MI multivariate
+    (from playground/infth_feature_relevance)"""
+    # init class and instance
+    # self.mimvCalcClass = JPackage("infodynamics.measures.continuous.kraskov").MutualInfoCalculatorMultiVariateKraskov1
+    mimvCalcClass = JPackage("infodynamics.measures.continuous.kraskov").MutualInfoCalculatorMultiVariateKraskov2        
+    # mimvCalcClass = JPackage("infodynamics.measures.continuous.kernel").MutualInfoCalculatorMultiVariateKernel
+    mimvCalc      = mimvCalcClass()
+    # set properties
+    mimvCalc.setProperty("NORMALISE", "true")
+    # mimvCalc.setProperty("PROP_TIME_DIFF", 0)
+
+    # prepare data and attributes
+    src, dst = prepare_data_and_attributes(data)
+    # src_ = src.copy()
+    # src = dst.copy()
+
+    # pl.hist(src[0], bins=255)
+    # pl.show()
+        
+        
+    print "mimv shapes", src.shape, dst.shape
+    print "mimv dtypes", src.dtype, dst.dtype
+    dim_src, dim_dst = src.shape[1], dst.shape[1]
+        
+    # compute stuff
+    # mimvCalc.initialise()
+    mimvCalc.initialise(dim_src, dim_dst)
+    mimvCalc.setObservations(src, dst)
+    # the average global MI between all source channels and all destination channels
+    mimv_avg = mimvCalc.computeAverageLocalOfObservations()
+    return mimv_avg
+
+# FIXME: use this one from infth_feature_relevance
+# def infth_mi_multivariate(self, data, estimator = "kraskov1", normalize = True):
+def compute_mutual_information(src, dst, k = 0, tau = 1):
     """taken from smp/im/im_quadrotor_plot.py
 
     computes a matrix of pairwise MI for all pairs of src_i,dst_j
+    (elementwise)
     """
     
     # src - dest is symmetric for MI but hey ...
@@ -95,8 +144,8 @@ def compute_mutual_information(src, dest):
     # from smp.infth import init_jpype, ComplexityMeas
 
     # init_jpype()
-    
-    numsrcvars, numdestvars = (src.shape[1], dest.shape[1])
+    assert len(src.shape) == 2 and len(dst.shape) == 2, "src %s, dst %s" % (src.shape, dst.shape)
+    numsrcvars, numdestvars = (src.shape[1], dst.shape[1])
     
     # miCalcClassC = JPackage("infodynamics.measures.continuous.kernel").MutualInfoCalculatorMultiVariateKernel
     # miCalcClassC = JPackage("infodynamics.measures.continuous.kraskov").MutualInfoCalculatorMultiVariateKraskov1
@@ -111,15 +160,42 @@ def compute_mutual_information(src, dest):
 
     for m in range(numdestvars):
         for s in range(numsrcvars):
-            # print("m,s", m, s)
+            print("m,s", m, s)
 
             # print("ha", m, motor[:,[m]])
             miCalcC.initialise() # sensor.shape[1], motor.shape[1])
-            # miCalcC.setObservations(src[:,s], dest[:,m])
-            miCalcC.setObservations(src[:,[s]], dest[:,[m]])
+            # miCalcC.setObservations(src[:,s], dst[:,m])
+            print "src[%s] = %s, dst[%s] = %s" % (s, src[:,[s]].shape, m, dst[:,[m]].shape)
+            miCalcC.setObservations(src[:,[s]], dst[:,[m]])
             mi = miCalcC.computeAverageLocalOfObservations()
             # print("mi", mi)
             measmat[m,s] = mi
 
     return measmat
-        
+
+def compute_information_distance(src, dst):
+    """check how 1 - mi = infodist via joint H"""
+    mi = compute_mutual_information(src, dst)
+    return 1 - (mi / infth_mi_multivariate(data = {'X': src, 'Y': dst}))
+
+def test_compute_mutual_information():
+    N = 1000
+    src = np.arange(N)
+    dst = np.sin(2.0 * src / float(N))
+    src = np.atleast_2d(src).T
+    dst = np.atleast_2d(dst).T
+    # stack
+    src = np.hstack((src, dst))
+    dst = src.copy()
+    print "src.sh = %s, dst.sh = %s" % (src.shape, dst.shape)
+    jh  = infth_mi_multivariate({'X': src, 'Y': dst})
+    result = compute_mutual_information(src, dst)
+    print "result = %s/%s" % (result,result/jh)
+    print "result = %s" % (result,)
+
+if __name__ == '__main__':
+    import argparse
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument()
+
+    test_compute_mutual_information()
