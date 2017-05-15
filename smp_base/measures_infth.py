@@ -157,7 +157,6 @@ def compute_mutual_information(src, dst, k = 0, tau = 1):
 
     measmat  = np.zeros((numdestvars, numsrcvars))
 
-
     for m in range(numdestvars):
         for s in range(numsrcvars):
             print("m,s", m, s)
@@ -177,6 +176,88 @@ def compute_information_distance(src, dst):
     """check how 1 - mi = infodist via joint H"""
     mi = compute_mutual_information(src, dst)
     return 1 - (mi / infth_mi_multivariate(data = {'X': src, 'Y': dst}))
+
+
+def compute_transfer_entropy(src, dst):
+    """taken from smp/im/im_quadrotor_plot.py"""
+    # from jpype import startJVM, isJVMStarted, getDefaultJVMPath, JPackage, shutdownJVM, JArray, JDouble, attachThreadToJVM
+    # from smp.infth import init_jpype, ComplexityMeas
+
+    # init_jpype()
+
+    numsrcvars, numdstvars = (src.shape[1], dst.shape[1])
+    
+    # teCalcClassC = JPackage("infodynamics.measures.continuous.kraskov").TransferEntropyCalculatorMultiVariateKraskov
+    teCalcClassC = JPackage("infodynamics.measures.continuous.kraskov").TransferEntropyCalculatorKraskov
+    # teCalcClassC = JPackage("infodynamics.measures.continuous.kernel").TransferEntropyCalculatorKernel
+    teCalcC = teCalcClassC()
+    teCalcC.setProperty("NORMALISE", "true")
+    # k is destination embedding length
+    teCalcC.setProperty(teCalcC.K_PROP_NAME, "1")
+    # teCalcC.setProperty("k", "100")
+    # l is source embedding length
+    teCalcC.setProperty(teCalcC.L_PROP_NAME, "1")
+    teCalcC.setProperty(teCalcC.DELAY_PROP_NAME, "0")
+    # teCalcC.setProperty(teCalcC.PROP_AUTO_EMBED_METHOD, "AUTO_EMBED_METHOD_NONE")
+    # print("teCalcClassC", teCalcClassC, "teCalcC", teCalcC)
+
+    # matrix of measures
+    measmat  = np.zeros((numdstvars, numsrcvars))
+
+    # loop over all combinations
+    for m in range(numdstvars):
+        for s in range(numsrcvars):
+            # print("m,s", m, s)
+            # teCalcC.initialise()
+            teCalcC.initialise(1, 1, 1, 1, 0)
+            # teCalcC.initialise(1, 1, 1, 1, 1, 1, 0)
+            teCalcC.setObservations(src[:,s], dst[:,m])
+            te = teCalcC.computeAverageLocalOfObservations()
+            # tes = teCalcC.computeSignificance(10)
+            # print("te", te)
+            measmat[m,s] = te
+
+    return measmat
+
+
+def compute_conditional_transfer_entropy(src, dst, cond):
+    
+
+    # from jpype import startJVM, isJVMStarted, getDefaultJVMPath, JPackage, shutdownJVM, JArray, JDouble, attachThreadToJVM
+    # from smp.infth import init_jpype, ComplexityMeas
+
+    # init_jpype()
+
+    numsrcvars, numdstvars, numcondvars = (src.shape[1], dst.shape[1], cond.shape[1])
+
+    cteCalcClassC = JPackage("infodynamics.measures.continuous.kraskov").ConditionalTransferEntropyCalculatorKraskov
+    # teCalcClassC = JPackage("infodynamics.measures.continuous.kernel").TransferEntropyCalculatorKernel
+    cteCalcC = cteCalcClassC()
+    cteCalcC.setProperty("NORMALISE", "true")
+    # k is destination embedding length
+    cteCalcC.setProperty(cteCalcC.K_PROP_NAME, "1")
+    # teCalcC.setProperty("k", "100")
+    # l is source embedding length
+    cteCalcC.setProperty(cteCalcC.L_PROP_NAME, "1")
+    cteCalcC.setProperty(cteCalcC.DELAY_PROP_NAME, "0")
+    # teCalcC.setProperty(teCalcC.PROP_AUTO_EMBED_METHOD, "AUTO_EMBED_METHOD_NONE")
+    # print("teCalcClassC", teCalcClassC, "teCalcC", teCalcC)
+
+    measmat  = np.zeros((numdstvars, numsrcvars))
+
+    for m in range(numdstvars):
+        for s in range(numsrcvars):
+            # print("m,s", m, s)
+            # cteCalcC.initialise(1, 1, 1, 1, 0, [1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1], [0, 0, 0, 0, 0, 0])
+            cteCalcC.initialise(1, 1, 1, 1, 0, [1] * numcondvars, [1] * numcondvars, [0] * numcondvars)
+            cteCalcC.setObservations(src[:,s], dst[:,m], cond)
+            cte = cteCalcC.computeAverageLocalOfObservations()
+            # tes = teCalcC.computeSignificance(10)
+            # print("cte", cte)
+            measmat[m,s] = cte
+
+    return measmat
+
 
 def test_compute_mutual_information():
     N = 1000

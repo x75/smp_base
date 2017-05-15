@@ -36,7 +36,9 @@ return figure handle
         for col in range(cols):
             axes[-1].append(fig.add_subplot(gs[row, col]))
     # print "fig.axes", fig.axes
-    plt.subplots_adjust(wspace=0, hspace = 0.3)
+    plt.subplots_adjust(wspace=0.0, hspace = 0.0)
+    # plt.subplots_adjust(wspace=0.1, hspace = 0.3)
+    # plt.subplots_adjust(wspace=0.1, hspace = 0.3)
             
     return fig
 
