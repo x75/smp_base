@@ -19,7 +19,7 @@ import pandas as pd
 from pandas.tools.plotting import scatter_matrix
 
 
-def makefig(rows = 1, cols = 1):
+def makefig(rows = 1, cols = 1, wspace = 0.0, hspace = 0.0):
     """create figure and subplot structure
 
 return figure handle
@@ -36,7 +36,7 @@ return figure handle
         for col in range(cols):
             axes[-1].append(fig.add_subplot(gs[row, col]))
     # print "fig.axes", fig.axes
-    plt.subplots_adjust(wspace=0.0, hspace = 0.0)
+    plt.subplots_adjust(wspace = wspace, hspace = hspace)
     # plt.subplots_adjust(wspace=0.1, hspace = 0.3)
     # plt.subplots_adjust(wspace=0.1, hspace = 0.3)
             
@@ -44,19 +44,29 @@ return figure handle
 
 def timeseries(ax, data, **kwargs):
     """timeseries plot"""
-    # style params
+    # marker style
     if kwargs.has_key('marker'):
         marker = kwargs['marker']
     else:
         marker = 'None'
+        
+    # linestyle
     if kwargs.has_key('linestyle'):
         linestyle = kwargs['linestyle']
     else:
         linestyle = 'solid'
-    if kwargs.has_key('ordinate'):
-        ax.plot(kwargs['ordinate'], data, alpha = 0.5, marker = marker, linestyle = linestyle)
+
+    # labels
+    if kwargs.has_key('label'):
+        label = kwargs['label']
     else:
-        ax.plot(data, alpha = 0.5, marker = marker, linestyle = linestyle)
+        label = None
+
+    # explicit xaxis
+    if kwargs.has_key('ordinate'):
+        ax.plot(kwargs['ordinate'], data, alpha = 0.5, marker = marker, linestyle = linestyle, label = label)
+    else:
+        ax.plot(data, alpha = 0.5, marker = marker, linestyle = linestyle, label = label)
 
 def histogram(ax, data, **kwargs):
     """histogram plot"""

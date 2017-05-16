@@ -12,7 +12,7 @@ import numpy as np
 
 from smp_base.measures import meas
 
-from jpype import getDefaultJVMPath, isJVMStarted, startJVM, attachThreadToJVM
+from jpype import getDefaultJVMPath, isJVMStarted, startJVM, attachThreadToJVM, isThreadAttachedToJVM
 from jpype import JPackage
 
 def init_jpype(jarloc = None, jvmpath = None):
@@ -58,32 +58,13 @@ class measMI(meas):
         # print "%s step: x = %s, y = %s" % (self.__class__.__name__, x.shape, y.shape)
         return compute_mutual_information(src = x, dst = y)
 
-def compute_entropy(src):
-    if src.shape[1] > 1:
-        return compute_entropy_multivariate(src)
-    else:
-        return compute_entropy_univariate(src)
-
-def compute_entropy_univariate(src):
-    ent_class = JPackage('infodynamics.measures.continuous.kernel').EntropyCalculatorKernel
-    ent = ent_class()
-    ent.setProperty("NORMALISE", "true")
-    ent.initialise(0.1)
-    ent.setObservations(src)
-    h = ent.computeAverageLocalOfObservations()
-    return h
-
-def compute_entropy_multivariate(src):
-    # ent_class = JPackage('infodynamics.measures.continuous.kernel').EntropyCalculatorMultiVariateKernel
-    ent_class = JPackage('infodynamics.measures.continuous.gaussian').EntropyCalculatorMultiVariateGaussian
-    # ent_class = JPackage('infodynamics.measures.continuous.kozachenko').EntropyCalculatorMultiVariateKozachenko
-    ent = ent_class()
-    # ent.setProperty("NORMALISE", "true")
-    # ent.initialise(src.shape[1], 0.1)
-    ent.initialise(src.shape[1])
-    ent.setObservations(src)
-    h = ent.computeAverageLocalOfObservations()
-    return h
+class dec_compute_infth(object):
+    def __call__(self, f):
+        def wrap(*args, **kwargs):
+            assert isJVMStarted() and isThreadAttachedToJVM(), "Either JVM not started or thread not attached. Hm."
+            return f(*args, **kwargs)
+            
+        return wrap
 
 def prepare_data_and_attributes(data, check_shape = False): # False
     # prepare data and attributes
@@ -96,17 +77,61 @@ def prepare_data_and_attributes(data, check_shape = False): # False
         if dst.shape[0] < dst.shape[1]:
             dst = dst.T
     return src, dst
-    
-def infth_mi_multivariate(data, estimator = "kraskov1", normalize = True):
+        
+################################################################################
+# wrap these into a thin class
+@dec_compute_infth()
+def compute_entropy(src):
+    if src.shape[1] > 1:
+        return compute_entropy_multivariate(src)
+    else:
+        return compute_entropy_univariate(src)
+
+@dec_compute_infth()
+def compute_entropy_univariate(src):
+    ent_class = JPackage('infodynamics.measures.continuous.kernel').EntropyCalculatorKernel
+    ent = ent_class()
+    ent.setProperty("NORMALISE", "true")
+    ent.initialise(0.1)
+    ent.setObservations(src)
+    h = ent.computeAverageLocalOfObservations()
+    return h
+
+@dec_compute_infth()
+def compute_entropy_multivariate(src):
+    # ent_class = JPackage('infodynamics.measures.continuous.kernel').EntropyCalculatorMultiVariateKernel
+    # ent_class = JPackage('infodynamics.measures.continuous.gaussian').EntropyCalculatorMultiVariateGaussian
+    # ent_class = JPackage('infodynamics.measures.continuous.kozachenko').EntropyCalculatorMultiVariateKozachenko
+    ent_class = JPackage('infodynamics.measures.continuous.kraskov1').MutualInfoCalculatorMultiVariateKraskov1
+    ent = ent_class()
+    # ent.setProperty("NORMALISE", "true")
+    # ent.initialise(src.shape[1], 0.1)
+    ent.initialise(src.shape[1], src.shape[1])
+    ent.setObservations(src, src)
+    h = ent.computeAverageLocalOfObservations()
+    return h
+
+def compute_mi_multivariate(*args, **kwargs):
+    return infth_mi_multivariate(data = kwargs['data'], estimator = kwargs['estimator'], normalize = kwargs['normalize'])
+
+@dec_compute_infth()
+def infth_mi_multivariate(data = {}, estimator = "kraskov1", normalize = True):
     """compute total scalar MI multivariate
     (from playground/infth_feature_relevance)"""
+    print "infth_mi_multivariate estimator = %s" % estimator
     # init class and instance
-    # self.mimvCalcClass = JPackage("infodynamics.measures.continuous.kraskov").MutualInfoCalculatorMultiVariateKraskov1
-    mimvCalcClass = JPackage("infodynamics.measures.continuous.kraskov").MutualInfoCalculatorMultiVariateKraskov2        
-    # mimvCalcClass = JPackage("infodynamics.measures.continuous.kernel").MutualInfoCalculatorMultiVariateKernel
+    if estimator == 'kraskov1':
+        mimvCalcClass = JPackage("infodynamics.measures.continuous.kraskov").MutualInfoCalculatorMultiVariateKraskov1
+    elif estimator == 'kraskov2':
+        mimvCalcClass = JPackage("infodynamics.measures.continuous.kraskov").MutualInfoCalculatorMultiVariateKraskov2
+    elif estimator == 'kernel':
+        mimvCalcClass = JPackage("infodynamics.measures.continuous.kernel").MutualInfoCalculatorMultiVariateKernel
+
+    # instantiate
     mimvCalc      = mimvCalcClass()
+    
     # set properties
-    mimvCalc.setProperty("NORMALISE", "true")
+    mimvCalc.setProperty("NORMALISE", str(normalize).lower())
     # mimvCalc.setProperty("PROP_TIME_DIFF", 0)
 
     # prepare data and attributes
@@ -118,8 +143,8 @@ def infth_mi_multivariate(data, estimator = "kraskov1", normalize = True):
     # pl.show()
         
         
-    print "mimv shapes", src.shape, dst.shape
-    print "mimv dtypes", src.dtype, dst.dtype
+    print "infth_mi_multivariate src/dst shapes", src.shape, dst.shape
+    print "infth_mi_multivariate src/dst dtypes", src.dtype, dst.dtype
     dim_src, dim_dst = src.shape[1], dst.shape[1]
         
     # compute stuff
@@ -130,8 +155,27 @@ def infth_mi_multivariate(data, estimator = "kraskov1", normalize = True):
     mimv_avg = mimvCalc.computeAverageLocalOfObservations()
     return mimv_avg
 
+@dec_compute_infth()
+def compute_transfer_entropy_multivariate(src, dst, delay = 0):
+    temvCalcClass = JPackage("infodynamics.measures.continuous.kraskov").TransferEntropyCalculatorMultiVariateKraskov
+    temvCalc = temvCalcClass()
+
+    srcdim = src.shape[1]
+    dstdim = dst.shape[1]
+    k = 1
+    k_tau = 1
+    l = 1
+    l_tau = 1
+    # delay = 1 # param u in TE equations
+    
+    temvCalc.initialise(srcdim, dstdim, k, k_tau, l, l_tau, delay)
+    temvCalc.setObservations(src, dst)
+    temv = temvCalc.computeAverageLocalOfObservations()
+    return temv
+    
 # FIXME: use this one from infth_feature_relevance
 # def infth_mi_multivariate(self, data, estimator = "kraskov1", normalize = True):
+@dec_compute_infth()
 def compute_mutual_information(src, dst, k = 0, tau = 1):
     """taken from smp/im/im_quadrotor_plot.py
 
@@ -159,12 +203,12 @@ def compute_mutual_information(src, dst, k = 0, tau = 1):
 
     for m in range(numdestvars):
         for s in range(numsrcvars):
-            print("m,s", m, s)
+            print("compute_mutual_information m,s", m, s)
 
             # print("ha", m, motor[:,[m]])
             miCalcC.initialise() # sensor.shape[1], motor.shape[1])
             # miCalcC.setObservations(src[:,s], dst[:,m])
-            print "src[%s] = %s, dst[%s] = %s" % (s, src[:,[s]].shape, m, dst[:,[m]].shape)
+            print "compute_mutual_information src[%s] = %s, dst[%s] = %s" % (s, src[:,[s]].shape, m, dst[:,[m]].shape)
             miCalcC.setObservations(src[:,[s]], dst[:,[m]])
             mi = miCalcC.computeAverageLocalOfObservations()
             # print("mi", mi)
@@ -172,11 +216,13 @@ def compute_mutual_information(src, dst, k = 0, tau = 1):
 
     return measmat
 
+@dec_compute_infth()
 def compute_information_distance(src, dst):
     """check how 1 - mi = infodist via joint H"""
     mi = compute_mutual_information(src, dst)
     return 1 - (mi / infth_mi_multivariate(data = {'X': src, 'Y': dst}))
 
+@dec_compute_infth()
 def compute_transfer_entropy(src, dst):
     """taken from smp/im/im_quadrotor_plot.py"""
     # from jpype import startJVM, isJVMStarted, getDefaultJVMPath, JPackage, shutdownJVM, JArray, JDouble, attachThreadToJVM
@@ -190,24 +236,25 @@ def compute_transfer_entropy(src, dst):
     teCalcClassC = JPackage("infodynamics.measures.continuous.kraskov").TransferEntropyCalculatorKraskov
     # teCalcClassC = JPackage("infodynamics.measures.continuous.kernel").TransferEntropyCalculatorKernel
     teCalcC = teCalcClassC()
-    teCalcC.setProperty("NORMALISE", "true")
+    # teCalcC.setProperty("NORMALISE", "true")
     # k is destination embedding length
-    teCalcC.setProperty(teCalcC.K_PROP_NAME, "1")
+    # teCalcC.setProperty(teCalcC.K_PROP_NAME, "1")
     # teCalcC.setProperty("k", "100")
     # l is source embedding length
-    teCalcC.setProperty(teCalcC.L_PROP_NAME, "1")
-    teCalcC.setProperty(teCalcC.DELAY_PROP_NAME, "0")
+    # teCalcC.setProperty(teCalcC.L_PROP_NAME, "1")
+    # teCalcC.setProperty(teCalcC.DELAY_PROP_NAME, "0")
     # teCalcC.setProperty(teCalcC.PROP_AUTO_EMBED_METHOD, "AUTO_EMBED_METHOD_NONE")
     # print("teCalcClassC", teCalcClassC, "teCalcC", teCalcC)
 
     # matrix of measures
     measmat  = np.zeros((numdstvars, numsrcvars))
 
-    k = 1
+    # temporal embedding params
+    k = 10
     k_tau = 1
     l = 10
     l_tau = 1
-    delay = 0
+    delay = 1 # param u in TE equations
     
     # loop over all combinations
     for m in range(numdstvars):
@@ -224,14 +271,9 @@ def compute_transfer_entropy(src, dst):
 
     return measmat
 
-
+@dec_compute_infth()
 def compute_conditional_transfer_entropy(src, dst, cond):
-    
-
-    # from jpype import startJVM, isJVMStarted, getDefaultJVMPath, JPackage, shutdownJVM, JArray, JDouble, attachThreadToJVM
-    # from smp.infth import init_jpype, ComplexityMeas
-
-    # init_jpype()
+    """compute the conditional transfer entropy using jidt"""
 
     numsrcvars, numdstvars, numcondvars = (src.shape[1], dst.shape[1], cond.shape[1])
 
