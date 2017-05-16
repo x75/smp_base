@@ -177,7 +177,6 @@ def compute_information_distance(src, dst):
     mi = compute_mutual_information(src, dst)
     return 1 - (mi / infth_mi_multivariate(data = {'X': src, 'Y': dst}))
 
-
 def compute_transfer_entropy(src, dst):
     """taken from smp/im/im_quadrotor_plot.py"""
     # from jpype import startJVM, isJVMStarted, getDefaultJVMPath, JPackage, shutdownJVM, JArray, JDouble, attachThreadToJVM
@@ -204,12 +203,18 @@ def compute_transfer_entropy(src, dst):
     # matrix of measures
     measmat  = np.zeros((numdstvars, numsrcvars))
 
+    k = 1
+    k_tau = 1
+    l = 10
+    l_tau = 1
+    delay = 0
+    
     # loop over all combinations
     for m in range(numdstvars):
         for s in range(numsrcvars):
             # print("m,s", m, s)
             # teCalcC.initialise()
-            teCalcC.initialise(1, 1, 1, 1, 0)
+            teCalcC.initialise(k, k_tau, l, l_tau, delay)
             # teCalcC.initialise(1, 1, 1, 1, 1, 1, 0)
             teCalcC.setObservations(src[:,s], dst[:,m])
             te = teCalcC.computeAverageLocalOfObservations()
