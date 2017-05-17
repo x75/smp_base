@@ -62,17 +62,35 @@ def timeseries(ax, data, **kwargs):
     else:
         label = None
 
+    # axis title
+    if kwargs.has_key('title'):
+        title = kwargs['title']
+    else:
+        title = 'timeseries of %s-shaped data' % data.shape
+        
     # explicit xaxis
     if kwargs.has_key('ordinate'):
         ax.plot(kwargs['ordinate'], data, alpha = 0.5, marker = marker, linestyle = linestyle, label = label)
     else:
         ax.plot(data, alpha = 0.5, marker = marker, linestyle = linestyle, label = label)
 
+    ax.legend(fontsize = 6)
+    ax.title.set_text(title)
+    ax.title.set_fontsize(8.0)
+
 def histogram(ax, data, **kwargs):
     """histogram plot"""
     # style params
+    # axis title
+    if kwargs.has_key('title'):
+        title = kwargs['title']
+    else:
+        title = 'histogram of %s-shaped data, log-scale' % data.shape
+        
     ax.hist(data, bins = int(np.log(data.shape[0]/20)), alpha = 0.5)
     ax.set_yscale('log')
+    ax.title.set_text(title)
+    ax.title.set_fontsize(8.0)
 
 def rp_timeseries_embedding(ax, data, **kwargs):
     """recurrence plot"""
