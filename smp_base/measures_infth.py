@@ -111,8 +111,11 @@ def compute_entropy_multivariate(src):
     h = ent.computeAverageLocalOfObservations()
     return h
 
-def compute_mi_multivariate(*args, **kwargs):
-    return infth_mi_multivariate(data = kwargs['data'], estimator = kwargs['estimator'], normalize = kwargs['normalize'])
+# def compute_mi_multivariate(*args, **kwargs):
+#     return infth_mi_multivariate(data = kwargs['data'], estimator = kwargs['estimator'], normalize = kwargs['normalize'])
+
+def compute_mi_multivariate(data = {}, estimator = "kraskov1", normalize = True):
+    return infth_mi_multivariate(data = data, estimator = estimator, normalize = normalize)
 
 @dec_compute_infth()
 def infth_mi_multivariate(data = {}, estimator = "kraskov1", normalize = True):
@@ -203,7 +206,7 @@ def compute_mutual_information(src, dst, k = 0, tau = 1):
 
     for m in range(numdestvars):
         for s in range(numsrcvars):
-            print("compute_mutual_information m,s", m, s)
+            # print "compute_mutual_information dst[%d], src[%d]" % (m, s)
 
             # print("ha", m, motor[:,[m]])
             miCalcC.initialise() # sensor.shape[1], motor.shape[1])
