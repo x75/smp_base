@@ -6,16 +6,44 @@ measures_infth
 
 information theoretic measures measure things related to the multivariate entropy of some data
 
+TODO
+# sift, sort and clean-up input from
+#  - smp/smp/infth.py
+#  - smp/playground/infth_feature_relevance.py
+#  - smp/sequence/*.py
+#  - smp_sphero (was smp_infth)
+#  - evoplast/ep3.py
+#  - smp/infth
+#  - smp/infth/infth_homeokinesis_analysis_cont.py
+#  - smp/infth/infth_playground
+#  - smp/infth/infth_explore.py
+#  - smp/infth/infth_pointwise_plot.py
+#  - smp/infth/infth_measures.py: unfinished
+#  - smp/infth/infth_playground.py
+#  - smp/infth/infth_EH-2D.py
+#  - smp/infth/infth_EH-2D_clean.py
 """
 
+import sys
 import numpy as np
 
 from smp_base.measures import meas
 
-from jpype import getDefaultJVMPath, isJVMStarted, startJVM, attachThreadToJVM, isThreadAttachedToJVM
-from jpype import JPackage
+
+try:
+    from jpype import getDefaultJVMPath, isJVMStarted, startJVM, attachThreadToJVM, isThreadAttachedToJVM
+    from jpype import JPackage
+    HAVE_JPYPE = True
+except ImportError, e:
+    print "Couldn't import jpype, %s" % (e,)
+    HAVE_JPYPE = False
+    # sys.exit(1)
 
 def init_jpype(jarloc = None, jvmpath = None):
+    if not HAVE_JPYPE:
+        print "Cannot initialize jpype because it couldn't be imported. Make sure jpype is installed"
+        return
+    
     if jarloc is None:
         jarloc = "/home/src/QK/infodynamics-dist/infodynamics.jar"
 
@@ -58,9 +86,22 @@ class measMI(meas):
         # print "%s step: x = %s, y = %s" % (self.__class__.__name__, x.shape, y.shape)
         return compute_mutual_information(src = x, dst = y)
 
+class dec_compute_infth_soft(object):
+    def __call__(self, f):
+        def wrap(*args, **kwargs):
+            # assert HAVE_JPYPE
+            # assert isJVMStarted() and isThreadAttachedToJVM(), "Either JVM not started or thread not attached. Hm."
+            if HAVE_JPYPE:
+                return f(*args, **kwargs)
+            else:
+                return None
+            
+        return wrap
+    
 class dec_compute_infth(object):
     def __call__(self, f):
         def wrap(*args, **kwargs):
+            assert HAVE_JPYPE
             assert isJVMStarted() and isThreadAttachedToJVM(), "Either JVM not started or thread not attached. Hm."
             return f(*args, **kwargs)
             

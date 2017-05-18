@@ -9,12 +9,17 @@ import scipy.linalg as sLA
 
 import ConfigParser, ast
 
-from jpype import startJVM, getDefaultJVMPath, JPackage, shutdownJVM
-
-if "/home/src/QK/smp/dmps" not in sys.path:
-    sys.path.insert(0, "/home/src/QK/smp/dmps")
 
 from eligibility import Eligibility
+
+try:
+    from smp_base.measures_infth import init_jpype, dec_compute_infth_soft
+    from jpype import JPackage
+    init_jpype()
+    HAVE_JPYPE = True
+except ImportError, e:
+    print "Couldn't import init_jpype from measures_infth, make sure jpype is installed"
+    HAVE_JPYPE = False
     
 # TODO
 # - make proper test case and compare with batch PCA
@@ -153,35 +158,34 @@ class learnerIOSMem(learnerIOS):
         self.itae_ = np.zeros((self.len, self.odim)) # integral of time-weighted absolute error
         
 class learnerReward(object):
-    # information dynamics toolkit initialization
-    # jarLocation = "../../infodynamics-dist/infodynamics.jar"
-    jarLocation = "/home/src/QK/infodynamics-dist/infodynamics.jar"
-    startJVM(getDefaultJVMPath(), "-ea", "-Djava.class.path=" + jarLocation)
+    # infth stuff
+    
     # discretization base
     base = 1000
     basehalf = base/2
 
-    # calculation classes
-    piCalcClass = JPackage("infodynamics.measures.discrete").PredictiveInformationCalculatorDiscrete
-    piCalcD = piCalcClass(base,1)
+    if HAVE_JPYPE:
+        # calculation classes
+        piCalcClass = JPackage("infodynamics.measures.discrete").PredictiveInformationCalculatorDiscrete
+        piCalcD = piCalcClass(base,1)
 
-    # ais
-    aisCalcClassD = JPackage("infodynamics.measures.discrete").ActiveInformationCalculatorDiscrete
-    aisCalcD = aisCalcClassD(base,1)
+        # ais
+        aisCalcClassD = JPackage("infodynamics.measures.discrete").ActiveInformationCalculatorDiscrete
+        aisCalcD = aisCalcClassD(base,1)
 
-    # contiuous estimation
-    # piCalcClassC = JPackage("infodynamics.measures.continuous.kernel").MutualInfoCalculatorMultiVariateKernel
-    piCalcClassC = JPackage("infodynamics.measures.continuous.kraskov").PredictiveInfoCalculatorKraskov
-    piCalcC = piCalcClassC();
-    # print dir(piCalcC)
-    piCalcC.setProperty("NORMALISE", "true"); # Normalise the individual variables
-
-    # active information storage
-    aisCalcClassC = JPackage("infodynamics.measures.continuous.kraskov").ActiveInfoStorageCalculatorKraskov
-    aisCalcC = aisCalcClassC()
-    aisCalcC.setProperty("NORMALISE", "false"); # Normalise the individual variables
+        # contiuous estimation
+        # piCalcClassC = JPackage("infodynamics.measures.continuous.kernel").MutualInfoCalculatorMultiVariateKernel
+        piCalcClassC = JPackage("infodynamics.measures.continuous.kraskov").PredictiveInfoCalculatorKraskov
+        piCalcC = piCalcClassC();
+        # print dir(piCalcC)
+        piCalcC.setProperty("NORMALISE", "true"); # Normalise the individual variables
     
-    # FIXME: do a shutdownJVM after being finished, use isJVMStarted?, attachtoJVM
+        # active information storage
+        aisCalcClassC = JPackage("infodynamics.measures.continuous.kraskov").ActiveInfoStorageCalculatorKraskov
+        aisCalcC = aisCalcClassC()
+        aisCalcC.setProperty("NORMALISE", "false"); # Normalise the individual variables
+    
+        # FIXME: do a shutdownJVM after being finished, use isJVMStarted?, attachtoJVM
     
     """Learner reward data"""
     def __init__(self, idim=1, odim=1, memlen=1000, coeff_a = 0.2):
@@ -227,6 +231,7 @@ class learnerReward(object):
         g2 = gaussian(-mean, sigma, accel)
         self.perf = g1 + g2 # .reshape((1,2))
 
+    @dec_compute_infth_soft()
     def perf_pi_discrete(self, x, avg=False):
         if avg:
             # compute average PI
@@ -237,6 +242,7 @@ class learnerReward(object):
             # return last element of list
             return list(pi)[-1]
 
+    @dec_compute_infth_soft()
     def perf_ais_discrete(self, x, avg=False):
         if avg:
             # compute average PI
@@ -248,6 +254,7 @@ class learnerReward(object):
             return list(pi)[-1]
 
         
+    @dec_compute_infth_soft()
     def perf_pi_continuous(self, x):
         # Use history length 1 (Schreiber k=1), kernel width of 0.5 normalised units
         # learnerReward.piCalcC.initialise(40, 1, 0.5);
@@ -263,6 +270,7 @@ class learnerReward(object):
         # print src.shape, dst.shape
         return learnerReward.piCalcC.computeAverageLocalOfObservations()# * -1
 
+    @dec_compute_infth_soft()
     def perf_ais_continuous(self, x):
         # Use history length 1 (Schreiber k=1), kernel width of 0.5 normalised units
         # learnerReward.piCalcC.initialise(40, 1, 0.5);
