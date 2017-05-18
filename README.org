@@ -19,6 +19,32 @@ New idea for structure:
  - sensorimotor loops
  - data and logging
 
+** Dependencies
+
+We have the standard main dependencies of numpy, scipy, matplotlib,
+and sklearn which are needed regardless. You can either install them
+via package manager
+
+: apt-get install python-numpy python-scipy python-matplotlib python-sklearn
+
+Optional modules are rlspy (recursive least squares implementation)
+from [fn:2] and jpype [fn:3], a java to python bridge which we use for
+computing information theoretic measures with the java information
+dynamics toolkit [fn:4].
+
+Additional dependencies which might be made optional in the future are
+pandas, ros, pyunicorn, and mdp/Oger.
+
+: apt-get install python-pandas python-mdp
+
+For installing a basic ROS stack see the wiki at
+https://www.ros.org/wiki, you need to have the package python-rospy.
+
+Pyunicorn does recurrence analysis and can be obtained from
+https://github.com/pik-copan/pyunicorn or via pip.
+
+Oger is an extension for MDP and can be obtained from http://reservoir-computing.org/installing_oger.
+
 ** Reservoir lib
 
 |----------------+-------------------------------------------------------------------------------------------|
@@ -39,5 +65,11 @@ or
 to see possible options. Documentation and examples upcoming.
 
 * Footnotes
+
+[fn:4] https://github.com/jlizier/jidt
+
+[fn:3] Either python-jpype via apt, or from pip either jpypex or JPype1
+
+[fn:2] https://github.com/bluesquall/rlspy
 
 [fn:1] https://github.com/x75/smp_sphero

@@ -1,0 +1,9 @@
+numpy >= 1.8
+scipy >= 0.14
+matplotlib >= 1.5.1
+scikit-learn >= 0.17.1
+jpypex >= 0.5.4.2
+rlspy >= 0.0.1
+
+pandas >= 0.17.1
+pyunicorn >= 0.5.1
