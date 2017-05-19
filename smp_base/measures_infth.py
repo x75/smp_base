@@ -211,6 +211,7 @@ def infth_mi_multivariate(data = {}, estimator = "kraskov1", normalize = True, d
 
 @dec_compute_infth()
 def compute_transfer_entropy_multivariate(src, dst, delay = 0):
+    """measures_infth: compute the multivariate transfer entropy from src to dst"""
     temvCalcClass = JPackage("infodynamics.measures.continuous.kraskov").TransferEntropyCalculatorMultiVariateKraskov
     temvCalc = temvCalcClass()
 
@@ -227,6 +228,12 @@ def compute_transfer_entropy_multivariate(src, dst, delay = 0):
     temvCalc.setObservations(src, dst)
     temv = temvCalc.computeAverageLocalOfObservations()
     return temv
+    
+@dec_compute_infth()
+def compute_conditional_transfer_entropy_multivariate(src, dst, cond, delay = 0):
+    """measures_infth: compute the multivariate conditional transfer entropy from src to dst"""
+    print "This doesn't exist in JIDT yet"""
+    return -1
     
 # FIXME: use this one from infth_feature_relevance
 # def infth_mi_multivariate(self, data, estimator = "kraskov1", normalize = True):
@@ -331,32 +338,74 @@ def compute_transfer_entropy(src, dst, delay = 0):
     return measmat
 
 @dec_compute_infth()
-def compute_conditional_transfer_entropy(src, dst, cond, delay = 0):
-    """compute the conditional transfer entropy using jidt"""
+def compute_conditional_transfer_entropy(src, dst, cond, delay = 0, xcond = False):
+    """!@breif compute the conditional transfer entropy using jidt
+
+params
+src: source variables
+dst: destination variables
+cond: conditioning vars
+delay: delay u between src/dst
+xcond: do cross conditional assuming y and cond are the same vector
+    """
 
     numsrcvars, numdstvars, numcondvars = (src.shape[1], dst.shape[1], cond.shape[1])
-
+    
     cteCalcClassC = JPackage("infodynamics.measures.continuous.kraskov").ConditionalTransferEntropyCalculatorKraskov
     # teCalcClassC = JPackage("infodynamics.measures.continuous.kernel").TransferEntropyCalculatorKernel
     cteCalcC = cteCalcClassC()
     cteCalcC.setProperty("NORMALISE", "true")
     # k is destination embedding length
-    cteCalcC.setProperty(cteCalcC.K_PROP_NAME, "1")
+    # cteCalcC.setProperty(cteCalcC.K_PROP_NAME, "1")
     # teCalcC.setProperty("k", "100")
     # l is source embedding length
-    cteCalcC.setProperty(cteCalcC.L_PROP_NAME, "1")
+    # cteCalcC.setProperty(cteCalcC.L_PROP_NAME, "1")
     # cteCalcC.setProperty(cteCalcC.DELAY_PROP_NAME, "0")
     # teCalcC.setProperty(teCalcC.PROP_AUTO_EMBED_METHOD, "AUTO_EMBED_METHOD_NONE")
     # print("teCalcClassC", teCalcClassC, "teCalcC", teCalcC)
 
+    # init return container
     measmat  = np.zeros((numdstvars, numsrcvars))
 
+    # init calc params
+    k = 1
+    k_tau = 1
+    l = 1
+    l_tau = 1
+    cond_emb_len = 1
+    cond_emb_tau = 1
+    cond_emb_delay = 0
+    
+    # loop over all combinations
     for m in range(numdstvars):
         for s in range(numsrcvars):
             # print("m,s", m, s)
             # cteCalcC.initialise(1, 1, 1, 1, 0, [1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1], [0, 0, 0, 0, 0, 0])
-            cteCalcC.initialise(1, 1, 1, 1, delay, [1] * numcondvars, [1] * numcondvars, [0] * numcondvars)
-            cteCalcC.setObservations(src[:,s], dst[:,m], cond)
+            # k, k_tau, l, l_tau, delay, 
+            # cteCalcC.initialise(1, 1, 1, 1, delay, [1] * numcondvars, [1] * numcondvars, [0] * numcondvars)
+            
+            condsl = range(numcondvars)
+            numcondvars_ = numcondvars
+            # cross-condition with src/cond being the same vector, condition on all vector elements besides s            
+            if xcond: 
+                del condsl[s]
+                numcondvars_ -= 1
+
+            # print "numsrcvars = %d, numdstvars = %d, numcondvars = %d, numcondvars_ = %d" % (numsrcvars, numdstvars, numcondvars, numcondvars_)
+            # print "condsl = %s" % (condsl, )
+
+            cond_emb_lens = [cond_emb_len] * numcondvars_
+            cond_emb_taus = [cond_emb_tau] * numcondvars_
+            cond_emb_delays = [cond_emb_delay] * numcondvars_
+                
+            # re-initialise calc
+            cteCalcC.initialise(k, k_tau, l, l_tau, delay,
+                                cond_emb_lens,
+                                cond_emb_taus,
+                                cond_emb_delays)
+            # load the data
+            cteCalcC.setObservations(src[:,s], dst[:,m], cond[:,condsl])
+            # compute the measures
             cte = cteCalcC.computeAverageLocalOfObservations()
             # tes = teCalcC.computeSignificance(10)
             # print("cte", cte)
