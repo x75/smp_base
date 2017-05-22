@@ -42,6 +42,12 @@ return figure handle
             
     return fig
 
+def set_interactive(interactive = False):
+    if interactive:
+        plt.ion()
+    else:
+        plt.ioff()
+
 def timeseries(ax, data, **kwargs):
     """timeseries plot"""
     # marker style
