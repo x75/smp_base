@@ -86,8 +86,8 @@ def histogram(ax, data, **kwargs):
         title = kwargs['title']
     else:
         title = 'histogram of %s-shaped data, log-scale' % data.shape
-        
-    ax.hist(data, bins = int(np.log(data.shape[0]/20)), alpha = 0.5)
+
+    ax.hist(data, bins = int(np.log(data.shape[0]/2)), alpha = 0.5)
     ax.set_yscale('log')
     ax.title.set_text(title)
     ax.title.set_fontsize(8.0)
