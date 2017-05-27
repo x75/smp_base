@@ -213,8 +213,53 @@ def plot_scattermatrix(df, **kwargs):
     # fig.savefig("fig_%03d_scattermatrix.pdf" % (fig.number), dpi=300)
     # fig.show()
     # plt.show()
+
+
+def plot_img(ax, data, **kwargs):
+    assert ax is not None, "missing axis argument 'ax'"
+    vmin = kwargs['vmin']
+    vmax = kwargs['vmax']
+    cmap = kwargs['cmap']
+    title = kwargs['title']
+    # FIXME: convert plottype into func: imshow, pcolor, pcolormesh, pcolorfast
+    mpl = ax.pcolorfast(data, vmin = vmin, vmax = vmax, cmap = cmap)
+    # normalize to [0, 1]
+    # mpl = ax.imshow(inv, interpolation = "none")
+    # mpl = ax.pcolorfast(data, vmin = vmin, vmax = vmax, cmap = cmap)
+    # mpl = ax.pcolorfast(data, vmin = vmins[j], vmax = vmaxs[j], cmap = cmap)
+    # mpl = ax.pcolorfast(data, vmin = -2, vmax = 2, cmap = cmap)
+    # mpl = ax.pcolormesh(data, cmap = cmap)
+    # mpl = ax.pcolor(data)
+    # mpl = ax.pcolorfast(data)
+    # mpl = ax.imshow(data, interpolation = "none")
+    # mpl = ax.pcolormesh(
+    #     data,
+    #     norm = colors.LogNorm(vmin=data.min(), vmax=data.max())
     
+    ax.grid(0)
+    if kwargs.has_key('aspect'):
+        ax.set_aspect(kwargs['aspect'])
+
+    if kwargs.has_key('colorbar'):
+        if kwargs['colorbar']:
+            plt.colorbar(mappable = mpl, ax = ax, orientation = "horizontal")
+
+    if kwargs.has_key('title'):
+        ax.set_title(title, fontsize=8)
+    else:
+        ax.set_title("%s" % ('matrix'), fontsize=8)
+        
+    # if kwargs.has_key('xlabel'):
+    ax.set_xlabel("")
+        
+    # if kwargs.has_key('ylabel'):
+    ax.set_ylabel("")
+        
+    # if kwargs.has_key('xticks'):
+    ax.set_xticks([])
+        
+    # if kwargs.has_key('yticks'):
+    ax.set_yticks([])
     
-            
 if __name__ == "__main__":
     fig = makefig(2, 3)

@@ -24,7 +24,7 @@ TODO
 #  - smp/infth/infth_EH-2D_clean.py
 """
 
-import sys
+import sys, os
 import numpy as np
 
 from smp_base.measures import meas
@@ -46,6 +46,8 @@ def init_jpype(jarloc = None, jvmpath = None):
     
     if jarloc is None:
         jarloc = "/home/src/QK/infodynamics-dist/infodynamics.jar"
+
+    assert os.path.exists(jarloc), "Jar file %s doesn't exist" % (jarloc, )
 
     if jvmpath is None:
         jvmpath = getDefaultJVMPath()
@@ -283,10 +285,10 @@ def compute_mutual_information(src, dst, k = 0, tau = 1, delay = 0):
     return measmat
 
 @dec_compute_infth()
-def compute_information_distance(src, dst, delay = 0):
+def compute_information_distance(src, dst, delay = 0, normalize = 1.0):
     """check how 1 - mi = infodist via joint H"""
     mi = compute_mutual_information(src, dst, delay = delay)
-    return 1 - (mi / infth_mi_multivariate(data = {'X': src, 'Y': dst}, delay = delay))
+    return 1 - (mi / normalize)
 
 @dec_compute_infth()
 def compute_transfer_entropy(src, dst, delay = 0):
