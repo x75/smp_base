@@ -46,17 +46,28 @@ def make_axes_from_spec(fig, gs, axesspec):
         axes[-1].append(fig.add_subplot(gs[axspec]))
     return axes
 
-def makefig(rows = 1, cols = 1, wspace = 0.0, hspace = 0.0, axesspec = None):
-    """create figure and subplot structure
+def makefig(rows = 1, cols = 1, wspace = 0.0, hspace = 0.0, axesspec = None, title = None):
+    """makefig
 
-return figure handle
-"""
+    alias for make_fig, see make_fig?
+    """
+    return make_fig(rows = rows, cols = cols, wspace = wspace, hspace = hspace, axesspec = axesspec, title = title)
+
+def make_fig(rows = 1, cols = 1, wspace = 0.0, hspace = 0.0, axesspec = None, title = None):
+    """make_fig
+
+    create figure, subplot gridspec and axes
+
+    return figure handle
+    """
     # rows = len(plotitems[0])
     # cols = len(plotitems[0][0])
     fig = plt.figure()
     gs = gridspec.GridSpec(rows, cols)
 
-
+    if title is not None:
+        fig.suptitle(title)
+    
     if axesspec is None:
         axes = make_axes_from_grid(fig, gs)
     else:
