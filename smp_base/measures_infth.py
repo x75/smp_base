@@ -240,7 +240,7 @@ def compute_conditional_transfer_entropy_multivariate(src, dst, cond, delay = 0)
 # FIXME: use this one from infth_feature_relevance
 # def infth_mi_multivariate(self, data, estimator = "kraskov1", normalize = True):
 @dec_compute_infth()
-def compute_mutual_information(src, dst, k = 0, tau = 1, delay = 0):
+def compute_mutual_information(src, dst, k = 0, tau = 1, delay = 0, norm_in = True, norm_out = None):
     """taken from smp/im/im_quadrotor_plot.py
 
     computes a matrix of pairwise MI for all pairs of src_i,dst_j
@@ -261,13 +261,19 @@ def compute_mutual_information(src, dst, k = 0, tau = 1, delay = 0):
     miCalcClassC = JPackage("infodynamics.measures.continuous.kraskov").MutualInfoCalculatorMultiVariateKraskov2
     # miCalcClassC = JPackage("infodynamics.measures.continuous.kraskov").MultiInfoCalculatorKraskov2
     miCalcC = miCalcClassC()
-    miCalcC.setProperty("NORMALISE", "true")
+    miCalcC.setProperty("NORMALISE", str(norm_in).lower())
     miCalcC.setProperty(miCalcC.PROP_TIME_DIFF, str(delay))
 
     # print "measures_infth: compute_mutual_information: miCalcC.timeDiff = %d" % (miCalcC.timeDiff)
     
     measmat  = np.zeros((numdestvars, numsrcvars))
 
+    if norm_out is not None:
+        assert norm_out is type(float), "Normalization constant needed (float)"
+        norm_out_ = 1.0/norm_out
+    else:
+        norm_out_ = 1.0
+    
     for m in range(numdestvars):
         for s in range(numsrcvars):
             # print "compute_mutual_information dst[%d], src[%d]" % (m, s)
@@ -282,7 +288,7 @@ def compute_mutual_information(src, dst, k = 0, tau = 1, delay = 0):
             # print "mi", mi
             measmat[m,s] = mi
 
-    return measmat
+    return measmat * norm_out_
 
 @dec_compute_infth()
 def compute_information_distance(src, dst, delay = 0, normalize = 1.0):
