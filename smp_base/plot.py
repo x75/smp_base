@@ -86,6 +86,14 @@ def set_interactive(interactive = False):
     else:
         plt.ioff()
 
+def get_ax_size(fig, ax):
+    """from stackoverflow"""
+    bbox = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+    width, height = bbox.width, bbox.height
+    width *= fig.dpi
+    height *= fig.dpi
+    return width, height
+        
 def timeseries(ax, data, **kwargs):
     """timeseries plot"""
     # marker style
@@ -271,6 +279,189 @@ def plot_img(ax, data, **kwargs):
         
     # if kwargs.has_key('yticks'):
     ax.set_yticks([])
+
+def interactive():
+
+    from functools import partial
+    
+    set_interactive(1)
+
+    def on_click(event, ax, data):
+        """
+        Left click: show real size
+        Right click: resize
+        """
+        print 'button pressed', event.button, event.xdata, event.ydata, data.shape
+        if event.xdata is not None:
+            # data = np.array([[event.xdata, event.ydata],])
+            # decoded = decoder.predict(data)
+            # decoded = reshape_paths(decoded, flat=False)
+            # if args.rel_coords:
+            #     decoded = np.cumsum(decoded, axis=1)
+
+            print "ax", ax, "data", data
+            ax.clear()
+
+            datarow = int(event.ydata)
+            
+            ax.plot(data[datarow,:], "k-o", alpha = 0.5)
+            plt.pause(1e-6)
+            # if event.button == 1:
+            #     # left click
+            #     if args.rel_coords:
+            #         ax.set_xlim([-0.5, 0.5])
+            #         ax.set_ylim([-0.5, 0.5])
+            #     else:
+            #         ax.set_xlim([0.0, 1.0])
+            #         ax.set_ylim([0.0, 1.0])
+            # else:
+            #     ax.autoscale(True)
+            # ax.scatter(decoded.T[0], decoded.T[1])
+    
+    X = np.random.binomial(10, 0.1, size = (30, 10))
+    
+    fig = plt.figure()
+
+    gs = gridspec.GridSpec(1, 2)
+
+    cmap = plt.get_cmap("Reds")
+    
+    ax0 = fig.add_subplot(gs[0])
+    ax0.pcolormesh(X, cmap = cmap)
+
+    ax1 = fig.add_subplot(gs[1])
+    ax1.plot(X[0], "k-o", alpha = 0.5)
+
+    plt.pause(1e-6)
+
+    fig.canvas.mpl_connect('button_press_event', partial(on_click, ax = ax1, data = X))
+
+    set_interactive(0)
+    
+    plt.show()
+    
+def custom_colorbar():
+
+    # notes
+
+    # subplot / grid / axes
+    # https://matplotlib.org/users/gridspec.html
+    # http://matplotlib.org/1.5.3/examples/axes_grid/index.html
+    # subplot, subplot2grid, rowspan/colspan, gridspec, axes_grid
+
+    # colorbar
+    # custom colorbar with custom axis from grid
+    # axes_grid, insets, ...
+    # http://matplotlib.org/1.5.3/examples/axes_grid/demo_colorbar_with_inset_locator.html
+        
+    import matplotlib as mpl
+    from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+
+    numplots = 3
+        
+    a = np.random.exponential(scale = 1.0)
+    b = np.random.exponential(scale = 1.0)
+    n = 32
+    X = np.random.beta(a = a, b = b, size = (numplots, n, n))
+    print "a = %f, b = %f, X = %s" % (a, b, X)
+
+    fig = plt.figure()
+
+    # fig, (ax1, ax2) = plt.subplots(1, 2, figsize=[6, 3])
+    # ax2 = plt.subplot2grid((3, 3), (1, 0), colspan=2)        
+
+    gs = gridspec.GridSpec(2, 2 * numplots, width_ratios = [9, 1] * numplots)
+    gs.hspace = 0.05
+    gs.wspace = 0.05
+        
+    for i in range(numplots):
+        cmap = plt.get_cmap("Reds")
+        norm = mpl.colors.Normalize(vmin=0, vmax=np.max(X[i]))
+            
+        # ax_im = plt.subplot2grid((1, 2 * numplots), (0, (2 * i)    ))
+        # ax_cb = plt.subplot2grid((1, 2 * numplots), (0, (2 * i) + 1))
+        # ax = fig.add_subplot(1, numplots, i+1)
+        ax_im = fig.add_subplot(gs[0, (2 * i)    ])
+        ax_cb = fig.add_subplot(gs[0, (2 * i) + 1])
+
+        img = ax_im.pcolormesh(X[i], norm = norm, cmap = cmap)
+        ax_im.set_aspect(1.0)
+
+        cb1 = mpl.colorbar.ColorbarBase(
+            ax_cb, cmap=cmap, norm=norm, orientation='vertical')
+        cb1.set_label('Some Units')
+        ax_cb.set_aspect(9.0/1.0)
+
+        print ax_im.get_position(), ax_im.get_aspect()
+        print ax_cb.get_position(), ax_cb.get_aspect()
+            
+        # cbar = plt.colorbar(mappable = img, orientation = "vertical", cax = ax_cb)
+        w_im, h_im = get_ax_size(fig, ax_im)
+        w_cb, h_cb = get_ax_size(fig, ax_cb)
+
+        print "w_im = %s, h_im = %s" % (w_im, h_im)
+        print "w_cb = %s, h_cb = %s" % (w_cb, h_cb)
+
+    for i in range(numplots):
+        cmap = plt.get_cmap("Reds")
+        norm = mpl.colors.Normalize(vmin=0, vmax=np.max(X[i]))
+            
+        # ax_im = plt.subplot2grid(gs.get_geometry(), (0, (2 * i)    ), colspan = 2)
+        # ax_cb = plt.subplot2grid(gs.get_geometry(), (0, (2 * i) + 1))
+        # ax = fig.add_subplot(1, numplots, i+1)
+        ax_im = fig.add_subplot(gs[1,(2 * i):(2*i+1)])
+        # ax_cb = inset_axes(ax_im,
+        #         width="50%",  # width = 10% of parent_bbox width
+        #         height="5%",  # height : 50%
+        #         loc=1)
+        ax_cb = inset_axes(ax_im,
+                               width="5%",  # width = 10% of parent_bbox width
+                               height = "%d" % (i * 30 + 40, ) + "%",  # height : 50%
+                               loc=3,
+                               bbox_to_anchor=(1.05, 0., 1, 1),
+                               bbox_transform=ax_im.transAxes,
+                               borderpad=0,
+                               )
+        # ax_cb = fig.add_subplot(gs[(numplots * 2) + (2 * i) + 1])
+
+        img = ax_im.pcolormesh(X[i], norm = norm, cmap = cmap)
+        ax_im.set_aspect(1.0)
+
+        cb1 = mpl.colorbar.ColorbarBase(
+            ax_cb, cmap=cmap, norm=norm, orientation='vertical')
+        cb1.set_label('Some Units')
+        # ax_cb.set_aspect(9.0/1.0)
+
+        print ax_im.get_position(), ax_im.get_aspect()
+        print ax_cb.get_position(), ax_cb.get_aspect()
+            
+        w_im, h_im = get_ax_size(fig, ax_im)
+        w_cb, h_cb = get_ax_size(fig, ax_cb)
+
+        print "w_im = %s, h_im = %s" % (w_im, h_im)
+        print "w_cb = %s, h_cb = %s" % (w_cb, h_cb)
+
+            
+
+    fig.show()
+    
+    plt.show()
+
     
 if __name__ == "__main__":
-    fig = makefig(2, 3)
+    import argparse, sys
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("-m", "--mode", type=str, default = "custom_colorbar", help = "testing mode: [custom_colorbar], interactive")
+
+    args = parser.parse_args()
+    # fig = makefig(2, 3)
+
+    if args.mode == "custom_colorbar":
+        custom_colorbar()
+    elif args.mode == "interactive":
+        interactive()
+    else:
+        print "Unknown mode %s, exiting" % (args.mode)
+        sys.exit(1)
+        
