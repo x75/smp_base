@@ -273,7 +273,9 @@ class Reservoir(object):
         self.output_num = output_num
         self.wf_amp = feedback_scale
         # self.wf = np.random.uniform(-self.wf_amp, self.wf_amp, (self.N, self.output_num))
-        self.wf = np.random.normal(0, self.wf_amp, (self.N, self.output_num))
+        # self.wf = np.random.normal(0, self.wf_amp, (self.N, self.output_num))
+        # enable zero amplitude
+        self.wf = np.random.normal(0, 1.0, (self.N, self.output_num)) * self.wf_amp
         # outputs and readout weight matrix
         self.wo = np.zeros((self.N, self.output_num));
 
@@ -1057,7 +1059,8 @@ class ReservoirPlot(object):
                 if k == 1:
                     pdata = np.exp(pdata)
                 if k == 2:
-                    pdata = lr.softmax(pdata)
+                    # FIXME: fix this, softmax seems to be zero?
+                    pdata = pdata # lr.softmax(pdata)
                 self.axs[1].plot(pdata, "%s-" % (cols[k]), lw=0.5, label="out%d"%k, alpha=0.5)
         else:
             self.axs[1].plot(pdata_out, lw=0.5, label="out")

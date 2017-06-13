@@ -144,18 +144,30 @@ def compute_entropy_univariate(src):
     return h
 
 @dec_compute_infth()
-def compute_entropy_multivariate(src):
+def compute_entropy_multivariate(src, delay = 0):
+    """compute_entropy_multivariate
+
+    compute the joint entropy as self-information
+    """
+    # concatenate all arrays in tuple
+    if type(src) is tuple:
+        randvars = (rv for rv in src if rv is not None)
+        src = np.hstack(tuple(randvars))
+    # otherwise: array already
+    
     # ent_class = JPackage('infodynamics.measures.continuous.kernel').EntropyCalculatorMultiVariateKernel
     # ent_class = JPackage('infodynamics.measures.continuous.gaussian').EntropyCalculatorMultiVariateGaussian
     # ent_class = JPackage('infodynamics.measures.continuous.kozachenko').EntropyCalculatorMultiVariateKozachenko
-    ent_class = JPackage('infodynamics.measures.continuous.kraskov1').MutualInfoCalculatorMultiVariateKraskov1
-    ent = ent_class()
-    ent.setProperty("NORMALISE", "true")
-    # ent.initialise(src.shape[1], 0.1)
-    ent.initialise(src.shape[1], src.shape[1])
-    ent.setObservations(src, src)
-    h = ent.computeAverageLocalOfObservations()
-    return h
+    
+    # ent_class = JPackage('infodynamics.measures.continuous.kraskov1').MutualInfoCalculatorMultiVariateKraskov1
+    # ent = ent_class()
+    # ent.setProperty("NORMALISE", "true")
+    # # ent.initialise(src.shape[1], 0.1)
+    # ent.initialise(src.shape[1], src.shape[1])
+    # ent.setObservations(src, src)
+    # h = ent.computeAverageLocalOfObservations()
+
+    return compute_mi_multivariate(data = {'X': src, 'Y': src}, delay = delay)
 
 # def compute_mi_multivariate(*args, **kwargs):
 #     return infth_mi_multivariate(data = kwargs['data'], estimator = kwargs['estimator'], normalize = kwargs['normalize'])
@@ -269,7 +281,7 @@ def compute_mutual_information(src, dst, k = 0, tau = 1, delay = 0, norm_in = Tr
     measmat  = np.zeros((numdestvars, numsrcvars))
 
     if norm_out is not None:
-        assert norm_out is type(float), "Normalization constant needed (float)"
+        # assert norm_out is type(float), "Normalization constant needed (float)"
         norm_out_ = 1.0/norm_out
     else:
         norm_out_ = 1.0
