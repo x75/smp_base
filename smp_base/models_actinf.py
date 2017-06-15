@@ -1,4 +1,6 @@
-"""Active inference project code
+"""smp_base: models_actinf.py
+
+Active inference project code
 
 Oswald Berthold, 2016-2017
 

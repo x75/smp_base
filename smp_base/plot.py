@@ -281,6 +281,7 @@ def plot_img(ax, data, **kwargs):
     ax.set_yticks([])
 
 def interactive():
+    """basic example for interactive plotting from GUI interaction via felix stiehler"""
 
     from functools import partial
     
@@ -341,7 +342,12 @@ def interactive():
     plt.show()
     
 def custom_colorbar():
+    """custom_colorbar
 
+    basic example for custom colorbar geometry control
+     1. create the colorbar axis with the gridspec, plot the colorbar and set its aspect to match the quadmesh
+     2. use inset_axis to create the colorbar axis
+    """
     # notes
 
     # subplot / grid / axes
