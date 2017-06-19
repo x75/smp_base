@@ -243,11 +243,13 @@ class ActInfSOESGP(ActInfOTLModel):
         self.output_feedback_weight = 0.0
         self.activation_function = 1
         # leak_rate: x <= (1-lr) * input + lr * x
-        self.leak_rate = 0.1 # 0.1
+        self.leak_rate = 0.0 # 0.1 # 0.1
         self.connectivity = 0.1
         self.spectral_radius = 0.7
         
-        self.kernel_params = [1.0, 1.0]
+        self.kernel_params = [2.0, 2.0]
+        # self.kernel_params = [1.0, 1.0]
+        # self.kernel_params = [0.1, 0.1]
         self.noise = 0.05
         self.epsilon = 1e-3
         self.capacity = 100
