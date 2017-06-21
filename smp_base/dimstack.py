@@ -1,8 +1,10 @@
 """
-Author: Eugenio Piasini <e.piasini@ucl.ac.uk>
-Date:   Tue Jun 19 10:12:40 2012 +0100
+Author: Eugenio Piasini <e.piasini@ucl.ac.uk>, Oswald Berthold
+Date:   Wed Jun 21 15:38:52 CEST 2017
 
     First version of core dimensional stacking function.
+
+    Added digitize pointcloud function to convert pointclouds into grid spaces by binning the points and averaging the function values per bin
 """
 
 import numpy as np
@@ -34,11 +36,12 @@ def dimensional_stacking(data, x_dims, y_dims):
     return stacked_data
 
 
-def digitize_pointcloud(data, argdims = [0], numbins = 3, valdims = 1):
+def digitize_pointcloud(data, argdims = [0], numbins = 3, valdims = 1, f_fval = np.mean):
     """digitize_pointcloud
 
     Digitize a pointcloud given as n x k matrix data, with argument dimensions k_arg < k,
-    and value dimension k_val < k, k_arg + k_val = k
+    and value dimension k_val < k, k_arg + k_val = k, computing the function value in a
+    given bin via the f_fval function
 
     Arguments:
     - data: n x k matrix of arguments and values from sampling a function
