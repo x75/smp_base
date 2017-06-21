@@ -253,7 +253,7 @@ class ActInfSOESGP(ActInfOTLModel):
         self.noise = 0.05
         self.epsilon = 1e-3
         self.capacity = 100
-        self.random_seed = 100
+        self.random_seed = 100 # FIXME: constant?
 
         # self.X_ = []
         # self.y_ = []
