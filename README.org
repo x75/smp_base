@@ -1,4 +1,5 @@
 #+TITLE: Sensorimotor learning basic lib
+#+AUTHOR: Oswald Berthold
 
 #+OPTIONS: toc:nil ^:nil
 

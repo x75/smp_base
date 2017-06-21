@@ -2,7 +2,7 @@
 Sensorimotor learning basic lib
 ===============================
 
-    :Author: opt
+    :Author: Oswald Berthold
 
 
 
