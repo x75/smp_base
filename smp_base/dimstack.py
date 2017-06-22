@@ -61,8 +61,11 @@ def digitize_pointcloud(data, argdims = [0], numbins = 3, valdims = 1, f_fval = 
     space = data[:,argdims]
     # print "space", space.shape, space
 
-    # float argument data digitized to bin indices
-    space_digitized = np.digitize(space, bins = np.linspace(-1, 1, numbins + 1))
+    # vals  = data[:,len(argdims):]
+    # print "vals", vals
+
+    # float-valued argument data digitized to bin indices
+    space_digitized = np.digitize(space, bins = np.linspace(np.min(space), np.max(space), numbins + 1))
     # print "space_digitized", space_digitized.shape, space_digitized
 
     # initialize return matrix
@@ -78,7 +81,7 @@ def digitize_pointcloud(data, argdims = [0], numbins = 3, valdims = 1, f_fval = 
         sidx = idx_ == space_digitized
 
         # if all elements equal then vector equal
-        sidx = np.sum(sidx, axis = 1) > (len(argdims) - 1)        
+        sidx = np.sum(sidx, axis = 1) > (len(argdims) - 1)
         # print "sidx", sidx.shape, np.sum(sidx)
 
         # get the functions value at vector equal indices
@@ -88,7 +91,8 @@ def digitize_pointcloud(data, argdims = [0], numbins = 3, valdims = 1, f_fval = 
         # if there are samples for this bin, compute the mean function value for the bin
         # plotdata_new[idx_[0],idx_[1],idx_[2],idx_[3],idx_[4],idx_[5]] = np.mean(v___)
         if len(v___) > 0:
-            plotdata_new[tuple(idx_.T-1)] = np.mean(v___)
+            # print "digitize_pointcloud found", v___
+            plotdata_new[tuple(idx_.T-1)] = f_fval(v___)
 
     # return the digitized function
     return plotdata_new
