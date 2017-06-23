@@ -66,6 +66,8 @@ or
 
 to see possible options. Documentation and examples upcoming.
 
+* TODO 
+ - clean up hardcoded paths
 * Footnotes
 
 [fn:4] https://github.com/jlizier/jidt
