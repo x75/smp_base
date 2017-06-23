@@ -1,13 +1,18 @@
-"""smp_base: A leaky integrator rate-coded reservoir class"""
+"""smp_base/reservoirs.py
 
-# TODO
-# - fit/predict interface, batch regression fit
-# - multiple timescales / tau
-# - intrinsic plasticity: input layer, reservoir layer
-# - correlated exploration noise
+A leaky integrator rate-coded reservoir class
 
-# Authors
-# - Oswald Berthold, Aleke Nolte (learnRLS)
+Authors:
+ - Oswald Berthold 2012 - 2017
+ - Aleke Nolte (learnRLS)
+
+TODO
+ - fit/predict interface, batch regression fit
+ - multiple timescales / tau
+ - intrinsic plasticity: input layer, reservoir layer
+ - correlated exploration noise
+"""
+
 
 import sys, time, argparse
 
@@ -27,6 +32,10 @@ from learners import GHA
 ############################################################
 # utility functions
 def create_matrix_sparse_random(rows = 2, cols = 2, density = 0.1, dist = "normal"):
+    """create_matrix_sparse_random
+
+    Create a sparse (density p) random (distribution dist) matrix for use in recurrent network
+    """
     m = spa.rand(rows, cols, density)
     m = m.todense()
     validx = m != 0

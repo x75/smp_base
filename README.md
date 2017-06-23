@@ -3,14 +3,15 @@
 # Sensorimotor learning basic lib
 
 A python library of code I use for sensorimotor learning experiments
-with simulations, robots, etc. Performing incremental clean-up and
-pulling from existing private repository. The basis idea is to
-generate states (sensors) with actions (motors), learn different
-predictive models from that data to approximate the sensorimotor
-dynamics and use the models to compute future actions.
+with simulations, robots, etc. The basic idea is to generate states
+(sensors) with actions (motors), learn different predictive models
+from that data to approximate the sensorimotor dynamics and use the
+models to compute future actions.
 
 This repository is in an early stages of release which I push on the
-occasion of sharing the smp\_sphero code <sup><a id="fnr.1" class="footref" href="#fn.1">1</a></sup>.
+occasion of sharing the smp\_sphero code <sup><a id="fnr.1" class="footref" href="#fn.1">1</a></sup>. Still performing
+incremental clean-up and refactoring plus additions from existing
+private repository.
 
 New idea for structure:
 
