@@ -23,9 +23,9 @@ TODO
 #  - smp/infth/infth_EH-2D.py
 #  - smp/infth/infth_EH-2D_clean.py
 """
-
 import sys, os
 import numpy as np
+import config
 
 from smp_base.measures import meas
 
@@ -35,26 +35,26 @@ try:
     from jpype import JPackage
     HAVE_JPYPE = True
 except ImportError, e:
-    print "Couldn't import jpype, %s" % (e,)
+    print "Couldn't import jpype, %s" % e
     HAVE_JPYPE = False
     # sys.exit(1)
 
-def init_jpype(jarloc = None, jvmpath = None):
+def init_jpype(jarloc=None, jvmpath=None):
     if not HAVE_JPYPE:
         print "Cannot initialize jpype because it couldn't be imported. Make sure jpype is installed"
         return
-    
-    if jarloc is None:
-        jarloc = "/home/src/QK/infodynamics-dist/infodynamics.jar"
 
-    assert os.path.exists(jarloc), "Jar file %s doesn't exist" % (jarloc, )
+    jarloc = jarloc or config.__dict__.get(
+        'JARLOC',
+        '%s/infodynamics/infodynamics.jar' % os.path.dirname(os.__file__)
+    )
+    assert os.path.exists(jarloc), "Jar file %s doesn't exist" % jarloc
 
-    if jvmpath is None:
-        jvmpath = getDefaultJVMPath()
+    jvmpath = jvmpath or config.__dict__.get('JVMPATH', getDefaultJVMPath())
 
     print("infth.init_jpype: Set jidt jar location to %s" % jarloc)
     print("infth.init_jpype: Set jidt jvmpath      to %s" % jvmpath)
-                
+
     # startJVM(getDefaultJVMPath(), "-ea", "-Xmx2048M", "-Djava.class.path=" + jarLocation)
     if not isJVMStarted():
         print("Starting JVM")
@@ -98,9 +98,9 @@ class dec_compute_infth_soft(object):
                 return f(*args, **kwargs)
             else:
                 return None
-            
+
         return wrap
-    
+
 class dec_compute_infth(object):
     """wrap infth calls and fail hard"""
     def __call__(self, f):
@@ -108,7 +108,7 @@ class dec_compute_infth(object):
             assert HAVE_JPYPE
             assert isJVMStarted() and isThreadAttachedToJVM(), "Either JVM not started or thread not attached. Hm."
             return f(*args, **kwargs)
-            
+
         return wrap
 
 def prepare_data_and_attributes(data, check_shape = False): # False
@@ -123,7 +123,7 @@ def prepare_data_and_attributes(data, check_shape = False): # False
         if dst.shape[0] < dst.shape[1]:
             dst = dst.T
     return src, dst
-        
+
 ################################################################################
 # wrap these into a thin class
 @dec_compute_infth()
@@ -154,11 +154,11 @@ def compute_entropy_multivariate(src, delay = 0):
         randvars = (rv for rv in src if rv is not None)
         src = np.hstack(tuple(randvars))
     # otherwise: array already
-    
+
     # ent_class = JPackage('infodynamics.measures.continuous.kernel').EntropyCalculatorMultiVariateKernel
     # ent_class = JPackage('infodynamics.measures.continuous.gaussian').EntropyCalculatorMultiVariateGaussian
     # ent_class = JPackage('infodynamics.measures.continuous.kozachenko').EntropyCalculatorMultiVariateKozachenko
-    
+
     # ent_class = JPackage('infodynamics.measures.continuous.kraskov1').MutualInfoCalculatorMultiVariateKraskov1
     # ent = ent_class()
     # ent.setProperty("NORMALISE", "true")
@@ -190,7 +190,7 @@ def infth_mi_multivariate(data = {}, estimator = "kraskov1", normalize = True, d
 
     # instantiate
     mimvCalc      = mimvCalcClass()
-    
+
     # set properties
     mimvCalc.setProperty("NORMALISE", str(normalize).lower())
     # mimvCalc.setProperty("PROP_TIME_DIFF", str(delay))
@@ -198,9 +198,9 @@ def infth_mi_multivariate(data = {}, estimator = "kraskov1", normalize = True, d
     # print "measures_infth: infth_mi_multivariate: mimvCalc.timeDiff = %d" % (mimvCalc.timeDiff)
 
     mimvCalc.timeDiff = delay
-    
+
     # print "measures_infth: infth_mi_multivariate: mimvCalc.timeDiff = %d" % (mimvCalc.timeDiff)
-    
+
     # prepare data and attributes
     src, dst = prepare_data_and_attributes(data)
     # src_ = src.copy()
@@ -208,13 +208,13 @@ def infth_mi_multivariate(data = {}, estimator = "kraskov1", normalize = True, d
 
     # pl.hist(src[0], bins=255)
     # pl.show()
-        
-        
+
+
     # print "infth_mi_multivariate src/dst shapes", src.shape, dst.shape
     # print "infth_mi_multivariate src/dst dtypes", src.dtype, dst.dtype
-    
+
     dim_src, dim_dst = src.shape[1], dst.shape[1]
-        
+
     # compute stuff
     # mimvCalc.initialise()
     mimvCalc.initialise(dim_src, dim_dst)
@@ -236,19 +236,19 @@ def compute_transfer_entropy_multivariate(src, dst, delay = 0):
     l = 1
     l_tau = 1
     # delay = 1 # param u in TE equations
-    
+
     temvCalc.initialise(srcdim, dstdim, k, k_tau, l, l_tau, delay)
     # print "measures_infth: compute_transfer_entropy_multivariate: temvCalc.timeDiff = %d" % (temvCalc.delay)
     temvCalc.setObservations(src, dst)
     temv = temvCalc.computeAverageLocalOfObservations()
     return temv
-    
+
 @dec_compute_infth()
 def compute_conditional_transfer_entropy_multivariate(src, dst, cond, delay = 0):
     """measures_infth: compute the multivariate conditional transfer entropy from src to dst"""
     print "This doesn't exist in JIDT yet"""
     return -1
-    
+
 # FIXME: use this one from infth_feature_relevance
 # def infth_mi_multivariate(self, data, estimator = "kraskov1", normalize = True):
 @dec_compute_infth()
@@ -258,7 +258,7 @@ def compute_mutual_information(src, dst, k = 0, tau = 1, delay = 0, norm_in = Tr
     computes a matrix of pairwise MI for all pairs of src_i,dst_j
     (elementwise)
     """
-    
+
     # src - dest is symmetric for MI but hey ...
     # from jpype import startJVM, isJVMStarted, getDefaultJVMPath, JPackage, shutdownJVM, JArray, JDouble, attachThreadToJVM
     # from smp.infth import init_jpype, ComplexityMeas
@@ -266,7 +266,7 @@ def compute_mutual_information(src, dst, k = 0, tau = 1, delay = 0, norm_in = Tr
     # init_jpype()
     assert len(src.shape) == 2 and len(dst.shape) == 2, "src %s, dst %s" % (src.shape, dst.shape)
     numsrcvars, numdestvars = (src.shape[1], dst.shape[1])
-    
+
     # miCalcClassC = JPackage("infodynamics.measures.continuous.kernel").MutualInfoCalculatorMultiVariateKernel
     # miCalcClassC = JPackage("infodynamics.measures.continuous.kraskov").MutualInfoCalculatorMultiVariateKraskov1
     # miCalcClassC = JPackage("infodynamics.measures.continuous.kraskov").MutualInfoCalculatorMultiVariateKraskov2
@@ -277,7 +277,7 @@ def compute_mutual_information(src, dst, k = 0, tau = 1, delay = 0, norm_in = Tr
     miCalcC.setProperty(miCalcC.PROP_TIME_DIFF, str(delay))
 
     # print "measures_infth: compute_mutual_information: miCalcC.timeDiff = %d" % (miCalcC.timeDiff)
-    
+
     measmat  = np.zeros((numdestvars, numsrcvars))
 
     if norm_out is not None:
@@ -285,7 +285,7 @@ def compute_mutual_information(src, dst, k = 0, tau = 1, delay = 0, norm_in = Tr
         norm_out_ = 1.0/norm_out
     else:
         norm_out_ = 1.0
-    
+
     for m in range(numdestvars):
         for s in range(numsrcvars):
             # print "compute_mutual_information dst[%d], src[%d]" % (m, s)
@@ -317,7 +317,7 @@ def compute_transfer_entropy(src, dst, delay = 0):
     # init_jpype()
 
     numsrcvars, numdstvars = (src.shape[1], dst.shape[1])
-    
+
     # teCalcClassC = JPackage("infodynamics.measures.continuous.kraskov").TransferEntropyCalculatorMultiVariateKraskov
     teCalcClassC = JPackage("infodynamics.measures.continuous.kraskov").TransferEntropyCalculatorKraskov
     # teCalcClassC = JPackage("infodynamics.measures.continuous.kernel").TransferEntropyCalculatorKernel
@@ -341,7 +341,7 @@ def compute_transfer_entropy(src, dst, delay = 0):
     l = 1
     l_tau = 1
     # delay = 0 # param u in TE equations
-    
+
     # loop over all combinations
     for m in range(numdstvars):
         for s in range(numsrcvars):
@@ -370,7 +370,7 @@ xcond: do cross conditional assuming y and cond are the same vector
     """
 
     numsrcvars, numdstvars, numcondvars = (src.shape[1], dst.shape[1], cond.shape[1])
-    
+
     cteCalcClassC = JPackage("infodynamics.measures.continuous.kraskov").ConditionalTransferEntropyCalculatorKraskov
     # teCalcClassC = JPackage("infodynamics.measures.continuous.kernel").TransferEntropyCalculatorKernel
     cteCalcC = cteCalcClassC()
@@ -395,19 +395,19 @@ xcond: do cross conditional assuming y and cond are the same vector
     cond_emb_len = 1
     cond_emb_tau = 1
     cond_emb_delay = 0
-    
+
     # loop over all combinations
     for m in range(numdstvars):
         for s in range(numsrcvars):
             # print("m,s", m, s)
             # cteCalcC.initialise(1, 1, 1, 1, 0, [1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1], [0, 0, 0, 0, 0, 0])
-            # k, k_tau, l, l_tau, delay, 
+            # k, k_tau, l, l_tau, delay,
             # cteCalcC.initialise(1, 1, 1, 1, delay, [1] * numcondvars, [1] * numcondvars, [0] * numcondvars)
-            
+
             condsl = range(numcondvars)
             numcondvars_ = numcondvars
-            # cross-condition with src/cond being the same vector, condition on all vector elements besides s            
-            if xcond: 
+            # cross-condition with src/cond being the same vector, condition on all vector elements besides s
+            if xcond:
                 del condsl[s]
                 numcondvars_ -= 1
 
@@ -417,7 +417,7 @@ xcond: do cross conditional assuming y and cond are the same vector
             cond_emb_lens = [cond_emb_len] * numcondvars_
             cond_emb_taus = [cond_emb_tau] * numcondvars_
             cond_emb_delays = [cond_emb_delay] * numcondvars_
-                
+
             # re-initialise calc
             cteCalcC.initialise(k, k_tau, l, l_tau, delay,
                                 cond_emb_lens,

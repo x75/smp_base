@@ -16,7 +16,15 @@ import numpy.linalg as LA
 import scipy.sparse as spa
 import matplotlib.pyplot as pl
 from matplotlib import gridspec
+
+
 try:
+    try:
+        from config import RLSPY
+    except:
+        pass
+    else:
+        sys.path.append(RLSPY)
     import rlspy
 except ImportError:
     print "ImportError for rlspy"
@@ -128,7 +136,7 @@ class LearningRules(object):
         c = 1.0/(1.0 + rPr)
         P = P - np.dot(k, (k.T*c))
         return (P, k, c)
-        
+
     def learnFORCE(self, target, P, k, c, r, z, channel):
         """FORCE learning rule for reservoir online supervised learning"""
         # compute error
@@ -142,15 +150,15 @@ class LearningRules(object):
         self.e = self.mdn_loss(x, r, z, target)
         dw = np.dot(-self.e, r.T).T
         return dw
-    
+
     # learning rule: FORCEmdn
     def learnFORCEmdn_setup(self, mixcomps = 3):
         """setup mdn variables"""
         self.loss = 0
         self.e = np.zeros((self.ndim_out, 1))
         self.mixcomps = mixcomps
-        
-    # use FORCE update with mdn based gradients    
+
+    # use FORCE update with mdn based gradients
     def learnFORCEmdn(self, target, P, k, c, r, z, channel, x):
         """FORCE learning rule for reservoir online supervised learning"""
         # compute error
@@ -163,7 +171,7 @@ class LearningRules(object):
         """Sample from the multivariate gaussian mixture"""
         print "%s.mixtureMV: Implement me" % (self.__class__.__name__)
         return None
-    
+
     # mixture, mdn_loss, and softmax are taken from karpathy's MixtureDensityNets.py
     def mixture(self, mu, sig, ps):
         """Sample from the univariate gaussian mixture"""
@@ -207,7 +215,7 @@ class LearningRules(object):
         # print "|dmu| = %f" % (np.linalg.norm(dmu))
 
         return np.vstack((dmu, dlogsig, dpiu))
-    
+
     def softmax(self, x):
         # softmaxes the columns of x
         #z = x - np.max(x, axis=0, keepdims=True) # for safety
@@ -239,7 +247,7 @@ class Reservoir(object):
           g
             Spectral radius [1.2]
         """
-        
+
         # reservoir size
         self.N = N
         # connection density
@@ -262,13 +270,13 @@ class Reservoir(object):
 
         normalize_spectral_radius(self.M, self.g)
         self.M = spa.csr_matrix(self.M)
-        
+
         # inputs and input weight matrix
         self.input_num = input_num
         self.wi_amp = input_scale
         # self.wi = np.random.uniform(-self.wi_amp, self.wi_amp, (self.N, self.input_num))
         self.wi = np.random.normal(0, self.wi_amp, (self.N, self.input_num))
-        
+
         # readout feedback term
         self.output_num = output_num
         self.wf_amp = feedback_scale
@@ -290,7 +298,7 @@ class Reservoir(object):
         # bias
         self.bias = np.random.uniform(-1., 1., size=self.x.shape)
         self.bias_scale = bias_scale
-        
+
         # rewards
         self.perf = np.zeros((self.output_num, 1))
         # self.perf_t = np.zeros((self.output_num, self.simtime_len))
@@ -320,7 +328,7 @@ class Reservoir(object):
 
         # FORCE stuff
         self.P = (1.0/self.alpha)*np.eye(self.N)
-    
+
         # nonlinearity
         self.nonlin_func = nonlin_func
 
@@ -344,7 +352,7 @@ class Reservoir(object):
         self.theta = theta
         self.theta_amps = np.ones(shape=(self.output_num, 1)) * self.theta
         # print "res: theta_amps", self.theta_amps
-        
+
     ############################################################
     # save network
     def save(self, filename=""):
@@ -357,7 +365,7 @@ class Reservoir(object):
         p.dump(self.__dict__)
         f.close()
         return
-        
+
     ############################################################
     # load network (restore from file)
     # @classmethod
@@ -397,8 +405,8 @@ class Reservoir(object):
     # initialize input weights to I
     def init_wi_identity(self):
         # self.wo = np.eye((self.N, self.output_num))
-        self.wi = np.eye((self.input_num)) 
-        
+        self.wi = np.eye((self.input_num))
+
     ############################################################
     # initialize input weights to ones
     def init_wi_ones(self):
@@ -490,7 +498,7 @@ class Reservoir(object):
         # apply to noisy readout
         self.zn = self.z + nu
         # self.zn = self.z + self.nu_
-        
+
         self.zn_lp = self.zn_lp * (1-self.coeff_a) + self.zn * self.coeff_a
         # print "Wo", self.wo.T.shape
         # print "self.r", self.r.shape
@@ -513,10 +521,10 @@ class Reservoir(object):
         dw = -e.T * k * c
         # apply update
         self.wo += dw
-                        
+
     def learnRLSsetup(self,wo_init, P0_init):
         # Attention! not using function parameters
-         
+
         #self.rls_E = rlspy.data_matrix.Estimator(np.zeros(shape=(self.N, 1)) ,(1.0/self.alpha)*np.eye(self.N))
         #self.rls_E = rlspy.data_matrix.Estimator(np.random.uniform(0, 0.0001, size=(self.N, 1)) , np.eye(self.N))
         if wo_init==None  and   P0_init==None :
@@ -535,13 +543,13 @@ class Reservoir(object):
 
     def learnRLS(self, target):
         # print "%s.learnRLS, target.shape = %s" % (self.__class__.__name__, target.shape)
-        self.rls_E.update(self.r.T, target.T, self.theta_state) 
+        self.rls_E.update(self.r.T, target.T, self.theta_state)
         self.wo = self.rls_E.x
-        
+
     def learnEH(self, target):
         """Exploratory Hebbian learning rule. This function computes the reward from the exploration result and modulates the Hebbian update with that reward, which can be binary or continuous. The exploratory part is happening in execute() by adding gaussian noise centered on current prediction."""
         eta = self.eta_init # 0.0003
-        
+
         self.perf = -np.square(self.zn - target)
 
         # binary modulator
@@ -560,12 +568,12 @@ class Reservoir(object):
         self.wo += dw
         # update performance prediction
         self.perf_lp = ((1 - self.coeff_a) * self.perf_lp) + (self.coeff_a * self.perf)
-        
+
     def perfVar(self, x):
         perf = np.var(x)
-        
+
         self.perf = np.array([perf]).reshape((self.output_num, 1))
-        
+
     def learnEHPerf(self):
         eta = self.eta_init
         # print "perf", self.perf
@@ -579,12 +587,12 @@ class Reservoir(object):
             # dW = eta * (self.zn[i,0] - self.zn_lp[i,0]) * -self.perf * self.r
             self.wo[:,i] += dW[:,0]
             # self.wo[:,i] += np.reshape(dW, (self.N, ))
-            
+
         self.perf_lp = ((1 - self.coeff_a) * self.perf_lp) + (self.coeff_a * self.perf)
-                        
+
     def learnPI(self, x):
         pass
-    
+
     def learnPCA_init(self, eta=1e-4):
         # self.ro_dim = 2
         eta_gha = eta
@@ -601,7 +609,7 @@ class Reservoir(object):
         # self.zn = self.z + np.random.normal(0, self.theta, size=(self.z.shape))
         self.zn = self.z + (np.random.normal(0, 1.0, size=(self.z.shape)) * self.theta)
         return self.z
-    
+
     # various getters
     def get_reservoir_matrix(self):
         return self.M
@@ -650,7 +658,7 @@ class Reservoir2(Reservoir):
             # self.M = np.array(self.M * self.g)
             self.M = np.array(self.M)
             print "M", self.M.shape
-            
+
             # input matrix
             p_wi = 0.5
             self.wi_ = spa.rand(self.N, self.input_num, p_wi)
@@ -689,13 +697,13 @@ class Reservoir2(Reservoir):
         # nonlinearity
         self.nonlin_func = nonlin_func
 
-        print "ip", self.ip        
+        print "ip", self.ip
         # # inputs and input weight matrix
         # self.wi = np.random.normal(0, self.wi_amp, (self.N, self.input_num))
         # # readout feedback term
         # self.wf = np.random.normal(0, self.wf_amp, (self.N, self.output_num))
         self.theta_amps = np.ones(shape=(self.output_num, 1)) * self.theta
-        
+
     ############################################################
     # execute Reservoir2
     # use model from waegemann et al 2012
@@ -768,7 +776,7 @@ def get_frequencies(numcomp = 1):
     freqs = np.linspace(f_start, f_end, f_numcomp) #.reshape((1, -1))
     # freqs_full = np.tile(freqs, (1, outdim)).T
     return freqs
-                
+
 def get_data(elen, outdim, mode="MSO_s1"):
     """Get target data from a datasource"""
 
@@ -798,7 +806,7 @@ def get_data(elen, outdim, mode="MSO_s1"):
         f_end   = (f_numcomp + 1) * f_step
     elif mode == "MSO_s4":
         # simple
-        # f(t)=(1.3/1.5)*sin(2*pi*t)+(1.3/3)*sin(4*pi*t)+(1.3/9)*sin(6*pi*t)+(1.3/3)*sin(8*pi*t)        
+        # f(t)=(1.3/1.5)*sin(2*pi*t)+(1.3/3)*sin(4*pi*t)+(1.3/9)*sin(6*pi*t)+(1.3/3)*sin(8*pi*t)
         d_sig_freqs = np.array([0.1, 0.2,  0.3]) * 0.02
         # d_sig_freqs = np.array([0.13, 0.26]) * 0.1
         # 400 seconds learning
@@ -851,7 +859,7 @@ def get_data(elen, outdim, mode="MSO_s1"):
         from scipy.io import wavfile
         # from smp.datasets import wavdataset
         # from models import SeqData
-        rate, data = wavfile.read("data/notype_mono_short.wav")
+        rate, data = wavfile.read(args.file)
         # rate, data = wavfile.read("drinksonus_mono_short.wav")
         offset = np.random.randint(0, data.shape[0] - elen)
         print data.dtype, offset
@@ -887,7 +895,7 @@ def get_data(elen, outdim, mode="MSO_s1"):
         ds_real = (sincomp + pulse) * (1.0/f_numcomp)
         print "ds_real.shape", ds_real
         return ds_real.reshape((outdim, -1))
-        
+
     # generate waveform from frequencies array
     # d_sig_freqs_base = np.linspace(f_start, f_end, f_numcomp).reshape((1, -1))
     if mode == "reg3t1":
@@ -897,7 +905,7 @@ def get_data(elen, outdim, mode="MSO_s1"):
         freqs = d_sig_freqs
     else:
         freqs = get_frequencies(numcomp = f_numcomp)
-        
+
     # print d_sig_freqs_base.shape
     # d_sig_freqs = np.tile(d_sig_freqs_base, (1, outdim)).T
     # print "d_sig_freqs shape = %s, data = %s" % (d_sig_freqs.shape, d_sig_freqs)
@@ -932,7 +940,7 @@ def get_data(elen, outdim, mode="MSO_s1"):
     # pl.subplot(212)
     # pl.plot(d_sig_b.T)
     # pl.show()
-            
+
     # d_sig = np.sum(d_sig_a, axis=1)/len(d_sig_freqs)
     # d_sig = d_sig.reshape(1, (len(d_sig)))
     return d_sig
@@ -1006,7 +1014,7 @@ class ReservoirPlot(object):
         self.fig.show()
 
         self.ressize = args.ressize
-        
+
         # plotting params for res hidden activation random projection
         self.selsize = 20
         self.rindex = np.random.randint(self.ressize, size=self.selsize)
@@ -1014,15 +1022,15 @@ class ReservoirPlot(object):
     def plot_data(self, args, data, incr = 1000, lr = None, testing = 100):
         (ds_real, out_t, out_t_mdn_sample, r_t, perf_t, loss_t, wo_t_norm, dw_t_norm) = data
         episode_len = args.length
-         
+
         assert lr is not None
-         
+
         for axidx in range(5):
             self.axs[axidx].clear()
 
         # mixcomp colors mu black, sigma blue, pi red
         cols = ["k", "b", "r"]
-       
+
         # self.axs[0].clear()
         # backlog = 200
         # print "incr, ds_real.shape", incr, ds_real.shape
@@ -1048,7 +1056,7 @@ class ReservoirPlot(object):
 
         self.axs[1].plot(pdata, "g-", lw=3.0, label="tgt", alpha=0.5)
         self.axs[1].plot([0, pdata.shape[0]], [0, 0], "k-", lw=0.2)
-        
+
         if args.mode.endswith("mdn"):
             # the sample
             self.axs[1].plot(pdata_mdn, "c-", lw=0.5, label="out_", alpha=0.5)
@@ -1064,9 +1072,9 @@ class ReservoirPlot(object):
                 self.axs[1].plot(pdata, "%s-" % (cols[k]), lw=0.5, label="out%d"%k, alpha=0.5)
         else:
             self.axs[1].plot(pdata_out, lw=0.5, label="out")
-            
+
         self.axs[1].legend(ncol=2, fontsize=8)
-        
+
         self.axs[2].set_title("reservoir traces")
         self.axs[2].plot(r_t.T[:,self.rindex], label="r")
 
@@ -1079,7 +1087,7 @@ class ReservoirPlot(object):
             self.axs[3].plot(wo_t_norm.T, label="|W|")
             self.axs[3].plot(dw_t_norm.T, label="|dW|")
         self.axs[3].legend(ncol=2, fontsize=8)
-        
+
         self.axs[4].set_title("perf (-loss)")
         # if args.mode.endswith("mdn"):
         if args.mode.endswith("mdn"):
@@ -1089,14 +1097,14 @@ class ReservoirPlot(object):
         else:
             self.axs[4].plot(perf_t.T, label="perf", alpha=0.5)
         self.axs[4].legend(ncol=2, fontsize=8)
-            
+
         pl.draw()
-        pl.pause(1e-9)        
-        
+        pl.pause(1e-9)
+
 class ReservoirTest(object):
     modes = {"ol_rls": 0, "ol_force": 1, "ol_eh": 2, "ip": 3, "fwd": 4, "ol_pi": 5, "ol_force_mdn": 6}
     targets = {"MSO_s1": 0, "MSO_s2": 1, "MSO_s3": 2, "MSO_c1": 3, "MSO_c2": 4, "MG": 5, "wav": 6, "reg3t1": 7, "reg_multimodal_1": 8}
-    
+
 def save_wavfile(out_t, timestr):
     try:
         from scipy.io import wavfile
@@ -1106,7 +1114,7 @@ def save_wavfile(out_t, timestr):
         wavfile.write("data/res_out_%s.wav" % (timestr), 44100, wav_out)
     except ImportError:
         print "ImportError for scipy.io.wavfile"
-                
+
 def main(args):
     if args.mode == "ip":
         test_ip(args)
@@ -1140,7 +1148,7 @@ def main(args):
         # input_scale = 1.0
         # g = 0.01
         # tau = 1.0
-        
+
         alpha = 100.0
         input_scale = 2.0
         g = 1.5
@@ -1148,7 +1156,7 @@ def main(args):
         tau = 0.025
         # tau = 0.01
     eta_init_ = 5e-4
-    
+
     # get training data
     ds_real = get_data(episode_len+1, outsize, args.target)
 
@@ -1178,20 +1186,20 @@ def main(args):
         res = Reservoir(N = i, input_num = insize, output_num = outsize_, g = g, tau = tau, alpha = alpha,
                         feedback_scale = feedback_scale, input_scale = input_scale, bias_scale = 0.8, eta_init=eta_init_,
                         theta = 5e-1, theta_state = 5e-2, coeff_a = 0.2, mtau=args.multitau)
-        
+
         # res.save(filename)
         # print ("first", res.M)
-        
+
         # res = Reservoir2(N=i, input_num=insize, output_num=outsize, g = 1.5, tau = 0.1,
         #                 feedback_scale=0.0, input_scale=1.0, bias_scale=0.0, eta_init=1e-3,
         #                 sparse=True, coeff_a = 0.2,
         #                 ip=False, theta = 1e-5, theta_state = 1e-2)
-    
+
         # print ("second", res.M)
 
         # res.load(filename)
         # print "third", res.M
-        
+
         # print "res size", res.get_reservoir_size()
         # print "res matrix", res.get_reservoir_matrix()
         # print "res input matrix", res.get_input_matrix()
@@ -1204,11 +1212,11 @@ def main(args):
             sigmas = [1e-3] * mixcomps + [1e-3] * mixcomps + [1e-3] * mixcomps
             print "sigmas", sigmas
             res.init_wo_random(np.zeros((1, outsize_)), np.array(sigmas))
-        
+
         # learning rule module
         lr = LearningRules(ndim_out = outsize_)
 
-        # do some setup 
+        # do some setup
         if ReservoirTest.modes[args.mode] == ReservoirTest.modes["ol_rls"]:
             if rlspy is None:
                 print "Dont have rlspy, exiting"
@@ -1226,8 +1234,8 @@ def main(args):
         pl.ion()
         # init reservoir plotting
         rp = ReservoirPlot(args) # bad naming, i is instance of res model size
-                    
-        # loop over timesteps        
+
+        # loop over timesteps
         for j in range(episode_len):
 
             # teacher forcing
@@ -1242,17 +1250,17 @@ def main(args):
                     inputs = out_t[:,[j-1]]
             # target
             target = ds_real[:,[j]]
-            
+
             # save network state
             res_x_ = res.x.copy()
             res_r_ = res.r.copy()
-            
+
             # update network, log activations
             res.execute(inputs)
             out_t[:,[j]]   = res.z
             out_t_n[:,[j]] = res.zn
             r_t[:,[j]] = res.r
-            
+
             # start testing / freerunning mode
             if j < testing and j > washout:
                 if ReservoirTest.modes[args.mode] == ReservoirTest.modes["ol_rls"]:
@@ -1266,12 +1274,12 @@ def main(args):
                     dw = lr.learnFORCE(target, res.P, k, c, res.r, res.z, 0)
                     res.wo += dw
                     res.perf = lr.e # mdn_loss_val
-                                    
+
                 elif ReservoirTest.modes[args.mode] == ReservoirTest.modes["ol_force_mdn"]:
                     # reservoir class built-in learning rule
                     # res.learnFORCE(target)
 
-                    
+
                     # modular learning rule (ugly call)
                     (res.P, k, c) = lr.learnFORCE_update_P(res.P, res.r)
                     dw = lr.learnFORCEmdn(target, res.P, k, c, res.r, res.z, 0, inputs)
@@ -1288,11 +1296,11 @@ def main(args):
                     loss_t[0,j] = lr.loss
                     # print "mdn_loss = %s" % mdn_loss_val
                     res.perf = lr.e # mdn_loss_val
-                        
+
                 elif ReservoirTest.modes[args.mode] == ReservoirTest.modes["ol_eh"]:
                     res.eta_init = eta_init_ / (1 + ((j - washout)/20000.0))
                     res.learnEH(target)
-                                        
+
                 elif ReservoirTest.modes[args.mode] == ReservoirTest.modes["ol_pi"]:
                     if j > 100:
                         res.perfVar(out_t)
@@ -1311,7 +1319,7 @@ def main(args):
 
             if args.mode.endswith("mdn"):
                 out_t_mdn_sample[:,[j]] = lr.mixture(res.z[:mixcomps,0], np.exp(res.z[mixcomps:(2*mixcomps),0]), lr.softmax(res.z[(2*mixcomps):,0]))
-                            
+
             perf_t[:,[j]] = res.perf
             wo_t[:,:,j] = res.wo
             for k in range(outsize_):
@@ -1327,20 +1335,20 @@ def main(args):
                 # print '\r[{0}] {1}%'.format('#'*(progress/10), progress)
                 sys.stdout.write( '\r[{0}] {1}%'.format('#'*int(progress), progress))
                 sys.stdout.flush()
-                
+
             if j > washout and (j+1) % args.plot_interval == 0:
                 rpdata = (ds_real, out_t, out_t_mdn_sample, r_t, perf_t, loss_t, wo_t_norm, dw_t_norm)
                 rp.plot_data(args = args, data = rpdata, incr = j, lr = lr, testing = testing)
 
     # FIXME: if testing
     # compute performance for testing: MSE, freq match without phase
-    
+
     # final plot
     pl.ioff()
 
     rpdata = (ds_real, out_t, out_t_mdn_sample, r_t, perf_t, loss_t, wo_t_norm, dw_t_norm)
     rp.plot_data(args = args, data = rpdata, incr = j, lr = lr, testing = testing)
-    
+
     timestr = time.strftime("%Y%m%d_%H%M%S")
     rp.fig.savefig("data/res_plot_%s.pdf" % (timestr), dpi=300, bbox_inches="tight")
     pl.show()
@@ -1351,7 +1359,7 @@ def main(args):
         save_wavfile(out_t, timestr)
 
 if __name__ == "__main__":
-    
+
     parser = argparse.ArgumentParser(description="Reservoir library, call main for testing: python reservoirs.py -t MSO_s1 -m ol_eh -rs 500 -l 100000")
     parser.add_argument("-l", "--length", help="Episode length [30000]", default=30000, type=int)
     parser.add_argument("-lr", "--learning_ratio", help="Ratio of learning to episode len [0.8]", default=0.8, type=float)
@@ -1366,11 +1374,12 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--seed", help="RNG seed [101]", default=101, type=int)
     parser.add_argument("-sf", "--scale_feedback", help="Global feedback strength (auto-regressive) [2.0]", default=2.0, type=float)
     parser.add_argument("-t", "--target", help="Target [MSO_s1], one of " + str(ReservoirTest.targets.keys()), default = "MSO_s1")
+    parser.add_argument("-f", "--file", help="File to use as data input", dest="file", default="data/notype_mono_short.wav")
     parser.add_argument("-tf", "--teacher_forcing", dest="teacher_forcing", action="store_true",
                         help="Use teacher forcing during training [False]")
     parser.add_argument("-fo", "--feedback_only", dest="feedback_only", action="store_true",
                         help="Use only the global output feedback [False]")
-    
+
     args = parser.parse_args()
 
     main(args)

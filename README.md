@@ -46,6 +46,11 @@ Pyunicorn does recurrence analysis and can be obtained from
 Oger is an extension for MDP and can be obtained from <http://reservoir-computing.org/installing_oger>.
 
 
+## Configuration
+
+The path to certain libraries can be set in the config file. See config.py.dist for possible options.
+
+
 ## Reservoir lib
 
 <table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
