@@ -47,6 +47,10 @@ https://github.com/pik-copan/pyunicorn or via pip.
 
 Oger is an extension for MDP and can be obtained from http://reservoir-computing.org/installing_oger.
 
+** Configuration
+
+The path to some of the libraries can be set in the config file. See config.py.dist for possible options.
+
 ** Reservoir lib
 
 |----------------+-------------------------------------------------------------------------------------------|
