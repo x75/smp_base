@@ -67,7 +67,10 @@ except ImportError, e:
 model_classes = ["KNN", "SOESGP", "STORKGP", "GMM", "HebbSOM", "all"]
         
 class ActInfModel(object):
-    """Base class for active inference function approximators / regressors"""
+    """ActInfModel
+
+    Base class for active inference function approximators / regressors
+    """
     def __init__(self, idim = 1, odim = 1, numepisodes = 10):
         self.model = None
         self.idim = idim
@@ -337,10 +340,10 @@ class ActInfSTORKGP(ActInfOTLModel):
 
 # GMM - gaussian mixture model
 class ActInfGMM(ActInfModel):
-        """ActInfGMM
+    """ActInfGMM
 
-        Gaussian mixture model based on PyPR's gmm
-        """
+    Gaussian mixture model based on PyPR's gmm
+    """
     def __init__(self, idim = 1, odim = 1, K = 10, numepisodes = 10):
         """ActInfGMM.__init__
         """
