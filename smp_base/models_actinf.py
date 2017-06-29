@@ -6,10 +6,11 @@ Oswald Berthold, 2016-2017
 
 This file contains the learners which can be used as adaptive models of
 sensorimotor contexts. For forward models there are
- - nearest neighbour
- - sparse online gaussian process models powered by Harold Soh's OTL library
- - gaussian mixture model
- - hebbian connected SOM 
+ - k nearest neighbours (knn)
+ - sparse online gaussian process models powered by Harold Soh's OTL library (soesgp, storkgp)
+ - gaussian mixture model based on pypr's gmm (gmm)
+ - hebbian connected SOM via bruno lara, guido schillaci (hebbsom)
+ - X: juan's igmm
 
 TODO: common calling convention for all model types
    - including 'predict_naive' and 'predict_full' methods that would capture
@@ -92,8 +93,15 @@ class ActInfModel(object):
         return cPickle.load(open(filename, "rb"))
 
 class ActInfKNN(ActInfModel):
-    """k-NN function approximator for active inference"""
+    """ActInfKNN
+
+    k-NN function approximator for active inference
+    """
     def __init__(self, idim = 1, odim = 1):
+        """ActInfKNN.__init__
+
+        init
+        """
         self.fwd = KNeighborsRegressor(n_neighbors=5)
         ActInfModel.__init__(self, idim, odim)
 
@@ -103,6 +111,10 @@ class ActInfKNN(ActInfModel):
         self.bootstrap()
 
     def bootstrap(self):
+        """ActInfKNN.bootstrap
+
+        Bootstrap the model with some initial dummy samples to prepare it for inference after init
+        """
         # bootstrap model
         print("%s.bootstrap'ping" % (self.__class__.__name__))
         for i in range(10):
@@ -116,9 +128,17 @@ class ActInfKNN(ActInfModel):
         self.fwd.fit(self.X_, self.y_)
 
     def predict(self, X):
+        """ActInfKNN.predict
+
+        Predict Y using X on the current model state
+        """
         return self.fwd.predict(X)
 
     def fit(self, X, y):
+        """ActInfKNN.fit
+
+        Fit Y to X single time step
+        """
         if X.shape[0] > 1: # batch of data
             return self.fit_batch(X, y)
         
@@ -132,6 +152,10 @@ class ActInfKNN(ActInfModel):
         self.fwd.fit(self.X_, self.y_)
 
     def fit_batch(self, X, y):
+        """ActInfKNN.fit
+
+        Batch fit Y to X
+        """
         self.X_ = X.tolist()
         self.y_ = y.tolist()
         self.fwd.fit(self.X_, self.y_)
@@ -140,8 +164,11 @@ class ActInfKNN(ActInfModel):
 # ActiveInference OTL library based model, base class implementing predict,
 # predict_step (otl can't handle batches), fit, save and load methods
 class ActInfOTLModel(ActInfModel):
-    """sparse online echo state gaussian process function approximator
-    for active inference"""
+    """ActInfOTLModel
+
+    Sparse online echo state gaussian process function approximator
+    for active inference
+    """
     def __init__(self, idim = 1, odim = 1):
         ActInfModel.__init__(self, idim, odim)
 
@@ -229,8 +256,11 @@ class ActInfOTLModel(ActInfModel):
 ################################################################################
 # Sparse Online Echo State Gaussian Process (SOESGP) OTL library model
 class ActInfSOESGP(ActInfOTLModel):
-    """sparse online echo state gaussian process function approximator
-    for active inference"""
+    """ActInfSOESGP
+
+    Sparse online echo state gaussian process function approximator
+    for active inference
+    """
     def __init__(self, idim = 1, odim = 1):
         ActInfOTLModel.__init__(self, idim, odim)
         
@@ -274,8 +304,11 @@ class ActInfSOESGP(ActInfOTLModel):
 ################################################################################
 # StorkGP OTL based model
 class ActInfSTORKGP(ActInfOTLModel):
-    """sparse online echo state gaussian process function approximator
-    for active inference"""
+    """ActInfSTORKGP
+
+    Sparse online echo state gaussian process function approximator
+    for active inference
+    """
     def __init__(self, idim = 1, odim = 1):
         ActInfModel.__init__(self, idim, odim)
         
@@ -304,8 +337,13 @@ class ActInfSTORKGP(ActInfOTLModel):
 
 # GMM - gaussian mixture model
 class ActInfGMM(ActInfModel):
+        """ActInfGMM
+
+        Gaussian mixture model based on PyPR's gmm
+        """
     def __init__(self, idim = 1, odim = 1, K = 10, numepisodes = 10):
-        """ActInfGMM"""
+        """ActInfGMM.__init__
+        """
         ActInfModel.__init__(self, idim, odim)
 
         # number of mixture components
@@ -333,7 +371,10 @@ class ActInfGMM(ActInfModel):
         print("%s.__init__, idim = %d, odim = %d" % (self.__class__.__name__, self.idim, self.odim))
 
     def fit(self, X, y):
-        """ActInfGMM single step fit: X, y are single patterns"""
+        """ActInfGMM.fit
+
+        Single step fit: X, y are single patterns
+        """
         # print("%s.fit" % (self.__class__.__name__), X.shape, y.shape)
         if X.shape[0] == 1:
             # single step update, add to internal data and refit if length matches update intervale
@@ -357,7 +398,10 @@ class ActInfGMM(ActInfModel):
             self.fit_batch(X, y)
         
     def fit_batch(self, X, y):
-        """ActInfGMM Fit the GMM model with batch data"""
+        """ActInfGMM.fit_batch
+
+        Fit the GMM model with batch data
+        """
         # print("%s.fit X.shape = %s, y.shape = %s" % (self.__class__.__name__, X.shape, y.shape))
         # self.Xy = np.hstack((X[:,3:], y[:,:]))
         # self.Xy = np.hstack((X, y))
@@ -375,16 +419,21 @@ class ActInfGMM(ActInfModel):
         print("%s.fit_batch Log likelihood (how well the data fits the model) = %f" % (self.__class__.__name__, self.logL))
 
     def predict(self, X):
-        """ActInfGMM predict: forward to default sample call"""
+        """ActInfGMM.predict
+
+        Predict Y from X by forwarding to default sample call
+        """
         return self.sample(X)
 
     def sample(self, X):
-        """ActInfGMM default sample function
+        """ActInfGMM.sample
 
-        assumes the input is X with dims = idim located in
+        Default sample function
+
+        Assumes the input is X with dims = idim located in
         the first part of the conditional inference combined input vector
 
-        this method construct the corresponding conditioning input from the reduced input
+        This method constructs the corresponding conditioning input from the reduced input
         """
         # print("%s.sample: X.shape = %s, idim = %d" % (self.__class__.__name__, X.shape, self.idim))
         assert X.shape[1] == self.idim
@@ -403,7 +452,10 @@ class ActInfGMM(ActInfModel):
         return self.sample_cond(cond)
     
     def sample_cond(self, X):
-        """ActInfGMM single sample from the GMM model with conditioning single input pattern X
+        """ActInfGMM.sample_cond
+
+        Single sample from the GMM model with conditioning on single input pattern X
+
         TODO: function conditional_dist, make predict/sample comply with sklearn and use the lowlevel
               cond_dist for advanced uses like dynamic conditioning
         """
@@ -425,15 +477,21 @@ class ActInfGMM(ActInfModel):
         return cond_sample
 
     def sample_batch(self, X):
-        """ActInfGMM.sample_batch: If X has more than one rows, return batch of samples for
-        every condition row in X"""
+        """ActInfGMM.sample_batch
+
+        If X has more than one rows, return batch of samples for
+        every condition row in X
+        """
         samples = np.zeros((X.shape[0], self.odim))
         for i in range(X.shape[0]):
             samples[i] = self.sample_cond(X[i])
         return samples
     
     def sample_batch_legacy(self, X, cond_dims = [0], out_dims = [1], resample_interval = 1):
-        """ActInfGMM sample from gmm model with conditioning batch input X"""
+        """ActInfGMM.sample_batch_legacy
+
+        Sample from gmm model with conditioning batch input X legacy function
+        """
         # compute conditional
         sampmax = 20
         numsamplesteps = X.shape[0]
