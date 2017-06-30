@@ -271,14 +271,14 @@ class ActInfSOESGP(ActInfOTLModel):
         self.otlmodel = OESGP()
 
         self.res_size = 100 # 20
-        self.input_weight = 1.0
+        self.input_weight = 1.0 # 1.0
         
         self.output_feedback_weight = 0.0
         self.activation_function = 1
         # leak_rate: x <= (1-lr) * input + lr * x
-        self.leak_rate = 0.0 # 0.1 # 0.1
+        self.leak_rate = 0.05 # 0.0 # 0.1 # 0.3
         self.connectivity = 0.1
-        self.spectral_radius = 0.7
+        self.spectral_radius = 0.99
         
         self.kernel_params = [2.0, 2.0]
         # self.kernel_params = [1.0, 1.0]
