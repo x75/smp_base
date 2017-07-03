@@ -196,7 +196,7 @@ class ActInfOTLModel(ActInfModel):
         # return np.zeros((1, self.odim))
         return np.array(pred).reshape((1, self.odim))
         
-    def fit(self, X, y):
+    def fit(self, X, y, update = True):
         """ActInfOTLModel.fit
 
         Fit model to data X, y
@@ -204,16 +204,17 @@ class ActInfOTLModel(ActInfModel):
         
         if X.shape[0] > 1: # batch of data
             return self.fit_batch(X, y)
-        
-        X_ = X.flatten().tolist()
-        # print("X.shape", X.shape, len(X_), X_)
-        self.otlmodel.update(X_)
-        # copy state into predefined structure
-        # self.otlmodel.getState(self.r)
 
-        pred = []
-        var  = []
-        self.otlmodel.predict(pred, var)
+        if update:
+            X_ = X.flatten().tolist()
+            # print("X.shape", X.shape, len(X_), X_)
+            self.otlmodel.update(X_)
+            # copy state into predefined structure
+            # self.otlmodel.getState(self.r)
+
+        # pred = []
+        # var  = []
+        # self.otlmodel.predict(pred, var)
 
         y_ = y.flatten().tolist()
         self.otlmodel.train(y_)
@@ -270,16 +271,17 @@ class ActInfSOESGP(ActInfOTLModel):
         self.otlmodel_type = "soesgp"
         self.otlmodel = OESGP()
 
-        self.res_size = 100 # 20
+        self.res_size = 300 # 20
         self.input_weight = 1.0 # 1.0
         
         self.output_feedback_weight = 0.0
         self.activation_function = 1
         # leak_rate: x <= (1-lr) * input + lr * x
-        self.leak_rate = 0.05 # 0.0 # 0.1 # 0.3
+        self.leak_rate = 0.9 # 0.05 # 0.0 # 0.1 # 0.3
         self.connectivity = 0.1
         self.spectral_radius = 0.99
-        
+
+        # covariances
         self.kernel_params = [2.0, 2.0]
         # self.kernel_params = [1.0, 1.0]
         # self.kernel_params = [0.1, 0.1]
