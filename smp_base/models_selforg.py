@@ -1,6 +1,8 @@
 
 import numpy as np
 
+from smp_graphs.common import set_attr_from_dict
+
 ################################################################################
 # helper funcs
 def dtanh(x):
@@ -17,45 +19,32 @@ def get_cb_dict(func):
 class HK():
     modes = {"hs": 0, "hk": 1, "eh_pi_d": 2}
 
-    def __init__(self, idim = 1, odim = 1, minlag = 1, maxlag = 2, laglen = 1, mode="hs", loop_time = 1./20, robot = "lpz"):
-        print "loop_time", loop_time
+    # def __init__(self, idim = 1, odim = 1, minlag = 1, maxlag = 2, laglen = 1, mode="hs"):
+    def __init__(self, conf):
+        set_attr_from_dict(self, conf)
+                
         self.isrunning = True
-        self.minlag = minlag
-        self.maxlag = maxlag
-        self.laglen = laglen
-        # if robot == "lpz":
-        #     self.robot = robotLPZ(self)
-        # elif robot == "sphero":
-        #     self.robot = robotSphero(self)
-        # else:
-        #     self.robot = None
-
-        # # get pubsub configuration
-        # pubs, subs = self.robot.get_pubsub()
-        
-        # # init ros runners
-        # smp_thread_ros.__init__(self, loop_time = loop_time,
-        #                         pubs = pubs, subs = subs)
         
         # self.name = "lpzros"
-        self.mode = HK.modes[mode]
+        self.mode = HK.modes[self.mode]
         self.cnt = 0
     
         ############################################################
         # model + meta params
-        self.numsen_raw = idim
-        self.numsen = idim
-        self.nummot = odim
+        self.numsen_raw = self.idim
+        self.numsen = self.idim
+        self.nummot = self.odim
         # buffer size accomodates causal minimum 1 + lag time steps
         self.bufsize = self.maxlag + 1 # 1 + self.robot.lag # 2
-        self.creativity = 0.5
+        
+        # self.creativity = 0.5
         # self.epsA = 0.2
         # self.epsA = 0.02
-        self.epsA = 0.001
+        # self.epsA = 0.001
         # self.epsC = 0.001
         # self.epsC = 0.001
         # self.epsC = 0.01
-        self.epsC = 0.1
+        # self.epsC = 0.1
         # self.epsC = 0.3
         # self.epsC = 0.5
         # self.epsC = 0.9
@@ -82,7 +71,8 @@ class HK():
         self.y = np.zeros((self.nummot, self.bufsize))
         self.z = np.zeros((self.numsen, 1))
         # auxiliary variables
-        self.L     = np.zeros((self.numsen, self.nummot))
+        # self.L     = np.zeros((self.numsen, self.nummot))
+        self.v     = np.zeros((self.numsen, 1)) 
         self.v_avg = np.zeros((self.numsen, 1)) 
         self.xsi   = np.zeros((self.numsen, 1))
 
@@ -112,7 +102,7 @@ class HK():
     def brain(self, msg):
         """lpz sensors callback: receive sensor values, sos algorithm attached, FloatArray input msg"""
         # FIXME: fix the timing
-        print "msg", self.cnt, msg
+        # print "msg", self.cnt, msg
         now = 0
         # self.msg_motors.data = []
         self.x = np.roll(self.x, 1, axis=1) # push back past
@@ -166,20 +156,20 @@ class HK():
 
         # forward prediction error xsi
         # FIXME: include state x in forward model
-        xsi = x_fut - (np.dot(self.A, y) + self.b)
-        print "xsi =", np.linalg.norm(xsi)
+        self.xsi = x_fut - (np.dot(self.A, y) + self.b)
+        # print "xsi =", np.linalg.norm(self.xsi)
         
         # forward model learning
-        dA = self.epsA * np.dot(xsi, y.T) + (self.A * -0.0003) # * 0.1
+        dA = self.epsA * np.dot(self.xsi, y.T) + (self.A * -0.0003) # * 0.1
         self.A += dA
-        db = self.epsA * xsi              + (self.b * -0.0001) # * 0.1
+        db = self.epsA * self.xsi              + (self.b * -0.0001) # * 0.1
         self.b += db
 
         # print "A", self.cnt, self.A
         # print "b", self.b
 
         if self.mode == 1: # TLE / homekinesis
-            eta = np.dot(np.linalg.pinv(self.A), xsi)
+            eta = np.dot(np.linalg.pinv(self.A), self.xsi)
             zeta = np.clip(eta * g_prime_inv, -1., 1.)
             # print "eta", self.cnt, eta
             # print "zeta", self.cnt, zeta
@@ -188,22 +178,22 @@ class HK():
             # changed params + noise shape
             lambda_ = np.eye(self.nummot) * np.random.uniform(-0.01, 0.01, (self.nummot, self.nummot))
             mue = np.dot(np.linalg.pinv(np.dot(self.C, self.C.T) + lambda_), zeta)
-            v = np.clip(np.dot(self.C.T, mue), -1., 1.)
-            self.v_avg += (v - self.v_avg) * 0.1
-            # print "v", self.cnt, v
+            self.v = np.clip(np.dot(self.C.T, mue), -1., 1.)
+            self.v_avg += (self.v - self.v_avg) * 0.1
+            # print "v", self.cnt, self.v
             # print "v_avg", self.cnt, self.v_avg
             EE = 1.0
 
-            # print EE, v
+            # print EE, self.v
             if True: # logarithmic error
-                # EE = .1 / (np.sqrt(np.linalg.norm(v)) + 0.001)
-                EE = .1 / (np.square(np.linalg.norm(v)) + 0.001)
-            print "EE", np.linalg.norm(EE)
+                # EE = .1 / (np.sqrt(np.linalg.norm(self.v)) + 0.001)
+                EE = .1 / (np.square(np.linalg.norm(self.v)) + 0.001)
+            # print "EE", np.linalg.norm(EE)
             # print "eta", eta
             # print "zeta", zeta
             # print "mue", mue
             
-            dC = (np.dot(mue, v.T) + (np.dot((mue * y * zeta), -2 * x.T))) * EE * self.epsC
+            dC = (np.dot(mue, self.v.T) + (np.dot((mue * y * zeta), -2 * x.T))) * EE * self.epsC
             dh = mue * y * zeta * -2 * EE * self.epsC
 
             # pass
@@ -211,7 +201,7 @@ class HK():
             # dh = np.zeros_like(self.h)
             
         elif self.mode == 0: # homestastic learning
-            eta = np.dot(self.A.T, xsi)
+            eta = np.dot(self.A.T, self.xsi)
             # print "eta", self.cnt, eta.shape, eta
             dC = np.dot(eta * g_prime, x.T) * self.epsC
             dh = eta * g_prime * self.epsC
