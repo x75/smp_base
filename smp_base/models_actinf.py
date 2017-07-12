@@ -10,9 +10,16 @@ sensorimotor contexts. For forward models there are
  - sparse online gaussian process models powered by Harold Soh's OTL library (soesgp, storkgp)
  - gaussian mixture model based on pypr's gmm (gmm)
  - hebbian connected SOM via bruno lara, guido schillaci (hebbsom)
- - X: juan's igmm
+ - igmm (juan acevedo-valle)
 
 TODO: common calling convention for all model types
+ - models:
+   - single hidden layer networks: linear/elm/res with RLS/FORCE/MDN/EH, merge with otl
+   - imol/models.py
+   - im/models.py
+   - smp/models_seq.py
+   - smp/models_karpmdn.py
+
    - including 'predict_naive' and 'predict_full' methods that would capture
      returning confidences about the current prediction
    - other variables that might be used by the context to modulate
@@ -64,7 +71,10 @@ try:
 except ImportError, e:
     print("Couldn't import lmjohns3's kohonon SOM lib", e)
 
-model_classes = ["KNN", "SOESGP", "STORKGP", "GMM", "HebbSOM", "all"]
+# IGMM
+from igmm_cond import IGMM_COND
+    
+model_classes = ["KNN", "SOESGP", "STORKGP", "GMM", "HebbSOM", ",IGMM", "all"]
         
 class ActInfModel(object):
     """ActInfModel
@@ -271,13 +281,13 @@ class ActInfSOESGP(ActInfOTLModel):
         self.otlmodel_type = "soesgp"
         self.otlmodel = OESGP()
 
-        self.res_size = 300 # 20
+        self.res_size = 100 # 20
         self.input_weight = 1.0 # 1.0
         
         self.output_feedback_weight = 0.0
         self.activation_function = 1
         # leak_rate: x <= (1-lr) * input + lr * x
-        self.leak_rate = 0.9 # 0.05 # 0.0 # 0.1 # 0.3
+        self.leak_rate = 0.96 # 0.05 # 0.0 # 0.1 # 0.3
         self.connectivity = 0.1
         self.spectral_radius = 0.99
 
@@ -492,56 +502,218 @@ class ActInfGMM(ActInfModel):
             samples[i] = self.sample_cond(X[i])
         return samples
     
-    def sample_batch_legacy(self, X, cond_dims = [0], out_dims = [1], resample_interval = 1):
-        """ActInfGMM.sample_batch_legacy
+    # def sample_batch_legacy(self, X, cond_dims = [0], out_dims = [1], resample_interval = 1):
+    #     """ActInfGMM.sample_batch_legacy
 
-        Sample from gmm model with conditioning batch input X legacy function
-        """
-        # compute conditional
-        sampmax = 20
-        numsamplesteps = X.shape[0]
-        odim = len(out_dims) # self.idim - X.shape[1]
-        self.y_sample_  = np.zeros((odim,))
-        self.y_sample   = np.zeros((odim,))
-        self.y_samples_ = np.zeros((sampmax, numsamplesteps, odim))
-        self.y_samples  = np.zeros((numsamplesteps, odim))
-        self.cond       = np.zeros_like(X[0])
+    #     Sample from gmm model with conditioning batch input X legacy function
+    #     """
+    #     # compute conditional
+    #     sampmax = 20
+    #     numsamplesteps = X.shape[0]
+    #     odim = len(out_dims) # self.idim - X.shape[1]
+    #     self.y_sample_  = np.zeros((odim,))
+    #     self.y_sample   = np.zeros((odim,))
+    #     self.y_samples_ = np.zeros((sampmax, numsamplesteps, odim))
+    #     self.y_samples  = np.zeros((numsamplesteps, odim))
+    #     self.cond       = np.zeros_like(X[0])
 
-        print("%s.sample_batch: y_samples_.shape = %s" % (self.__class__.__name__, self.y_samples_.shape))
+    #     print("%s.sample_batch: y_samples_.shape = %s" % (self.__class__.__name__, self.y_samples_.shape))
         
-        for i in range(numsamplesteps):
-            # if i % 100 == 0:
-            if i % resample_interval == 0:
-                # print("%s.sample_batch: sampling gmm cond prob at step %d" % (self.__class__.__name__, i))
-                ref_interval = 1
-                # self.cond = self.logs["EP"][(i+ref_interval) % self.logs["EP"].shape[0]] # self.X__[i,:3]
-                self.cond = X[(i+ref_interval) % numsamplesteps] # self.X__[i,:3]
-                # self.cond = np.array()
-                # self.cond[:2] = X_
-                # print(self.cond, out_dims, X.shape)
-                self.cond[out_dims] = np.nan
-                (self.cen_con, self.cov_con, self.new_p_k) = gmm.cond_dist(self.cond, self.cen_lst, self.cov_lst, self.p_k)
-                # print "run_hook_e2p_sample gmm.cond_dist:", np.array(self.cen_con).shape, np.array(self.cov_con).shape, self.new_p_k.shape
-                samperr = 1e6
-                j = 0
-                while samperr > 0.1 and j < sampmax:
-                    self.y_sample = gmm.sample_gaussian_mixture(self.cen_con, self.cov_con, self.new_p_k, samples = 1)
-                    self.y_samples_[j,i] = self.y_sample
-                    samperr_ = np.linalg.norm(self.y_sample - X[(i+1) % numsamplesteps,:odim], 2)
-                    if samperr_ < samperr:
-                        samperr = samperr_
-                        self.y_sample_ = self.y_sample
-                    j += 1
-                    # print "sample/real err", samperr
-                print("sampled", j, "times")
-            else:
-                # retain samples from last sampling interval boundary
-                self.y_samples_[:,i] = self.y_samples_[:,i-1]
-            # return sample array
-            self.y_samples[i] = self.y_sample_
+    #     for i in range(numsamplesteps):
+    #         # if i % 100 == 0:
+    #         if i % resample_interval == 0:
+    #             # print("%s.sample_batch: sampling gmm cond prob at step %d" % (self.__class__.__name__, i))
+    #             ref_interval = 1
+    #             # self.cond = self.logs["EP"][(i+ref_interval) % self.logs["EP"].shape[0]] # self.X__[i,:3]
+    #             self.cond = X[(i+ref_interval) % numsamplesteps] # self.X__[i,:3]
+    #             # self.cond = np.array()
+    #             # self.cond[:2] = X_
+    #             # print(self.cond, out_dims, X.shape)
+    #             self.cond[out_dims] = np.nan
+    #             (self.cen_con, self.cov_con, self.new_p_k) = gmm.cond_dist(self.cond, self.cen_lst, self.cov_lst, self.p_k)
+    #             # print "run_hook_e2p_sample gmm.cond_dist:", np.array(self.cen_con).shape, np.array(self.cov_con).shape, self.new_p_k.shape
+    #             samperr = 1e6
+    #             j = 0
+    #             while samperr > 0.1 and j < sampmax:
+    #                 self.y_sample = gmm.sample_gaussian_mixture(self.cen_con, self.cov_con, self.new_p_k, samples = 1)
+    #                 self.y_samples_[j,i] = self.y_sample
+    #                 samperr_ = np.linalg.norm(self.y_sample - X[(i+1) % numsamplesteps,:odim], 2)
+    #                 if samperr_ < samperr:
+    #                     samperr = samperr_
+    #                     self.y_sample_ = self.y_sample
+    #                 j += 1
+    #                 # print "sample/real err", samperr
+    #             print("sampled", j, "times")
+    #         else:
+    #             # retain samples from last sampling interval boundary
+    #             self.y_samples_[:,i] = self.y_samples_[:,i-1]
+    #         # return sample array
+    #         self.y_samples[i] = self.y_sample_
             
-        return self.y_samples, self.y_samples_
+    #     return self.y_samples, self.y_samples_
 
+# IGMM - incremental gaussian mixture model, from juan
+class ActInfIGMM(ActInfModel):
+    """ActInfIGMM
+
+    Gaussian mixture model based on PyPR's gmm
+    """
+    def __init__(self, idim = 1, odim = 1, K = 10, numepisodes = 10):
+        """ActInfIGMM.__init__
+        """
+        ActInfModel.__init__(self, idim, odim)
+
+        # number of mixture components
+        self.K = K
+        # list of K component idim x 1    centroid vectors
+        self.cen_lst = []
+        # list of K component idim x idim covariances
+        self.cov_lst = []
+        # K mixture coeffs
+        self.p_k = None
+        # log loss after training
+        self.logL = 0
+
+        self.cdim = self.idim + self.odim
+
+        # data
+        self.Xy_ = []
+        self.X_  = []
+        self.y_  = []
+        self.Xy = np.zeros((1, self.cdim))
+        # fitting configuration
+        self.fit_interval = 100
+        self.fitted =  False
+
+
+        self.model = IGMM_COND(min_components=3, forgetting_factor=0.5)
+        
+        # print("%s.__init__, idim = %d, odim = %d" % (self.__class__.__name__, self.idim, self.odim))
+
+    def fit(self, X, y):
+        """ActInfIGMM.fit
+
+        Single step fit: X, y are single patterns
+        """
+        # print("%s.fit" % (self.__class__.__name__), X.shape, y.shape)
+        if X.shape[0] == 1:
+            # single step update, add to internal data and refit if length matches update intervale
+            self.Xy_.append(np.hstack((X[0], y[0])))
+            self.X_.append(X[0])
+            self.y_.append(y[0])
+            if len(self.Xy_) % self.fit_interval == 0:
+                # print("len(Xy_)", len(self.Xy_), self.Xy_[99])
+                # pl.plot(self.Xy_)
+                # pl.show()
+                # self.fit_batch(self.Xy)
+                self.fit_batch(self.X_, self.y_)
+                self.Xy_ = []
+                self.X_ = []
+                self.y_ = []
+        else:
+            # batch fit, just fit model to the input data batch
+            self.Xy_ += np.hstack((X, y)).tolist()
+            # self.X_  += X.tolist()
+            # self.y_  += y.tolist()
+            # self.Xy = np.hstack((X, y))
+            # self.Xy  = np.asarray(self.Xy_)
+            # print("X_, y_", self.X_, self.y_)
+            self.fit_batch(X, y)
+        
+    def fit_batch(self, X, y):
+        """ActInfIGMM.fit_batch
+
+        Fit the IGMM model with batch data
+        """
+        # print("%s.fit X.shape = %s, y.shape = %s" % (self.__class__.__name__, X.shape, y.shape))
+        # self.Xy = np.hstack((X[:,3:], y[:,:]))
+        # self.Xy = np.hstack((X, y))
+        # self.Xy = np.asarray(self.Xy_)
+        # self.Xy = Xy
+        # X = np.asarray(X_)
+        # y = np.asarray(y_)
+        self.Xy = np.hstack((X, y))
+        # self.Xy  = np.asarray(self.Xy_)
+        print("%s.fit_batch self.Xy.shape = %s" % (self.__class__.__name__, self.Xy.shape))
+        # fit gmm
+        # self.cen_lst, self.cov_lst, self.p_k, self.logL = gmm.em_gm(self.Xy, K = self.K, max_iter = 1000,
+        #                                                             verbose = False, iter_call = None)
+        self.model.train(self.Xy)
+        self.fitted =  True
+        # print("%s.fit_batch Log likelihood (how well the data fits the model) = %f" % (self.__class__.__name__, self.logL))
+
+    def predict(self, X):
+        """ActInfIGMM.predict
+
+        Predict Y from X by forwarding to default sample call
+        """
+        # print("IGMM.predict X.shape", X.shape, X)
+        return self.sample(X)
+    
+    def sample(self, X):
+        """ActInfIGMM.sample
+
+        Default sample function
+
+        Assumes the input is X with dims = idim located in
+        the first part of the conditional inference combined input vector
+
+        This method constructs the corresponding conditioning input from the reduced input
+        """
+        # print("%s.sample: X.shape = %s, idim = %d" % (self.__class__.__name__, X.shape, self.idim))
+        assert X.shape[1] == self.idim
+
+        # cond = np.zeros((, self.cdim))
+        uncond    = np.empty((X.shape[0], self.odim))
+        uncond[:] = np.nan
+        # print("%s.sample: uncond.shape = %s, %s" % (self.__class__.__name__, uncond.shape, uncond))
+        
+        cond = np.hstack((X, uncond))
+        # cond[:self.idim] = X.copy()
+        # cond[self.idim:] = np.nan
+        # print("%s.sample: cond.shape = %s, %s" % (self.__class__.__name__, cond.shape, cond))
+        
+        if X.shape[0] > 1: # batch
+            return self.sample_batch(cond)
+        return self.sample_cond(cond)
+    
+    def sample_cond(self, X):
+        """ActInfIGMM.sample_cond
+
+        Single sample from the IGMM model with conditioning on single input pattern X
+
+        TODO: function conditional_dist, make predict/sample comply with sklearn and use the lowlevel
+              cond_dist for advanced uses like dynamic conditioning
+        """
+        if not self.fitted:
+            # return np.zeros((3,1))
+            # model has not been bootstrapped, return random prediction
+            return np.random.uniform(-0.1, 0.1, (1, self.odim)) # FIXME hardcoded shape
+    
+        # gmm.cond_dist want's a (n, ) shape, not (1, n)
+        if len(X.shape) > 1:
+            cond = X[0]
+        else:
+            cond = X
+
+        # print("%s.sample_cond: cond.shape = %s" % (self.__class__.__name__, cond.shape))
+        # (cen_con, cov_con, new_p_k) = gmm.cond_dist(cond, self.cen_lst, self.cov_lst, self.p_k)
+        # cond_sample = gmm.sample_gaussian_mixture(cen_con, cov_con, new_p_k, samples = 1)
+        cond_sample = self.model.sample_cond_dist(cond, 1)
+        # print("%s.sample_cond: cond_sample.shape = %s, %s" % (self.__class__.__name__, cond_sample.shape, cond_sample))
+        return cond_sample
+
+    def sample_batch(self, X):
+        """ActInfIGMM.sample_batch
+
+        If X has more than one rows, return batch of samples for
+        every condition row in X
+        """
+        samples = np.zeros((X.shape[0], self.odim))
+        for i in range(X.shape[0]):
+            samples[i] = self.sample_cond(X[i])
+        return samples
+    
 ################################################################################
 # Hebbian SOM model: connect to SOMs with hebbian links
 class ActInfHebbianSOM(ActInfModel):
@@ -655,7 +827,7 @@ class ActInfHebbianSOM(ActInfModel):
 
     def fit_soms(self, X, y):
         """ActInfHebbianSOM"""
-        # print("%s.fit_soms fitting X = %s, y = %s" % (self.__class__.__name__, X.shape, y.shape))
+        print("%s.fit_soms fitting X = %s, y = %s" % (self.__class__.__name__, X.shape, y.shape))
         # if X.shape[0] != 1, r
         # e = EP[i,:dim_e]
         # p = EP[i,dim_e:]
@@ -688,12 +860,12 @@ class ActInfHebbianSOM(ActInfModel):
         # (dWnorm_e_ == 0 and dWnorm_p_ == 0) or 
         # while (dWnorm_e_ > 0.05 and dWnorm_p_ > 0.05):
         do_convergence = True
-        while (do_convergence) and (np.abs(dWnorm_e__ - dWnorm_e_) > eps_convergence and np.abs(dWnorm_p__ - dWnorm_p_) > eps_convergence):
+        while (do_convergence) and (np.abs(dWnorm_e__ - dWnorm_e_) > eps_convergence and np.abs(dWnorm_p__ - dWnorm_p_) > eps_convergence) and j < 10:
             if j > 0 and j % 10 == 0:
                 print("%s.fit_soms episode %d / %d" % (self.__class__.__name__, j, numepisodes))
-            if X.shape[0] == 1:
-                print("no convergence")
-                do_convergence = False
+            # if X.shape[0] == 1:
+            #     print("no convergence")
+            #     do_convergence = False
             dWnorm_e = 0
             dWnorm_p = 0
             
@@ -724,7 +896,7 @@ class ActInfHebbianSOM(ActInfModel):
 
     def fit_hebb(self, X, y):
         """ActInfHebbianSOM"""
-        # print("%s.fit_hebb fitting X = %s, y = %s" % (self.__class__.__name__, X.shape, y.shape))
+        print("%s.fit_hebb fitting X = %s, y = %s" % (self.__class__.__name__, X.shape, y.shape))
         # numepisodes_hebb = 1
         if X.shape[0] > 100:
             print("%s.fit_hebb batch fitting of size %d" % (self.__class__.__name__, X.shape[0]))
@@ -765,12 +937,12 @@ class ActInfHebbianSOM(ActInfModel):
         j = 0
         # for j in range(numepisodes):
         do_convergence = True
-        while do_convergence and z_err_norm_ > eps_convergence and np.abs(z_err_norm__ - z_err_norm_) > eps_convergence:
+        while do_convergence and z_err_norm_ > eps_convergence and np.abs(z_err_norm__ - z_err_norm_) > eps_convergence and j < 20:
             if j > 0 and j % 10 == 0:
                 print("%s.fit_hebb episode %d / %d" % (self.__class__.__name__, j, numepisodes))
-            if X.shape[0] == 1:
-                print("no convergence")
-                do_convergence = False
+            # if X.shape[0] == 1:
+            #     print("no convergence")
+            #     do_convergence = False
             for i in range(X.shape[0]):
                 # just activate
                 self.filter_e.learn(X[i])
@@ -899,10 +1071,13 @@ class ActInfHebbianSOM(ActInfModel):
                 dWnorm_ = 0.8 * dWnorm_ + 0.2 * dWnorm
                 # print ("dWnorm", dWnorm)
                 self.hebblink_filter += d_hebblink_filter
-            print("hebblink_filter type", type(self.hebblink_filter))
-            print("np.linalg.norm(self.hebblink_filter, 2)", np.linalg.norm(self.hebblink_filter, 2))
+                
+            # print("hebblink_filter type", type(self.hebblink_filter))
+            # print("np.linalg.norm(self.hebblink_filter, 2)", np.linalg.norm(self.hebblink_filter, 2))
+            
             self.hebblink_filter /= np.linalg.norm(self.hebblink_filter, 2)
-            print("hebblink_filter type", type(self.hebblink_filter))
+            
+            # print("hebblink_filter type", type(self.hebblink_filter))
             # print(Z_err_norm)
             # print("%s.fit_hebb error p/p_bar %f" % (self.__class__.__name__, np.array(Z_err_norm)[:logidx].mean()))
             print("%s.fit_hebb |dW| = %f, |W| = %f, mean err = %f / %f" % (self.__class__.__name__, dWnorm_, w_norm, z_err_norm_, z_err_norm__))
@@ -1370,6 +1545,8 @@ def get_class_from_name(name = "KNN"):
         cls = ActInfSTORKGP
     elif name == "GMM":
         cls = partial(ActInfGMM, K = 20)
+    elif name == "IGMM":
+        cls = partial(ActInfIGMM, K = 20)
     elif name == "HebbSOM":
         cls = ActInfHebbianSOM
     else:

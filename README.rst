@@ -45,7 +45,7 @@ computing information theoretic measures with the java information
 dynamics toolkit  [4]_ .
 
 Additional dependencies which might be made optional in the future are
-pandas, ros, pyunicorn, and mdp/Oger.
+pandas, ros, pyunicorn, mdp, Oger, and igmm [5]_.
 
 ::
 
@@ -98,3 +98,5 @@ to see possible options. Documentation and examples upcoming.
 .. [3] Either python-jpype via apt, or from pip either jpypex or JPype1
 
 .. [4] `https://github.com/jlizier/jidt <https://github.com/jlizier/jidt>`_
+
+.. [5] `https://github.com/x75/igmm/tree/smp`_
