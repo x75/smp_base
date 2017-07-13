@@ -77,7 +77,8 @@ try:
     from igmm_cond import IGMM_COND
 except ImportError, e:
     print("Couldn't import IGMM lib", e)
-    
+
+saveplot = True
 model_classes = ["KNN", "SOESGP", "STORKGP", "GMM", "HebbSOM", ",IGMM", "all"]
         
 class ActInfModel(object):
@@ -1312,19 +1313,24 @@ def hebbsom_get_map_nodes(mdl, idim, odim):
     print("e_nodes", e_nodes.shape, "p_nodes", p_nodes.shape)
     return (e_nodes, p_nodes)
 
-def plot_nodes_over_data_1d_components(X, Y, mdl, e_nodes, p_nodes, e_nodes_cov, p_nodes_cov):
+def savefig(fig, filename):
+    fig_scale_inches = 0.75
+    fig.set_size_inches((16 * fig_scale_inches, 9 * fig_scale_inches))
+    fig.savefig(filename, dpi = 300, bbox_inches = 'tight')
+
+def plot_nodes_over_data_1d_components(X, Y, mdl, e_nodes, p_nodes, e_nodes_cov, p_nodes_cov, saveplot = False):
     """one-dimensional plot of each components of X and Y together with those of SOM nodes for all i and o components"""
     
     idim = X.shape[1]
     odim = Y.shape[1]
     
-    fig1 = pl.figure()
-    fig1.suptitle("One-dimensional breakdown of SOM nodes per input dimension (%s)" % (mdl.__class__.__name__))
+    fig = pl.figure()
+    fig.suptitle("One-dimensional breakdown of SOM nodes per input dimension (%s)" % (mdl.__class__.__name__))
     numplots = idim + odim
     gs = gridspec.GridSpec(numplots, 1)
 
     for i in range(idim):
-        ax = fig1.add_subplot(gs[i,0])
+        ax = fig.add_subplot(gs[i,0])
         ax.hist(X[:,i], bins=20)
         xlim = ax.get_xlim()
         ylim = ax.get_ylim()
@@ -1343,7 +1349,7 @@ def plot_nodes_over_data_1d_components(X, Y, mdl, e_nodes, p_nodes, e_nodes_cov,
         # pl.plot(e_nodes[:,i], np.zeros_like(e_nodes[:,i]), "ro", alpha=0.33, markersize=10)
         
     for i in range(idim, numplots):
-        ax = fig1.add_subplot(gs[i,0])
+        ax = fig.add_subplot(gs[i,0])
         ax.hist(Y[:,i-idim], bins=20)
         xlim = ax.get_xlim()
         ylim = ax.get_ylim()
@@ -1360,10 +1366,13 @@ def plot_nodes_over_data_1d_components(X, Y, mdl, e_nodes, p_nodes, e_nodes_cov,
             ax.text(node, offset2, "n%d" % j, fontsize=6)
             
        # pl.plot(p_nodes[:,i-idim], np.zeros_like(p_nodes[:,i-idim]), "ro", alpha=0.33, markersize=10)
-    fig1.show()
+    if saveplot:
+        filename = "plot_nodes_over_data_1d_components_%s.jpg" % (mdl.__class__.__name__,)
+        savefig(fig, filename)
+    fig.show()
     # pl.show()
 
-def plot_nodes_over_data_scattermatrix(X, Y, mdl, e_nodes, p_nodes, e_nodes_cov, p_nodes_cov):
+def plot_nodes_over_data_scattermatrix(X, Y, mdl, e_nodes, p_nodes, e_nodes_cov, p_nodes_cov, saveplot = False):
     """plot input data distribution and SOM node locations as scattermatrix all X comps over all Y comps
     X, Y, e_nodes, p_nodes"""
     
@@ -1386,7 +1395,7 @@ def plot_nodes_over_data_scattermatrix(X, Y, mdl, e_nodes, p_nodes, e_nodes_cov,
     # df = pd.DataFrame(np.hstack((X_plus_e_nodes, Y_plus_p_nodes)), columns=dfcols)
     df = pd.DataFrame(np.hstack((X, Y)), columns=dfcols)
     sm = scatter_matrix(df, alpha=0.2, figsize=(5,5), diagonal="hist")
-    print("sm = %s" % (sm))
+    # print("sm = %s" % (sm))
     # loop over i/o components
     idims = range(idim)
     odims = range(idim, idim+odim)
@@ -1408,9 +1417,12 @@ def plot_nodes_over_data_scattermatrix(X, Y, mdl, e_nodes, p_nodes, e_nodes_cov,
             #     sm[i,j].plot(e_nodes[:,j], p_nodes[:,i-idim], "go", alpha=0.5, markersize=8)
 
     # get figure reference from axis and show
-    fig2 = sm[0,0].get_figure()
-    fig2.suptitle("Predictions over data scattermatrix (%s)" % (mdl.__class__.__name__))
-    fig2.show()
+    fig = sm[0,0].get_figure()
+    fig.suptitle("Predictions over data scattermatrix (%s)" % (mdl.__class__.__name__))
+    if saveplot:
+        filename = "plot_nodes_over_data_scattermatrix_%s.jpg" % (mdl.__class__.__name__,)
+        savefig(fig, filename)
+    fig.show()
 
 def hebbsom_predict_full(X, Y, mdl):
     distances = []
@@ -1433,20 +1445,20 @@ def hebbsom_predict_full(X, Y, mdl):
     
 ################################################################################
 # plot nodes over data with scattermatrix and data hexbin
-def plot_nodes_over_data_scattermatrix_hexbin(X, Y, mdl, predictions, distances, activities):
+def plot_nodes_over_data_scattermatrix_hexbin(X, Y, mdl, predictions, distances, activities, saveplot = False):
     """plot single components X over Y with SOM sample"""
     
     idim = X.shape[1]
     odim = Y.shape[1]
     numplots = idim * odim + 2
-    fig3 = pl.figure()
-    fig3.suptitle("Predictions over data xy scattermatrix/hexbin (%s)" % (mdl.__class__.__name__))
+    fig = pl.figure()
+    fig.suptitle("Predictions over data xy scattermatrix/hexbin (%s)" % (mdl.__class__.__name__))
     gs = gridspec.GridSpec(idim, odim)
-    fig3axes = []
+    figaxes = []
     for i in range(idim):
-        fig3axes.append([])
+        figaxes.append([])
         for o in range(odim):
-            fig3axes[i].append(fig3.add_subplot(gs[i,o]))
+            figaxes[i].append(fig.add_subplot(gs[i,o]))
     err = 0
 
     # colsa = ["k", "r", "g", "c", "m", "y"]
@@ -1456,7 +1468,7 @@ def plot_nodes_over_data_scattermatrix_hexbin(X, Y, mdl, predictions, distances,
     for i in range(odim): # odim * 2
         for j in range(idim):
             # pl.subplot(numplots, 1, (i*idim)+j+1)
-            ax = fig3axes[j][i]
+            ax = figaxes[j][i]
             # target = Y[h,i]
             # X__ = X_[j] # X[h,j]
             # err += np.sum(np.square(target - prediction))
@@ -1469,50 +1481,59 @@ def plot_nodes_over_data_scattermatrix_hexbin(X, Y, mdl, predictions, distances,
             # ax.plot(X__, [pred1], "ro", alpha=0.5)
             # pred2 = mdl.filter_e.neuron(mdl.filter_e.flat_to_coords(activities_sorted[-2]))
             # ax.plot(X__, [pred2], "ro", alpha=0.25)
-    print("accum total err = %f" % (err / X.shape[0] / (idim * odim)))
-    fig3.show()
-        
+    # print("accum total err = %f" % (err / X.shape[0] / (idim * odim)))
+    if saveplot:
+        filename = "plot_nodes_over_data_scattermatrix_hexbin_%s.jpg" % (mdl.__class__.__name__,)
+        savefig(fig, filename)
+    fig.show()
 
-def plot_hebbsom_links_distances_activations(X, Y, mdl, predictions, distances, activities):
+def plot_hebbsom_links_distances_activations(X, Y, mdl, predictions, distances, activities, saveplot = False):
     """plot the hebbian link matrix, and all node distances and activities for all inputs"""
     
 
     hebblink_log = np.log(mdl.hebblink_filter.T + 1.0)
     
-    fig4 = pl.figure()
-    fig4.suptitle("Debugging SOM: hebbian links, distances, activities (%s)" % (mdl.__class__.__name__))
+    fig = pl.figure()
+    fig.suptitle("Debugging SOM: hebbian links, distances, activities (%s)" % (mdl.__class__.__name__))
     gs = gridspec.GridSpec(4, 1)
     # pl.plot(X, Y, "k.", alpha=0.5)
     # pl.subplot(numplots, 1, numplots-1)
-    ax1 = fig4.add_subplot(gs[0])
+    ax1 = fig.add_subplot(gs[0])
+    ax1.set_title('hebbian associative links')
     # im1 = ax1.imshow(mdl.hebblink_filter, interpolation="none", cmap=pl.get_cmap("gray"))
     im1 = ax1.pcolormesh(hebblink_log, cmap=pl.get_cmap("gray"))
     ax1.set_xlabel("in (e)")
     ax1.set_ylabel("out (p)")
-    cbar = fig4.colorbar(mappable = im1, ax=ax1, orientation="horizontal")
+    cbar = fig.colorbar(mappable = im1, ax=ax1, orientation="horizontal")
     
-    ax2 = fig4.add_subplot(gs[1])
+    ax2 = fig.add_subplot(gs[1])
+    ax2.set_title('distances over time')
 
     distarray = np.array(distances)
-    print("distarray.shape", distarray.shape)
+    # print("distarray.shape", distarray.shape)
     pcm = ax2.pcolormesh(distarray.T)
-    cbar = fig4.colorbar(mappable = pcm, ax=ax2, orientation="horizontal")
+    cbar = fig.colorbar(mappable = pcm, ax=ax2, orientation="horizontal")
     
     # pl.subplot(numplots, 1, numplots)
-    ax3 = fig4.add_subplot(gs[2])
+    ax3 = fig.add_subplot(gs[2])
+    ax3.set_title('activations propagated via hebbian links')
     actarray = np.array(activities)
-    print("actarray.shape", actarray.shape)
+    # print("actarray.shape", actarray.shape)
     pcm = ax3.pcolormesh(actarray.T)
-    cbar = fig4.colorbar(mappable = pcm, ax=ax3, orientation="horizontal")
+    cbar = fig.colorbar(mappable = pcm, ax=ax3, orientation="horizontal")
 
-    ax4 = fig4.add_subplot(gs[3])
+    ax4 = fig.add_subplot(gs[3])
+    ax4.set_title('flattened link table')
     ax4.plot(hebblink_log.flatten())
 
     # print("hebblink_log", hebblink_log)
     
-    fig4.show()
+    if saveplot:
+        filename = "plot_hebbsom_links_distances_activations_%s.jpg" % (mdl.__class__.__name__,)
+        savefig(fig, filename)
+    fig.show()
 
-def plot_predictions_over_data(X, Y, mdl):
+def plot_predictions_over_data(X, Y, mdl, saveplot = False):
     # plot prediction
     idim = X.shape[1]
     odim = Y.shape[1]
@@ -1545,10 +1566,13 @@ def plot_predictions_over_data(X, Y, mdl):
         yran = ylim[1] - ylim[0]
         ax.text(xlim[0] + xran * 0.1, ylim[0] + yran * 0.3, "mse = %f" % mse)
         ax.text(xlim[0] + xran * 0.1, ylim[0] + yran * 0.5, "mae = %f" % mae)
+    if saveplot:
+        filename = "plot_predictions_over_data_%s.jpg" % (mdl.__class__.__name__,)
+        savefig(fig, filename)
     fig.show()
 
 
-def plot_predictions_over_data_ts(X, Y, mdl):
+def plot_predictions_over_data_ts(X, Y, mdl, saveplot = False):
     # plot prediction
     idim = X.shape[1]
     odim = Y.shape[1]
@@ -1587,7 +1611,7 @@ def plot_predictions_over_data_ts(X, Y, mdl):
             ax.plot(prediction, "r.", label="Y_", alpha=0.25)
 
         errors = np.asarray(errors)
-        print("errors.shape", errors.shape)
+        # print("errors.shape", errors.shape)
         aes = np.min(np.abs(errors), axis=0)
         ses = np.min(np.square(errors), axis=0)
         mae = np.mean(aes)
@@ -1601,6 +1625,9 @@ def plot_predictions_over_data_ts(X, Y, mdl):
         ax.text(xlim[0] + xran * 0.1, ylim[0] + yran * 0.3, "mse = %f" % mse)
         ax.text(xlim[0] + xran * 0.1, ylim[0] + yran * 0.5, "mae = %f" % mae)
         # pl.plot(X[:,i], Y[:,i], "k.", alpha=0.25)
+    if saveplot:
+        filename = "plot_predictions_over_data_ts_%s.jpg" % (mdl.__class__.__name__,)
+        savefig(fig, filename)
     fig.show()
         
 def get_class_from_name(name = "KNN"):
@@ -1710,7 +1737,7 @@ def test_model(args):
         if args.fitmode == 'incremental':
             args.numepisodes = 1
         print("HebbianSOM idim", idim, "odim", odim)
-        mdl = mdlcls(idim = idim, odim = odim, numepisodes = args.numepisodes)
+        mdl = mdlcls(idim = idim, odim = odim, numepisodes = args.numepisodes, mapsize_e = 100, mapsize_p = 100)
 
     print("Testing model class %s, %s" % (mdlcls, mdl))
 
@@ -1737,26 +1764,26 @@ def test_model(args):
         # print("covs",  e_nodes_cov, p_nodes_cov)
         # print("covs",  e_nodes_cov.shape, p_nodes_cov.shape)
 
-        print("1")
-        plot_nodes_over_data_1d_components(X, Y, mdl, e_nodes, p_nodes, e_nodes_cov, p_nodes_cov)
+        print("1 plot_nodes_over_data_1d_components")
+        plot_nodes_over_data_1d_components(X, Y, mdl, e_nodes, p_nodes, e_nodes_cov, p_nodes_cov, saveplot = saveplot)
         
-        print("2")
-        plot_nodes_over_data_scattermatrix(X, Y, mdl, e_nodes, p_nodes, e_nodes_cov, p_nodes_cov)
+        print("2 plot_nodes_over_data_scattermatrix")
+        plot_nodes_over_data_scattermatrix(X, Y, mdl, e_nodes, p_nodes, e_nodes_cov, p_nodes_cov, saveplot = saveplot)
 
-        print("3")
+        print("3 hebbsom_predict_full")
         predictions, distances, activities = hebbsom_predict_full(X, Y, mdl)
     
-        print("4")
-        plot_predictions_over_data(X, Y, mdl)
+        print("4 plot_predictions_over_data")
+        plot_predictions_over_data(X, Y, mdl, saveplot = saveplot)
         
-        print("5")
-        plot_predictions_over_data_ts(X, Y, mdl)
+        print("5 plot_predictions_over_data_ts")
+        plot_predictions_over_data_ts(X, Y, mdl, saveplot = saveplot)
         
-        print("6")
-        plot_nodes_over_data_scattermatrix_hexbin(X, Y, mdl, predictions, distances, activities)
+        print("6 plot_nodes_over_data_scattermatrix_hexbin")
+        plot_nodes_over_data_scattermatrix_hexbin(X, Y, mdl, predictions, distances, activities, saveplot = saveplot)
                 
-        print("7")
-        plot_hebbsom_links_distances_activations(X, Y, mdl, predictions, distances, activities)
+        print("7 plot_hebbsom_links_distances_activations")
+        plot_hebbsom_links_distances_activations(X, Y, mdl, predictions, distances, activities, saveplot = saveplot)
                             
         # nodes_e = filter_e.map.neurons[:,:,i]
         # nodes_p = filter_p.map.neurons[:,:,i]
@@ -1777,18 +1804,18 @@ def test_model(args):
         print("nodes", e_nodes, p_nodes)
         print("covs",  e_nodes_cov.shape, p_nodes_cov.shape)
         
-        plot_nodes_over_data_1d_components(X, Y, mdl, e_nodes, p_nodes, e_nodes_cov, p_nodes_cov)
+        plot_nodes_over_data_1d_components(X, Y, mdl, e_nodes, p_nodes, e_nodes_cov, p_nodes_cov, saveplot = saveplot)
         
-        plot_nodes_over_data_scattermatrix(X, Y, mdl, e_nodes, p_nodes, e_nodes_cov, p_nodes_cov)
+        plot_nodes_over_data_scattermatrix(X, Y, mdl, e_nodes, p_nodes, e_nodes_cov, p_nodes_cov, saveplot = saveplot)
         
-        plot_predictions_over_data_ts(X, Y, mdl)
+        plot_predictions_over_data_ts(X, Y, mdl, saveplot = saveplot)
         
-        plot_predictions_over_data(X, Y, mdl)
+        plot_predictions_over_data(X, Y, mdl, saveplot = saveplot)
     else:
         # elif args.modelclass in ["KNN", "SOESGP", "STORKGP"]:
         # print("hello")
-        plot_predictions_over_data_ts(X, Y, mdl)
-        plot_predictions_over_data(X, Y, mdl)
+        plot_predictions_over_data_ts(X, Y, mdl, saveplot = saveplot)
+        plot_predictions_over_data(X, Y, mdl, saveplot = saveplot)
         
         
     pl.draw()
