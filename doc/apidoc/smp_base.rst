@@ -11,6 +11,14 @@ Subpackages
 Submodules
 ----------
 
+smp\_base\.config module
+------------------------
+
+.. automodule:: smp_base.config
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 smp\_base\.eligibility module
 -----------------------------
 

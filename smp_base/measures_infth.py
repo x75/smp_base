@@ -27,7 +27,8 @@ import sys, os
 import numpy as np
 import config
 
-from smp_base.measures import meas
+# from smp_base.measures import meas
+from .measures import meas
 
 
 try:

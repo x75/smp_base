@@ -14,8 +14,10 @@ smp_base documentation
 
    apidoc/modules
 
+
 ..
    apidoc
+
 
 Indices and tables
 ==================

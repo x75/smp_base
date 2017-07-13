@@ -18,7 +18,7 @@ try:
     init_jpype()
     HAVE_JPYPE = True
 except ImportError, e:
-    print "Couldn't import init_jpype from measures_infth, make sure jpype is installed"
+    print "Couldn't import init_jpype from measures_infth, make sure jpype is installed", e
     HAVE_JPYPE = False
     
 # TODO

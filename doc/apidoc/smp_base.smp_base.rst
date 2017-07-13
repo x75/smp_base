@@ -36,6 +36,14 @@ smp\_base\.smp\_base\.models\_actinf module
     :undoc-members:
     :show-inheritance:
 
+smp\_base\.smp\_base\.models\_selforg module
+--------------------------------------------
+
+.. automodule:: smp_base.smp_base.models_selforg
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 smp\_base\.smp\_base\.plot module
 ---------------------------------
 
