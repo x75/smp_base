@@ -12,13 +12,13 @@ Sensorimotor learning basic lib
 A python library of code I use for sensorimotor learning experiments
 with simulations, robots, etc. The basic idea is to generate states
 (sensors) with actions (motors), learn different predictive models
-from that data to approximate the sensorimotor dynamics and use the
-models to compute future actions.
+from that data to approximate the sensorimotor dynamics and then use
+the models to infer future actions.
 
-This repository is in an early stages of release which I push on the
-occasion of sharing the smp\_sphero code  [1]_ . Still performing
+This repository is still in an early stage of release which I push on
+the occasion of sharing the smp\_sphero code  [1]_ . Still performing
 incremental clean-up and refactoring plus additions from existing
-private repository.
+other repositories so a lot of things might still change.
 
 New idea for structure:
 
@@ -31,9 +31,9 @@ New idea for structure:
 1.1 Dependencies
 ~~~~~~~~~~~~~~~~
 
-We have the standard main dependencies of numpy, scipy, matplotlib,
-and sklearn which are needed regardless. You can either install them
-via package manager
+The main dependencies are the standard ones such as numpy, scipy,
+matplotlib, and sklearn which are needed regardless. You can either
+install them via package manager
 
 ::
 
@@ -42,10 +42,9 @@ via package manager
 Optional modules are rlspy (recursive least squares implementation)
 from  [2]_  and jpype  [3]_ , a java to python bridge which we use for
 computing information theoretic measures with the java information
-dynamics toolkit  [4]_ .
-
-Additional dependencies which might be made optional in the future are
-pandas, ros, pyunicorn, mdp, Oger, and igmm [5]_.
+dynamics toolkit  [4]_ . Additional dependencies which might be made
+optional in the future are pandas, ros, pyunicorn, mdp, Oger, and igmm
+[5]_.
 
 ::
 
