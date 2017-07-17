@@ -8,7 +8,6 @@ Authors:
 
 TODO
  - fit/predict interface, batch regression fit
- - multiple timescales / tau
  - intrinsic plasticity: input layer, reservoir layer
  - correlated exploration noise
 """
@@ -35,7 +34,7 @@ except ImportError:
     print "ImportError for rlspy"
     rlspy = None
 
-from learners import GHA
+# from learners import GHA
 
 ############################################################
 # utility functions
@@ -602,22 +601,22 @@ class Reservoir(object):
     def learnPI(self, x):
         pass
 
-    def learnPCA_init(self, eta=1e-4):
-        # self.ro_dim = 2
-        eta_gha = eta
-        self.gha = GHA(eta = eta_gha, ndims = self.N, pdims = self.output_num)
-        self.gha.w *= 0.1
-        self.wo = self.gha.w
+    # def learnPCA_init(self, eta=1e-4):
+    #     # self.ro_dim = 2
+    #     eta_gha = eta
+    #     self.gha = GHA(eta = eta_gha, ndims = self.N, pdims = self.output_num)
+    #     self.gha.w *= 0.1
+    #     self.wo = self.gha.w
 
-    def learnPCA(self):
-        # resin
-        # self.res.execute(resin)
-        y_gha = self.gha.update(self.r)
-        self.wo = self.gha.w
-        self.z = y_gha
-        # self.zn = self.z + np.random.normal(0, self.theta, size=(self.z.shape))
-        self.zn = self.z + (np.random.normal(0, 1.0, size=(self.z.shape)) * self.theta)
-        return self.z
+    # def learnPCA(self):
+    #     # resin
+    #     # self.res.execute(resin)
+    #     y_gha = self.gha.update(self.r)
+    #     self.wo = self.gha.w
+    #     self.z = y_gha
+    #     # self.zn = self.z + np.random.normal(0, self.theta, size=(self.z.shape))
+    #     self.zn = self.z + (np.random.normal(0, 1.0, size=(self.z.shape)) * self.theta)
+    #     return self.z
 
     # various getters
     def get_reservoir_matrix(self):

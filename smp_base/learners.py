@@ -1,4 +1,11 @@
-"""smp_base: learner class as robot specific model integrating supervised online prediction learners
+"""smp_base/learners.py
+
+learner class using the reservoirs.py model
+
+interface to the robot sensorimotor loop for doing
+ - reward modulated hebbian learning with different noise models (incremental online reinforcement learning)
+ - supervised online prediction learning
+
 """
 
 import sys, time

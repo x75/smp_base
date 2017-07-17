@@ -767,10 +767,11 @@ class ActInfHebbianSOM(ActInfModel):
                 mapshape_e = (self.mapsize_e, )
             else:
                 mapshape_e = (self.mapsize_e, self.mapsize_e)
+            # 1D better?
             mapshape_e = (self.mapsize_e, )
             self.kw_e = self.kwargs(
                 shape = mapshape_e, dimension = self.idim, lr_init = som_lr,
-                neighborhood_size = som_nhs, z = 0.001)
+                neighborhood_size = som_nhs) #, z = 0.001)
             # self.kw_e = self.kwargs(shape = (self.mapsize_e, self.mapsize_e), dimension = self.idim, lr_init = 0.5, neighborhood_size = 0.6)
             self.som_e = Map(Parameters(**self.kw_e))
         elif maptype == "gas":
@@ -783,9 +784,10 @@ class ActInfHebbianSOM(ActInfModel):
                 mapshape_p = (self.mapsize_p, )
             else:
                 mapshape_p = (int(self.mapsize_p), int(self.mapsize_p))
+            # 1D better?
             mapshape_p = (self.mapsize_p, )
             self.kw_p = self.kwargs(shape = mapshape_p, dimension = self.odim, lr_init = som_lr,
-                                    neighborhood_size = som_nhs, z = 0.001)
+                                    neighborhood_size = som_nhs) #, z = 0.001)
             # self.kw_p = self.kwargs(shape = (int(self.mapsize_p * 1.5), int(self.mapsize_p * 1.5)), dimension = self.odim, lr_init = 0.5, neighborhood_size = 0.7)
             self.som_p = Map(Parameters(**self.kw_p))
         elif maptype == "gas":
@@ -825,7 +827,7 @@ class ActInfHebbianSOM(ActInfModel):
         # Hebbian learning rate
         if self.hebblink_use_activity:
             self.hebblink_et = ExponentialTimeseries(-1e-4, 1e-1, 0)
-            # self.hebblink_et = ConstantTimeseries(5e-3)
+            # self.hebblink_et = ConstantTimeseries(5e-4)
             # et = ConstantTimeseries(0.5)
         else:
             self.hebblink_et = ConstantTimeseries(1e-12)
@@ -833,20 +835,22 @@ class ActInfHebbianSOM(ActInfModel):
     # SOM argument dict
     def kwargs(self, shape=(10, 10), z=0.001, dimension=2, lr_init = 1.0, neighborhood_size = 1):
         """ActInfHebbianSOM params function for Map"""
-        return dict(dimension=dimension,
-                    shape=shape,
-                    neighborhood_size = self.ET(-1e-3, neighborhood_size, 0.1), # 1.0),
-                    learning_rate=self.ET(-1e-4, lr_init, 0.01),
-                    # learning_rate=self.CT(lr_init),
-                    noise_variance=z)
+        return dict(
+            dimension = dimension,
+            shape = shape,
+            neighborhood_size = self.ET(-1e-3, neighborhood_size, 0.1), # 1.0),
+            learning_rate=self.ET(-1e-4, lr_init, 0.0),
+            # learning_rate=self.CT(lr_init),
+            noise_variance=z)
 
     def kwargs_gas(self, shape=(100,), z=0.001, dimension=3, lr_init = 1.0, neighborhood_size = 1):
         """ActInfHebbianSOM params function for Gas"""
-        return dict(dimension=dimension,
-                    shape=shape,
-                    neighborhood_size = self.ET(-1e-3, neighborhood_size, 1),
-                    learning_rate=self.ET(-1e-4, lr_init, 0.01),
-                    noise_variance=z)
+        return dict(
+            dimension=dimension,
+            shape=shape,
+            neighborhood_size = self.ET(-1e-3, neighborhood_size, 1.0),
+            learning_rate=self.ET(-1e-4, lr_init, 0.0),
+            noise_variance=z)
 
     def set_learning_rate_constant(self, c = 0.0):
         # print("fit_hebb", self.filter_e.map._learning_rate)
@@ -942,7 +946,7 @@ class ActInfHebbianSOM(ActInfModel):
     def fit_hebb(self, X, y):
         """ActInfHebbianSOM"""
         # print("%s.fit_hebb fitting X = %s, y = %s" % (self.__class__.__name__, X.shape, y.shape))
-        if X.shape[0] == 1 and self.soms_cnt_fit < 500: # 1500:
+        if X.shape[0] == 1 and self.soms_cnt_fit < 200: # 1500:
             return
         # numepisodes_hebb = 1
         if X.shape[0] > 100:
@@ -1005,7 +1009,7 @@ class ActInfHebbianSOM(ActInfModel):
                 # p_ = p_ ** 2
                 p_ = (p_ == np.max(p_)) * 1.0
         
-                e_ = self.filter_e.activity.flatten()
+                e_ = self.filter_e.activity.reshape(e_shape) # flatten()
                 e__ = e_.copy()
                 # e_ = e_ ** 2
                 e_ = (e_ == np.max(e_)) * 1.0
@@ -1125,12 +1129,13 @@ class ActInfHebbianSOM(ActInfModel):
                     else:
                         d_hebblink_filter = eta * np.outer(self.filter_e.distances(e), z_err)
 
+                    # does what?
                     self.hebblink_filter[e_idx, p_idx] += eta * e__[e_idx]
                     
                     dWnorm = np.linalg.norm(d_hebblink_filter)
                     dWnorm_ = 0.8 * dWnorm_ + 0.2 * dWnorm
                     # print ("dWnorm", dWnorm)
-                    self.hebblink_filter += d_hebblink_filter
+                    # self.hebblink_filter += d_hebblink_filter
                 
             # print("hebblink_filter type", type(self.hebblink_filter))
             # print("np.linalg.norm(self.hebblink_filter, 2)", np.linalg.norm(self.hebblink_filter, 2))
@@ -1143,7 +1148,8 @@ class ActInfHebbianSOM(ActInfModel):
             # print("hebblink_filter type", type(self.hebblink_filter))
             # print(Z_err_norm)
             # print("%s.fit_hebb error p/p_bar %f" % (self.__class__.__name__, np.array(Z_err_norm)[:logidx].mean()))
-            print("%s.fit_hebb |dW| = %f, |W| = %f, mean err = %f / %f" % (self.__class__.__name__, dWnorm_, w_norm, z_err_norm_, z_err_norm__))
+            print("%s.fit_hebb |dW| = %f, |W| = %f, mean err = %f / %f" % (self.__class__.__name__, dWnorm_, w_norm, np.min(z_err), np.max(z_err)))
+             # z_err_norm_, z_err_norm__))
             # print("%s.fit_hebb |W|  = %f" % (self.__class__.__name__, w_norm))
         self.hebb_cnt_fit += 1
             
@@ -1207,10 +1213,11 @@ class ActInfHebbianSOM(ActInfModel):
         e2p_w_p_weights = self.filter_p.neuron(self.filter_p.flat_to_coords(sidx))
         # e2p_w_p_weights = self.filter_p.neuron(self.filter_p.flat_to_coords(np.argmax(self.filter_p.activity)))
         
-        return e2p_w_p_weights.reshape((1, self.odim))
-        # ret = np.random.normal(e2p_w_p_weights, self.filter_p.sigmas[sidx] * 0.001, (1, self.odim))
+        ret = np.random.normal(e2p_w_p_weights, self.filter_p.sigmas[sidx], (1, self.odim))
         # ret = np.random.normal(e2p_w_p_weights, 0.01, (1, self.odim))
-        # return ret
+        # print("hebbsom sample", e2p_w_p_weights, self.filter_p.sigmas[sidx])
+        # ret = e2p_w_p_weights.reshape((1, self.odim))
+        return ret
     
     def sample_cond_legacy(self, X):
         """ActInfHebbianSOM.sample_cond: sample from model conditioned on X"""
