@@ -10,10 +10,10 @@ import scipy.linalg as sLA
 import ConfigParser, ast
 
 
-from eligibility import Eligibility
+from .eligibility import Eligibility
 
 try:
-    from smp_base.measures_infth import init_jpype, dec_compute_infth_soft
+    from .measures_infth import init_jpype, dec_compute_infth_soft
     from jpype import JPackage
     init_jpype()
     HAVE_JPYPE = True

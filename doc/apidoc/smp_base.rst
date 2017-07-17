@@ -1,20 +1,13 @@
 smp\_base package
 =================
 
-Subpackages
------------
-
-.. toctree::
-
-    smp_base.smp_base
-
 Submodules
 ----------
 
-smp\_base\.config module
-------------------------
+smp\_base\.dimstack module
+--------------------------
 
-.. automodule:: smp_base.config
+.. automodule:: smp_base.dimstack
     :members:
     :undoc-members:
     :show-inheritance:
@@ -39,6 +32,46 @@ smp\_base\.learners module
 --------------------------
 
 .. automodule:: smp_base.learners
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+smp\_base\.measures module
+--------------------------
+
+.. automodule:: smp_base.measures
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+smp\_base\.measures\_infth module
+---------------------------------
+
+.. automodule:: smp_base.measures_infth
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+smp\_base\.models\_actinf module
+--------------------------------
+
+.. automodule:: smp_base.models_actinf
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+smp\_base\.models\_selforg module
+---------------------------------
+
+.. automodule:: smp_base.models_selforg
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+smp\_base\.plot module
+----------------------
+
+.. automodule:: smp_base.plot
     :members:
     :undoc-members:
     :show-inheritance:

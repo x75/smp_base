@@ -25,6 +25,7 @@ TODO: common calling convention for all model types
    - other variables that might be used by the context to modulate
      exploration, learning and behaviour
    - disambiguate static and dynamic (conditional inference types) idim/odim
+
 TODO: consistency problem when sampling from probabilistic models (gmm, hebbsom, ...)
 
 issues:

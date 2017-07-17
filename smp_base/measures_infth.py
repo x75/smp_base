@@ -7,21 +7,21 @@ measures_infth
 information theoretic measures measure things related to the multivariate entropy of some data
 
 TODO
-# sift, sort and clean-up input from
-#  - smp/smp/infth.py
-#  - smp/playground/infth_feature_relevance.py
-#  - smp/sequence/*.py
-#  - smp_sphero (was smp_infth)
-#  - evoplast/ep3.py
-#  - smp/infth
-#  - smp/infth/infth_homeokinesis_analysis_cont.py
-#  - smp/infth/infth_playground
-#  - smp/infth/infth_explore.py
-#  - smp/infth/infth_pointwise_plot.py
-#  - smp/infth/infth_measures.py: unfinished
-#  - smp/infth/infth_playground.py
-#  - smp/infth/infth_EH-2D.py
-#  - smp/infth/infth_EH-2D_clean.py
+sift, sort and clean-up input from
+ - smp/smp/infth.py
+ - smp/playground/infth_feature_relevance.py
+ - smp/sequence/\*.py
+ - smp_sphero (was smp_infth)
+ - evoplast/ep3.py
+ - smp/infth
+ - smp/infth/infth_homeokinesis_analysis_cont.py
+ - smp/infth/infth_playground
+ - smp/infth/infth_explore.py
+ - smp/infth/infth_pointwise_plot.py
+ - smp/infth/infth_measures.py: unfinished
+ - smp/infth/infth_playground.py
+ - smp/infth/infth_EH-2D.py
+ - smp/infth/infth_EH-2D_clean.py
 """
 import sys, os
 import numpy as np

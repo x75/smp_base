@@ -18,11 +18,9 @@ def dimensional_stacking(data, x_dims, y_dims):
     See LeBlanc, Ward, Wittels 1990, 'Exploring N-Dimensional
     Databases'.
      * data: n-dimensional ndarray (e.g. data.shape=[4,5,6])
-     * x_dims: dimensions to be stacked on the x axis,
-     big-endian style ('slowest' dimension first, 'fastest'
-     dimension last.). e.g. x_dims=[2,0]
-     * y_dims: dimensions to be stacked on the y axis,
-     big-endian. e.g. y_dims = [1]
+     * x_dims: dimensions to be stacked on the x axis, big-endian style ('slowest' dimension first, 'fastest' dimension last.). e.g. x_dims=[2,0]
+     * y_dims: dimensions to be stacked on the y axis, big-endian. e.g. y_dims = [1]
+
     """
     new_x_length = reduce(lambda x, y: x * y,
 			  [data.shape[idx] for idx in x_dims])
@@ -51,6 +49,7 @@ def digitize_pointcloud(data, argdims = [0], numbins = 3, valdims = 1, f_fval = 
 
     Returns:
     - A matrix with shape (numbins x numbins x ... x numbins) and shape length = k_arg and scalar function value entries
+
     """
     # for getting the product space
     import itertools
