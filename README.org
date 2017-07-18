@@ -5,34 +5,30 @@
 
 * Sensorimotor learning basic lib
 
-A python library of code I use for sensorimotor learning experiments
+A python library of code used for sensorimotor learning experiments
 with simulations, robots, etc. The basic idea is to generate states
 (sensors) with actions (motors), learn different predictive models
-from that data to approximate the sensorimotor dynamics and use the
-models to compute future actions.
+from that data to approximate the sensorimotor dynamics and then use
+the models to infer future actions.
 
 This repository is in an early stages of release which I push on the
 occasion of sharing the smp_sphero code [fn:1]. Still performing
 incremental clean-up and refactoring plus additions from existing
-private repository.
-
-New idea for structure:
- - models: fit/predict (offline), fitpredict (online)
- - sensorimotor loops
- - data and logging
+other repositories so a lot of things might still change.
 
 ** Dependencies
 
-We have the standard main dependencies of numpy, scipy, matplotlib,
-and sklearn which are needed regardless. You can either install them
-via package manager
+The main dependencies are the standard ones such as numpy, scipy,
+matplotlib, and sklearn which are needed regardless. You can either
+install them via package manager
 
 : apt-get install python-numpy python-scipy python-matplotlib python-sklearn
 
 Optional modules are rlspy (recursive least squares implementation)
 from [fn:2] and jpype [fn:3], a java to python bridge which we use for
 computing information theoretic measures with the java information
-dynamics toolkit [fn:4].
+dynamics toolkit [fn:4]. Additional dependencies which might be made
+optional in the future are pandas, ros, pyunicorn, mdp, Oger, and igmm [fn:5].
 
 Additional dependencies which might be made optional in the future are
 pandas, ros, pyunicorn, and mdp/Oger.
@@ -51,7 +47,7 @@ Oger is an extension for MDP and can be obtained from http://reservoir-computing
 
 The path to some of the libraries can be set in the config file. See config.py.dist for possible options.
 
-** Reservoir lib
+** Reservoir lib                                                   :noexport:
 
 |----------------+-------------------------------------------------------------------------------------------|
 | reservoirs.py  | contains Reservoir class, LearningRules class, a  few utility functions and a main method |
@@ -70,9 +66,9 @@ or
 
 to see possible options. Documentation and examples upcoming.
 
-* TODO 
- - clean up hardcoded paths
 * Footnotes
+
+[fn:5] https://github.com/x75/igmm/tree/smp
 
 [fn:4] https://github.com/jlizier/jidt
 

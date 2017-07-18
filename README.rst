@@ -9,24 +9,16 @@ Sensorimotor learning basic lib
 1 Sensorimotor learning basic lib
 ---------------------------------
 
-A python library of code I use for sensorimotor learning experiments
+A python library of code used for sensorimotor learning experiments
 with simulations, robots, etc. The basic idea is to generate states
 (sensors) with actions (motors), learn different predictive models
 from that data to approximate the sensorimotor dynamics and then use
 the models to infer future actions.
 
-This repository is still in an early stage of release which I push on
-the occasion of sharing the smp\_sphero code  [1]_ . Still performing
+This repository is in an early stages of release which I push on the
+occasion of sharing the smp\_sphero code  [1]_ . Still performing
 incremental clean-up and refactoring plus additions from existing
 other repositories so a lot of things might still change.
-
-New idea for structure:
-
-- models: fit/predict (offline), fitpredict (online)
-
-- sensorimotor loops
-
-- data and logging
 
 1.1 Dependencies
 ~~~~~~~~~~~~~~~~
@@ -43,8 +35,10 @@ Optional modules are rlspy (recursive least squares implementation)
 from  [2]_  and jpype  [3]_ , a java to python bridge which we use for
 computing information theoretic measures with the java information
 dynamics toolkit  [4]_ . Additional dependencies which might be made
-optional in the future are pandas, ros, pyunicorn, mdp, Oger, and igmm
-[5]_.
+optional in the future are pandas, ros, pyunicorn, mdp, Oger, and igmm  [5]_ .
+
+Additional dependencies which might be made optional in the future are
+pandas, ros, pyunicorn, and mdp/Oger.
 
 ::
 
@@ -58,36 +52,10 @@ Pyunicorn does recurrence analysis and can be obtained from
 
 Oger is an extension for MDP and can be obtained from `http://reservoir-computing.org/installing_oger <http://reservoir-computing.org/installing_oger>`_.
 
-1.2 Reservoir lib
+1.2 Configuration
 ~~~~~~~~~~~~~~~~~
 
-.. table::
-
-    +------------------+-------------------------------------------------------------------------------------------+
-    | reservoirs.py    | contains Reservoir class, LearningRules class, a  few utility functions and a main method |
-    +------------------+-------------------------------------------------------------------------------------------+
-    | \                | that demonstrates basic use of the class. It can definitely be simplified (WiP)           |
-    +------------------+-------------------------------------------------------------------------------------------+
-    | learners.py      | this model embeds the underlying adaptive model into the sensorimotor context             |
-    +------------------+-------------------------------------------------------------------------------------------+
-    | eligibility.py   | basic eligibility windows used in a variant of learning rules                             |
-    +------------------+-------------------------------------------------------------------------------------------+
-    | smp\\\_thread.py | thread wrapper that provides constant dt run loop and asynchronous sensor callbacks       |
-    +------------------+-------------------------------------------------------------------------------------------+
-
-You could try and run 
-
-::
-
-    python reservoirs.py
-
-or
-
-::
-
-    python reservoirs.py --help
-
-to see possible options. Documentation and examples upcoming.
+The path to some of the libraries can be set in the config file. See config.py.dist for possible options.
 
 
 .. [1] `https://github.com/x75/smp_sphero <https://github.com/x75/smp_sphero>`_
@@ -98,4 +66,4 @@ to see possible options. Documentation and examples upcoming.
 
 .. [4] `https://github.com/jlizier/jidt <https://github.com/jlizier/jidt>`_
 
-.. [5] `https://github.com/x75/igmm/tree/smp`_
+.. [5] `https://github.com/x75/igmm/tree/smp <https://github.com/x75/igmm/tree/smp>`_

@@ -16,8 +16,8 @@ approach. Currently implemented models are
 
 TODO:
  - consolidate calling convention / api for all model types
-  - predict, fit, sample, conditionals, visualize
-  - common test code
+   - predict, fit, sample, conditionals, visualize
+   - common test code
 
  - implement missing models
    - missing: single hidden layer networks: linear/elm/res with RLS/FORCE/MDN/EH, merge with otl
@@ -55,6 +55,9 @@ import matplotlib.gridspec as gridspec
 import cPickle
 from functools import partial
 
+from models import smpModel
+from models import savefig, plot_nodes_over_data_1d_components_fig, plot_nodes_over_data_1d_components
+
 # KNN
 from sklearn.neighbors import KNeighborsRegressor
 
@@ -89,47 +92,18 @@ except ImportError, e:
 saveplot = True
 model_classes = ["KNN", "SOESGP", "STORKGP", "GMM", "HebbSOM", ",IGMM", "all"]
         
-class ActInfModel(object):
-    """ActInfModel
-
-    Base class for function approximators / regressors
-    """
-    def __init__(self, idim = 1, odim = 1, numepisodes = 1):
-        self.model = None
-        self.idim = idim
-        self.odim = odim
-        self.numepisodes = numepisodes
-
-    def bootstrap(self): None
-
-    def predict(self, X):
-        if self.model is None:
-            print("%s.predict: implement me" % (self.__class__.__name__))
-            return np.zeros((1, self.odim))
-            
-    def fit(self, X, Y):
-        if self.model is None:
-            print("%s.fit: implement me" % (self.__class__.__name__))
-
-    def save(self, filename):
-        cPickle.dump(self, open(filename, "wb"))
-
-    @classmethod
-    def load(cls, filename):
-        return cPickle.load(open(filename, "rb"))
-
-class ActInfKNN(ActInfModel):
-    """ActInfKNN
+class smpKNN(smpModel):
+    """smpKNN
 
     k-NN function approximator for active inference
     """
     def __init__(self, idim = 1, odim = 1):
-        """ActInfKNN.__init__
+        """smpKNN.__init__
 
         init
         """
         self.fwd = KNeighborsRegressor(n_neighbors=5)
-        ActInfModel.__init__(self, idim, odim)
+        smpModel.__init__(self, idim, odim)
 
         self.X_ = []
         self.y_ = []
@@ -137,7 +111,7 @@ class ActInfKNN(ActInfModel):
         self.bootstrap()
 
     def bootstrap(self):
-        """ActInfKNN.bootstrap
+        """smpKNN.bootstrap
 
         Bootstrap the model with some initial dummy samples to prepare it for inference after init
         """
@@ -154,14 +128,14 @@ class ActInfKNN(ActInfModel):
         self.fwd.fit(self.X_, self.y_)
 
     def predict(self, X):
-        """ActInfKNN.predict
+        """smpKNN.predict
 
         Predict Y using X on the current model state
         """
         return self.fwd.predict(X)
 
     def fit(self, X, y):
-        """ActInfKNN.fit
+        """smpKNN.fit
 
         Fit Y to X single time step
         """
@@ -178,7 +152,7 @@ class ActInfKNN(ActInfModel):
         self.fwd.fit(self.X_, self.y_)
 
     def fit_batch(self, X, y):
-        """ActInfKNN.fit
+        """smpKNN.fit
 
         Batch fit Y to X
         """
@@ -189,14 +163,14 @@ class ActInfKNN(ActInfModel):
 ################################################################################
 # ActiveInference OTL library based model, base class implementing predict,
 # predict_step (otl can't handle batches), fit, save and load methods
-class ActInfOTLModel(ActInfModel):
-    """ActInfOTLModel
+class smpOTLModel(smpModel):
+    """smpOTLModel
 
     Sparse online echo state gaussian process function approximator
     for active inference
     """
     def __init__(self, idim = 1, odim = 1):
-        ActInfModel.__init__(self, idim, odim)
+        smpModel.__init__(self, idim, odim)
 
         self.otlmodel_type = "soesgp"
         self.otlmodel = None
@@ -220,7 +194,7 @@ class ActInfOTLModel(ActInfModel):
         return np.array(pred).reshape((1, self.odim))
         
     def fit(self, X, y, update = True):
-        """ActInfOTLModel.fit
+        """smpOTLModel.fit
 
         Fit model to data X, y
         """
@@ -282,14 +256,14 @@ class ActInfOTLModel(ActInfModel):
 
 ################################################################################
 # Sparse Online Echo State Gaussian Process (SOESGP) OTL library model
-class ActInfSOESGP(ActInfOTLModel):
-    """ActInfSOESGP
+class smpSOESGP(smpOTLModel):
+    """smpSOESGP
 
     Sparse online echo state gaussian process function approximator
     for active inference
     """
     def __init__(self, idim = 1, odim = 1):
-        ActInfOTLModel.__init__(self, idim, odim)
+        smpOTLModel.__init__(self, idim, odim)
         
         self.otlmodel_type = "soesgp"
         self.otlmodel = OESGP()
@@ -331,14 +305,14 @@ class ActInfSOESGP(ActInfOTLModel):
 
 ################################################################################
 # StorkGP OTL based model
-class ActInfSTORKGP(ActInfOTLModel):
-    """ActInfSTORKGP
+class smpSTORKGP(smpOTLModel):
+    """smpSTORKGP
 
     Sparse online echo state gaussian process function approximator
     for active inference
     """
     def __init__(self, idim = 1, odim = 1):
-        ActInfModel.__init__(self, idim, odim)
+        smpModel.__init__(self, idim, odim)
         
         self.otlmodel_type = "storkgp"
         self.otlmodel = STORKGP()
@@ -364,15 +338,15 @@ class ActInfSTORKGP(ActInfOTLModel):
 # - can create conditional submodels
 
 # GMM - gaussian mixture model
-class ActInfGMM(ActInfModel):
-    """ActInfGMM
+class smpGMM(smpModel):
+    """smpGMM
 
     Gaussian mixture model based on PyPR's gmm
     """
     def __init__(self, idim = 1, odim = 1, K = 10, numepisodes = 10):
-        """ActInfGMM.__init__
+        """smpGMM.__init__
         """
-        ActInfModel.__init__(self, idim, odim)
+        smpModel.__init__(self, idim, odim)
 
         # number of mixture components
         self.K = K
@@ -399,7 +373,7 @@ class ActInfGMM(ActInfModel):
         print("%s.__init__, idim = %d, odim = %d" % (self.__class__.__name__, self.idim, self.odim))
 
     def fit(self, X, y):
-        """ActInfGMM.fit
+        """smpGMM.fit
 
         Single step fit: X, y are single patterns
         """
@@ -426,7 +400,7 @@ class ActInfGMM(ActInfModel):
             self.fit_batch(X, y)
         
     def fit_batch(self, X, y):
-        """ActInfGMM.fit_batch
+        """smpGMM.fit_batch
 
         Fit the GMM model with batch data
         """
@@ -447,14 +421,14 @@ class ActInfGMM(ActInfModel):
         print("%s.fit_batch Log likelihood (how well the data fits the model) = %f" % (self.__class__.__name__, self.logL))
 
     def predict(self, X):
-        """ActInfGMM.predict
+        """smpGMM.predict
 
         Predict Y from X by forwarding to default sample call
         """
         return self.sample(X)
 
     def sample(self, X):
-        """ActInfGMM.sample
+        """smpGMM.sample
 
         Default sample function
 
@@ -480,7 +454,7 @@ class ActInfGMM(ActInfModel):
         return self.sample_cond(cond)
     
     def sample_cond(self, X):
-        """ActInfGMM.sample_cond
+        """smpGMM.sample_cond
 
         Single sample from the GMM model with conditioning on single input pattern X
 
@@ -505,7 +479,7 @@ class ActInfGMM(ActInfModel):
         return cond_sample
 
     def sample_batch(self, X):
-        """ActInfGMM.sample_batch
+        """smpGMM.sample_batch
 
         If X has more than one rows, return batch of samples for
         every condition row in X
@@ -516,7 +490,7 @@ class ActInfGMM(ActInfModel):
         return samples
     
     # def sample_batch_legacy(self, X, cond_dims = [0], out_dims = [1], resample_interval = 1):
-    #     """ActInfGMM.sample_batch_legacy
+    #     """smpGMM.sample_batch_legacy
 
     #     Sample from gmm model with conditioning batch input X legacy function
     #     """
@@ -566,15 +540,15 @@ class ActInfGMM(ActInfModel):
     #     return self.y_samples, self.y_samples_
 
 # IGMM - incremental gaussian mixture model, from juan
-class ActInfIGMM(ActInfModel):
-    """ActInfIGMM
+class smpIGMM(smpModel):
+    """smpIGMM
 
     Gaussian mixture model based on PyPR's gmm
     """
     def __init__(self, idim = 1, odim = 1, K = 10, numepisodes = 10):
-        """ActInfIGMM.__init__
+        """smpIGMM.__init__
         """
-        ActInfModel.__init__(self, idim, odim)
+        smpModel.__init__(self, idim, odim)
 
         # number of mixture components
         self.K = K
@@ -604,7 +578,7 @@ class ActInfIGMM(ActInfModel):
         # print("%s.__init__, idim = %d, odim = %d" % (self.__class__.__name__, self.idim, self.odim))
 
     def fit(self, X, y):
-        """ActInfIGMM.fit
+        """smpIGMM.fit
 
         Single step fit: X, y are single patterns
         """
@@ -634,7 +608,7 @@ class ActInfIGMM(ActInfModel):
             self.fit_batch(X, y)
         
     def fit_batch(self, X, y):
-        """ActInfIGMM.fit_batch
+        """smpIGMM.fit_batch
 
         Fit the IGMM model with batch data
         """
@@ -656,7 +630,7 @@ class ActInfIGMM(ActInfModel):
         # print("%s.fit_batch Log likelihood (how well the data fits the model) = %f" % (self.__class__.__name__, self.logL))
 
     def predict(self, X):
-        """ActInfIGMM.predict
+        """smpIGMM.predict
 
         Predict Y from X by forwarding to default sample call
         """
@@ -664,7 +638,7 @@ class ActInfIGMM(ActInfModel):
         return self.sample(X)
     
     def sample(self, X):
-        """ActInfIGMM.sample
+        """smpIGMM.sample
 
         Default sample function
 
@@ -691,7 +665,7 @@ class ActInfIGMM(ActInfModel):
         return self.sample_cond(cond)
     
     def sample_cond(self, X):
-        """ActInfIGMM.sample_cond
+        """smpIGMM.sample_cond
 
         Single sample from the IGMM model with conditioning on single input pattern X
 
@@ -717,7 +691,7 @@ class ActInfIGMM(ActInfModel):
         return cond_sample
 
     def sample_batch(self, X):
-        """ActInfIGMM.sample_batch
+        """smpIGMM.sample_batch
 
         If X has more than one rows, return batch of samples for
         every condition row in X
@@ -729,13 +703,13 @@ class ActInfIGMM(ActInfModel):
     
 ################################################################################
 # Hebbian SOM model: connect to SOMs with hebbian links
-class ActInfHebbianSOM(ActInfModel):
-    def __init__(self, idim = 1, odim = 1, numepisodes = 100, mapsize_e = 10, mapsize_p = 10, som_lr = 1e-1):
-        """ActInfHebbianSOM
+class smpHebbianSOM(smpModel):
+    def __init__(self, idim = 1, odim = 1, numepisodes = 100, visualize = False, mapsize_e = 10, mapsize_p = 10, som_lr = 1e-1):
+        """smpHebbianSOM
 
         Two SOM's coding the input and output space connected by associative Hebbian links
         """
-        ActInfModel.__init__(self, idim, odim, numepisodes = numepisodes)
+        smpModel.__init__(self, idim, odim, numepisodes = numepisodes, visualize = visualize)
 
         # SOMs training self assessment
         self.cnt_fit     = 0
@@ -764,7 +738,7 @@ class ActInfHebbianSOM(ActInfModel):
         # som_lr = 1e-1 # Haykin, p475
         # som_lr = 5e-1
         # som_lr = 5e-4
-        som_nhs = 10
+        som_nhs = 3 # 1.5
 
         maptype = "som"
         # maptype = "gas"
@@ -806,9 +780,9 @@ class ActInfHebbianSOM(ActInfModel):
 
         # create "filter" using existing SOM_e, filter computes activation on distance
         self.filter_e = Filter(self.som_e, history=lambda: 0.0)
-        print("neurons_e", self.filter_e.map.neurons)
+        # print("neurons_e", self.filter_e.map.neurons)
         self.filter_e.reset()
-        print("neurons_e", self.filter_e.map.neurons)
+        # print("neurons_e", self.filter_e.map.neurons)
         self.filter_e_lr = self.filter_e.map._learning_rate
 
         # kw_f_p = kwargs(shape = (mapsize * 3, mapsize * 3), dimension = 3, neighborhood_size = 0.5, lr_init = 0.1)
@@ -834,15 +808,19 @@ class ActInfHebbianSOM(ActInfModel):
         
         # Hebbian learning rate
         if self.hebblink_use_activity:
-            self.hebblink_et = ExponentialTimeseries(self.decay_const, 1e-0, 0)
-            # self.hebblink_et = ConstantTimeseries(5e-4)
-            # et = ConstantTimeseries(0.5)
+            # self.hebblink_et = ExponentialTimeseries(self.decay_const, 1e-0, 0)
+            self.hebblink_et = ConstantTimeseries(1e-0)
+            # self.hebblink_et = ConstantTimeseries(0.0)
         else:
             self.hebblink_et = ConstantTimeseries(1e-12)
 
+        # visualization
+        if self.visualize:
+            self.figs.append(plot_nodes_over_data_1d_components_fig(title = self.__class__.__name__, numplots = idim + odim))
+            
     # SOM argument dict
     def kwargs(self, shape=(10, 10), z=0.001, dimension=2, lr_init = 1.0, neighborhood_size = 1):
-        """ActInfHebbianSOM params function for Map"""
+        """smpHebbianSOM params function for Map"""
         return dict(
             dimension = dimension,
             shape = shape,
@@ -852,7 +830,7 @@ class ActInfHebbianSOM(ActInfModel):
             noise_variance=z)
 
     def kwargs_gas(self, shape=(100,), z=0.001, dimension=3, lr_init = 1.0, neighborhood_size = 1):
-        """ActInfHebbianSOM params function for Gas"""
+        """smpHebbianSOM params function for Gas"""
         return dict(
             dimension=dimension,
             shape=shape,
@@ -860,6 +838,22 @@ class ActInfHebbianSOM(ActInfModel):
             learning_rate=self.ET(self.decay_const, lr_init, 0.0),
             noise_variance=z)
 
+    def visualize_model(self):
+        e_nodes, p_nodes = hebbsom_get_map_nodes(self, self.idim, self.odim)
+        e_nodes_cov = np.tile(np.eye(self.idim) * 0.05, e_nodes.shape[0]).T.reshape((e_nodes.shape[0], self.idim, self.idim))
+        p_nodes_cov = np.tile(np.eye(self.odim) * 0.05, p_nodes.shape[0]).T.reshape((p_nodes.shape[0], self.odim, self.odim))
+
+        X = np.vstack(self.Xhist)
+        Y = np.vstack(self.Yhist)
+        
+        # print(X.shape)
+        
+        plot_nodes_over_data_1d_components(
+            fig = self.figs[0], X = X, Y = Y, mdl = self,
+            e_nodes = e_nodes, p_nodes = p_nodes, e_nodes_cov = e_nodes_cov, p_nodes_cov = p_nodes_cov,
+            saveplot = False
+        )
+    
     def set_learning_rate_constant(self, c = 0.0):
         # print("fit_hebb", self.filter_e.map._learning_rate)
         self.filter_e.map._learning_rate = self.CT(c)
@@ -869,7 +863,7 @@ class ActInfHebbianSOM(ActInfModel):
         self.filter_p_lr = self.filter_p.map._learning_rate
 
     def fit_soms(self, X, y):
-        """ActInfHebbianSOM"""
+        """smpHebbianSOM"""
         # print("%s.fit_soms fitting X = %s, y = %s" % (self.__class__.__name__, X.shape, y.shape))
         # if X.shape[0] != 1, r
         # e = EP[i,:dim_e]
@@ -952,7 +946,7 @@ class ActInfHebbianSOM(ActInfModel):
         self.soms_cnt_fit += 1
 
     def fit_hebb(self, X, y):
-        """ActInfHebbianSOM"""
+        """smpHebbianSOM"""
         # print("%s.fit_hebb fitting X = %s, y = %s" % (self.__class__.__name__, X.shape, y.shape))
         if X.shape[0] == 1 and self.soms_cnt_fit < 200: # 1500:
             return
@@ -1162,7 +1156,7 @@ class ActInfHebbianSOM(ActInfModel):
         self.hebb_cnt_fit += 1
             
     def fit(self, X, y):
-        """ActInfHebbianSOM
+        """smpHebbianSOM
 
         Fit model to data
         """
@@ -1173,19 +1167,28 @@ class ActInfHebbianSOM(ActInfModel):
         self.fit_hebb(X, y)
         self.fitted = True
 
+        if self.visualize:
+            self.Xhist.append(X)
+            self.Yhist.append(y)
+            
+            if self.cnt_fit % 100 == 0:
+                self.visualize_model()
+            
+        self.cnt_fit += 1
+            
     def predict(self, X):
-        """ActInfHebbianSOM"""
+        """smpHebbianSOM"""
         return self.sample(X)
 
     def sample(self, X):
-        """ActInfHebbianSOM.sample"""
+        """smpHebbianSOM.sample"""
         # print("%s.sample X.shape = %s, %d" % (self.__class__.__name__, X.shape, 0))
         if len(X.shape) == 2 and X.shape[0] > 1: # batch
             return self.sample_batch(X)
         return self.sample_cond(X)
 
     def sample_cond(self, X):
-        """ActInfHebbianSOM.sample_cond: draw single sample from model conditioned on X"""
+        """smpHebbianSOM.sample_cond: draw single sample from model conditioned on X"""
         # print("%s.sample_cond X.shape = %s, %d" % (self.__class__.__name__, X.shape, 0))
 
         # fix the SOMs with learning rate constant 0
@@ -1229,7 +1232,7 @@ class ActInfHebbianSOM(ActInfModel):
         return ret
     
     # def sample_cond_legacy(self, X):
-    #     """ActInfHebbianSOM.sample_cond: sample from model conditioned on X"""
+    #     """smpHebbianSOM.sample_cond: sample from model conditioned on X"""
     #     sampling_search_num = 100
 
     #     e_shape = (np.prod(self.filter_e.map._shape), 1)
@@ -1298,7 +1301,7 @@ class ActInfHebbianSOM(ActInfModel):
         
         
     def sample_batch(self, X):
-        """ActInfHebbianSOM.sample_batch: If X has more than one rows, return batch of samples for
+        """smpHebbianSOM.sample_batch: If X has more than one rows, return batch of samples for
         every condition row in X"""
         samples = np.zeros((X.shape[0], self.odim))
         for i in range(X.shape[0]):
@@ -1306,7 +1309,7 @@ class ActInfHebbianSOM(ActInfModel):
         return samples
     
     def sample_batch_legacy(self, X, cond_dims = [0], out_dims = [1], resample_interval = 1):
-        """ActInfHebbianSOM"""
+        """smpHebbianSOM"""
         print("%s.sample_batch_legacy data X = %s" % (self.__class__.__name__, X))
         sampmax = 20
         numsamplesteps = X.shape[0]
@@ -1329,65 +1332,6 @@ def hebbsom_get_map_nodes(mdl, idim, odim):
     p_nodes = p_nodes.reshape((-1,odim))
     print("e_nodes", e_nodes.shape, "p_nodes", p_nodes.shape)
     return (e_nodes, p_nodes)
-
-def savefig(fig, filename):
-    fig_scale_inches = 0.75
-    fig.set_size_inches((16 * fig_scale_inches, 9 * fig_scale_inches))
-    fig.savefig(filename, dpi = 300, bbox_inches = 'tight')
-
-def plot_nodes_over_data_1d_components(X, Y, mdl, e_nodes, p_nodes, e_nodes_cov, p_nodes_cov, saveplot = False):
-    """one-dimensional plot of each components of X and Y together with those of SOM nodes for all i and o components"""
-    
-    idim = X.shape[1]
-    odim = Y.shape[1]
-    
-    fig = pl.figure()
-    fig.suptitle("One-dimensional breakdown of SOM nodes per input dimension (%s)" % (mdl.__class__.__name__))
-    numplots = idim + odim
-    gs = gridspec.GridSpec(numplots, 1)
-
-    for i in range(idim):
-        ax = fig.add_subplot(gs[i,0])
-        ax.hist(X[:,i], bins=20)
-        xlim = ax.get_xlim()
-        ylim = ax.get_ylim()
-        yran = ylim[1] - ylim[0]
-        offset1 = yran * -0.1
-        offset2 = yran * -0.25
-        # print("offsets 1,2 = %f, %f" % (offset1, offset2))
-        ax.plot(X[:,i], np.ones_like(X[:,i]) * offset1, "ko", alpha=0.33)
-        for j,node in enumerate(e_nodes[:,i]):
-            myms = 2 + 30 * np.sqrt(e_nodes_cov[i,i,i])
-            # print("node", j, node, myms)
-            ax.plot([node], [offset2], "ro", alpha=0.33, markersize=10)
-            # ax.plot([node], [offset2], "r.", alpha=0.33, markersize = myms)
-            # x1, x2 = gmm.
-            ax.text(node, offset2, "n%d" % j, fontsize=6)
-        # pl.plot(e_nodes[:,i], np.zeros_like(e_nodes[:,i]), "ro", alpha=0.33, markersize=10)
-        
-    for i in range(idim, numplots):
-        ax = fig.add_subplot(gs[i,0])
-        ax.hist(Y[:,i-idim], bins=20)
-        xlim = ax.get_xlim()
-        ylim = ax.get_ylim()
-        yran = ylim[1] - ylim[0]
-        offset1 = yran * -0.1
-        offset2 = yran * -0.25
-        # print("offsets 1,2 = %f, %f" % (offset1, offset2))
-        ax.plot(Y[:,i-idim], np.ones_like(Y[:,i-idim]) * offset1, "ko", alpha=0.33)
-        for j,node in enumerate(p_nodes[:,i-idim]):
-            myms = 2 + 30 * np.sqrt(p_nodes_cov[i-idim,i-idim,i-idim])
-            # print("node", j, node, myms)
-            ax.plot([node], [offset2], "ro", alpha=0.33, markersize=10)
-            # ax.plot([node], [offset2], "r.", alpha=0.33, markersize = myms)
-            ax.text(node, offset2, "n%d" % j, fontsize=6)
-            
-       # pl.plot(p_nodes[:,i-idim], np.zeros_like(p_nodes[:,i-idim]), "ro", alpha=0.33, markersize=10)
-    if saveplot:
-        filename = "plot_nodes_over_data_1d_components_%s.jpg" % (mdl.__class__.__name__,)
-        savefig(fig, filename)
-    fig.show()
-    # pl.show()
 
 def plot_nodes_over_data_scattermatrix(X, Y, mdl, e_nodes, p_nodes, e_nodes_cov, p_nodes_cov, saveplot = False):
     """plot input data distribution and SOM node locations as scattermatrix all X comps over all Y comps
@@ -1649,19 +1593,19 @@ def plot_predictions_over_data_ts(X, Y, mdl, saveplot = False):
         
 def get_class_from_name(name = "KNN"):
     if name == "KNN":
-        cls = ActInfKNN
+        cls = smpKNN
     elif name == "SOESGP":
-        cls = ActInfSOESGP
+        cls = smpSOESGP
     elif name == "STORKGP":
-        cls = ActInfSTORKGP
+        cls = smpSTORKGP
     elif name == "GMM":
-        cls = partial(ActInfGMM, K = 20)
+        cls = partial(smpGMM, K = 20)
     elif name == "IGMM":
-        cls = partial(ActInfIGMM, K = 20)
+        cls = partial(smpIGMM, K = 20)
     elif name == "HebbSOM":
-        cls = ActInfHebbianSOM
+        cls = smpHebbianSOM
     else:
-        cls = ActInfKNN
+        cls = smpKNN
     return cls
 
 def generate_inverted_sinewave_dataset(N = 1000):
@@ -1740,7 +1684,7 @@ def test_model(args):
         dim = idim + odim
         
     # diagnostics
-    print("X.shape = %s, idim = %d, Y.shape = %s, odim = %d" % (X.shape, idim, Y.shape, odim))
+    print("models_actinf.py: X.shape = %s, idim = %d, Y.shape = %s, odim = %d" % (X.shape, idim, Y.shape, odim))
     # sys.exit()
     # pl.subplot(211)
     # pl.plot(X)
@@ -1754,7 +1698,7 @@ def test_model(args):
         if args.fitmode == 'incremental':
             args.numepisodes = 1
         print("HebbianSOM idim", idim, "odim", odim)
-        mdl = mdlcls(idim = idim, odim = odim, numepisodes = args.numepisodes, mapsize_e = 100, mapsize_p = 100)
+        mdl = mdlcls(idim = idim, odim = odim, numepisodes = args.numepisodes, visualize = True, mapsize_e = 10, mapsize_p = 10)
 
     print("Testing model class %s, %s" % (mdlcls, mdl))
 
@@ -1782,7 +1726,8 @@ def test_model(args):
         # print("covs",  e_nodes_cov.shape, p_nodes_cov.shape)
 
         print("1 plot_nodes_over_data_1d_components")
-        plot_nodes_over_data_1d_components(X, Y, mdl, e_nodes, p_nodes, e_nodes_cov, p_nodes_cov, saveplot = saveplot)
+        fig = plot_nodes_over_data_1d_components_fig(title = args.modelclass, numplots = X.shape[1] + Y.shape[1])
+        plot_nodes_over_data_1d_components(fig, X, Y, mdl, e_nodes, p_nodes, e_nodes_cov, p_nodes_cov, saveplot = saveplot)
         
         print("2 plot_nodes_over_data_scattermatrix")
         plot_nodes_over_data_scattermatrix(X, Y, mdl, e_nodes, p_nodes, e_nodes_cov, p_nodes_cov, saveplot = saveplot)
