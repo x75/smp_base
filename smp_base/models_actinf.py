@@ -740,6 +740,7 @@ class ActInfHebbianSOM(ActInfModel):
         self.hebb_cnt_fit     = 0
         self.hebb_cnt_predict = 0
         self.hebb_fitted = False
+        self.decay_const = -1e-5
         
         # learning rate proxy
         self.ET = ExponentialTimeseries
@@ -826,7 +827,7 @@ class ActInfHebbianSOM(ActInfModel):
         
         # Hebbian learning rate
         if self.hebblink_use_activity:
-            self.hebblink_et = ExponentialTimeseries(-1e-4, 1e-1, 0)
+            self.hebblink_et = ExponentialTimeseries(self.decay_const, 1e-0, 0)
             # self.hebblink_et = ConstantTimeseries(5e-4)
             # et = ConstantTimeseries(0.5)
         else:
@@ -838,8 +839,8 @@ class ActInfHebbianSOM(ActInfModel):
         return dict(
             dimension = dimension,
             shape = shape,
-            neighborhood_size = self.ET(-1e-3, neighborhood_size, 0.1), # 1.0),
-            learning_rate=self.ET(-1e-4, lr_init, 0.0),
+            neighborhood_size = self.ET(self.decay_const, neighborhood_size, 0.1), # 1.0),
+            learning_rate=self.ET(self.decay_const, lr_init, 0.0),
             # learning_rate=self.CT(lr_init),
             noise_variance=z)
 
@@ -848,8 +849,8 @@ class ActInfHebbianSOM(ActInfModel):
         return dict(
             dimension=dimension,
             shape=shape,
-            neighborhood_size = self.ET(-1e-3, neighborhood_size, 1.0),
-            learning_rate=self.ET(-1e-4, lr_init, 0.0),
+            neighborhood_size = self.ET(self.decay_const, neighborhood_size, 1.0),
+            learning_rate=self.ET(self.decay_const, lr_init, 0.0),
             noise_variance=z)
 
     def set_learning_rate_constant(self, c = 0.0):
