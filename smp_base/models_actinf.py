@@ -16,6 +16,7 @@ approach. Currently implemented models are
 
 TODO:
  - consolidate calling convention / api for all model types
+   - init with single argument config dictionary
    - predict, fit, sample, conditionals, visualize
    - common test code
 
@@ -55,7 +56,7 @@ import matplotlib.gridspec as gridspec
 import cPickle
 from functools import partial
 
-from models import smpModel
+from models import smpModelInit, smpModel
 from models import savefig, plot_nodes_over_data_1d_components_fig, plot_nodes_over_data_1d_components
 
 # KNN
@@ -97,13 +98,20 @@ class smpKNN(smpModel):
 
     k-NN function approximator for active inference
     """
-    def __init__(self, idim = 1, odim = 1):
+    defaults = {
+        'idim': 1,
+        'odim': 1,
+        'n_neighbors': 5,
+        }
+    @smpModelInit()
+    def __init__(self, conf):
         """smpKNN.__init__
 
         init
         """
-        self.fwd = KNeighborsRegressor(n_neighbors=5)
-        smpModel.__init__(self, idim, odim)
+        smpModel.__init__(self, conf)
+        
+        self.fwd = KNeighborsRegressor(n_neighbors = self.n_neighbors)
 
         self.X_ = []
         self.y_ = []
@@ -169,11 +177,21 @@ class smpOTLModel(smpModel):
     Sparse online echo state gaussian process function approximator
     for active inference
     """
-    def __init__(self, idim = 1, odim = 1):
-        smpModel.__init__(self, idim, odim)
+    defaults = {
+        'idim': 1,
+        'odim': 1,
+        'otlmodel_type': 'soesgp',
+        'otlmodel': None,
+        }
+        
+    @smpModelInit()
+    def __init__(self, conf):
+        # if conf is None: conf = self.defaults
+    
+        smpModel.__init__(self, conf)
 
-        self.otlmodel_type = "soesgp"
-        self.otlmodel = None
+        # self.otlmodel_type = "soesgp"
+        # self.otlmodel = None
 
     def predict(self, X):
         if X.shape[0] > 1: # batch input
@@ -262,30 +280,50 @@ class smpSOESGP(smpOTLModel):
     Sparse online echo state gaussian process function approximator
     for active inference
     """
-    def __init__(self, idim = 1, odim = 1):
-        smpOTLModel.__init__(self, idim, odim)
+    defaults = {
+        'idim': 1,
+        'odim': 1,
+        'otlmodel_type': 'soesgp',
+        'otlmodel': None,
+        'modelsize': 100,
+        'input_weight': 1.0,
+        'output_feedback_weight': 0.0,
+        'activation_function': 1,
+        'leak_rate': 0.96,
+        'connectivity': 0.1,
+        'spectral_radius': 0.99,
+        'kernel_params': [2.0, 2.0],
+        'noise': 0.05,
+        'epsilon': 1e-3,
+        'capacity': 100,
+        'random_seed': 100,
+    }
+    
+    @smpModelInit()
+    def __init__(self, conf):
+        smpOTLModel.__init__(self, conf)
         
-        self.otlmodel_type = "soesgp"
+        # self.otlmodel_type = "soesgp"
         self.otlmodel = OESGP()
 
-        self.res_size = 100 # 20
-        self.input_weight = 1.0 # 1.0
+        # self.res_size = 100 # 20
+        # self.input_weight = 1.0 # 1.0
         
-        self.output_feedback_weight = 0.0
-        self.activation_function = 1
-        # leak_rate: x <= (1-lr) * input + lr * x
-        self.leak_rate = 0.96 # 0.05 # 0.0 # 0.1 # 0.3
-        self.connectivity = 0.1
-        self.spectral_radius = 0.99
+        # self.output_feedback_weight = 0.0
+        # self.activation_function = 1
+        # # leak_rate: x <= (1-lr) * input + lr * x
+        # self.leak_rate = 0.96 # 0.05 # 0.0 # 0.1 # 0.3
+        # self.connectivity = 0.1
+        # self.spectral_radius = 0.99
 
-        # covariances
-        self.kernel_params = [2.0, 2.0]
-        # self.kernel_params = [1.0, 1.0]
-        # self.kernel_params = [0.1, 0.1]
-        self.noise = 0.05
-        self.epsilon = 1e-3
-        self.capacity = 100
-        self.random_seed = 100 # FIXME: constant?
+        # # covariances
+        # self.kernel_params = [2.0, 2.0]
+        # # self.kernel_params = [1.0, 1.0]
+        # # self.kernel_params = [0.1, 0.1]
+        # self.noise = 0.05
+        # self.epsilon = 1e-3
+        # self.capacity = 100
+        # self.random_seed = 100 # FIXME: constant?
 
         # self.X_ = []
         # self.y_ = []
@@ -311,19 +349,39 @@ class smpSTORKGP(smpOTLModel):
     Sparse online echo state gaussian process function approximator
     for active inference
     """
-    def __init__(self, idim = 1, odim = 1):
-        smpModel.__init__(self, idim, odim)
+    defaults = {
+        'idim': 1,
+        'odim': 1,
+        'otlmodel_type': 'storkgp',
+        'otlmodel': None,
+        'modelsize': 100,
+        'input_weight': 1.0,
+        'output_feedback_weight': 0.0,
+        'activation_function': 1,
+        'leak_rate': 0.96,
+        'connectivity': 0.1,
+        'spectral_radius': 0.99,
+        'kernel_params': [2.0, 2.0],
+        'noise': 0.05,
+        'epsilon': 1e-3,
+        'capacity': 100,
+        'random_seed': 100,
+    }
         
-        self.otlmodel_type = "storkgp"
+    @smpModelInit()
+    def __init__(self, conf):
+        smpModel.__init__(self, conf)
+        
+        # self.otlmodel_type = "storkgp"
         self.otlmodel = STORKGP()
 
-        self.res_size = 100 # 20
+        # self.res_size = self.modelsize # 100 # 20
         
         self.bootstrap()
     
     def bootstrap(self):
         self.otlmodel.init(self.idim, self.odim,
-                          self.res_size, # window size
+                          self.modelsize, # window size
                           0, # kernel type
                           [0.5, 0.99, 1.0, self.idim],
                           1e-4,
@@ -343,13 +401,17 @@ class smpGMM(smpModel):
 
     Gaussian mixture model based on PyPR's gmm
     """
-    def __init__(self, idim = 1, odim = 1, K = 10, numepisodes = 10):
+    defaults = {
+        'idim': 1, 'odim': 1, 'K': 10, 'numepisodes': 10}
+    
+    @smpModelInit()
+    def __init__(self, conf):
         """smpGMM.__init__
         """
-        smpModel.__init__(self, idim, odim)
+        smpModel.__init__(self, conf)
 
         # number of mixture components
-        self.K = K
+        # self.K = K
         # list of K component idim x 1    centroid vectors
         self.cen_lst = []
         # list of K component idim x idim covariances
@@ -545,13 +607,16 @@ class smpIGMM(smpModel):
 
     Gaussian mixture model based on PyPR's gmm
     """
-    def __init__(self, idim = 1, odim = 1, K = 10, numepisodes = 10):
+    defaults = {'idim': 1, 'odim': 1, 'K': 10, 'numepisodes': 10}
+    
+    @smpModelInit()
+    def __init__(self, conf):
         """smpIGMM.__init__
         """
-        smpModel.__init__(self, idim, odim)
+        smpModel.__init__(self, conf)
 
         # number of mixture components
-        self.K = K
+        # self.K = K
         # list of K component idim x 1    centroid vectors
         self.cen_lst = []
         # list of K component idim x idim covariances
@@ -704,12 +769,16 @@ class smpIGMM(smpModel):
 ################################################################################
 # Hebbian SOM model: connect to SOMs with hebbian links
 class smpHebbianSOM(smpModel):
-    def __init__(self, idim = 1, odim = 1, numepisodes = 100, visualize = False, mapsize_e = 10, mapsize_p = 10, som_lr = 1e-1):
+    defaults = {
+        'idim': 1, 'odim': 1, 'numepisodes': 100, 'visualize': False, 'mapsize_e': 10, 'mapsize_p': 10, 'som_lr': 1e-0,
+        'som_nhs': 3}
+    @smpModelInit()
+    def __init__(self, conf):
         """smpHebbianSOM
 
         Two SOM's coding the input and output space connected by associative Hebbian links
         """
-        smpModel.__init__(self, idim, odim, numepisodes = numepisodes, visualize = visualize)
+        smpModel.__init__(self, conf)
 
         # SOMs training self assessment
         self.cnt_fit     = 0
@@ -728,8 +797,8 @@ class smpHebbianSOM(smpModel):
         self.CT = ConstantTimeseries
         
         self.mapsize = 10 ** 2 # 100
-        self.mapsize_e = mapsize_e # 100 # int(np.sqrt(self.mapsize)) # max(10, self.idim * 3)
-        self.mapsize_p = mapsize_p # 150 # int(np.sqrt(self.mapsize)) # max(10, self.odim * 3)
+        # self.mapsize_e = mapsize_e # 100 # int(np.sqrt(self.mapsize)) # max(10, self.idim * 3)
+        # self.mapsize_p = mapsize_p # 150 # int(np.sqrt(self.mapsize)) # max(10, self.odim * 3)
         self.numepisodes_som  = self.numepisodes
         self.numepisodes_hebb = self.numepisodes
         # FIXME: make neighborhood_size decrease with time
@@ -738,7 +807,7 @@ class smpHebbianSOM(smpModel):
         # som_lr = 1e-1 # Haykin, p475
         # som_lr = 5e-1
         # som_lr = 5e-4
-        som_nhs = 3 # 1.5
+        # self.som_nhs = 3 # 1.5
 
         maptype = "som"
         # maptype = "gas"
@@ -752,12 +821,12 @@ class smpHebbianSOM(smpModel):
             # 1D better?
             mapshape_e = (self.mapsize_e, )
             self.kw_e = self.kwargs(
-                shape = mapshape_e, dimension = self.idim, lr_init = som_lr,
-                neighborhood_size = som_nhs) #, z = 0.001)
+                shape = mapshape_e, dimension = self.idim, lr_init = self.som_lr,
+                neighborhood_size = self.som_nhs) #, z = 0.001)
             # self.kw_e = self.kwargs(shape = (self.mapsize_e, self.mapsize_e), dimension = self.idim, lr_init = 0.5, neighborhood_size = 0.6)
             self.som_e = Map(Parameters(**self.kw_e))
         elif maptype == "gas":
-            self.kw_e = self.kwargs_gas(shape = (self.mapsize_e ** 2, ), dimension = self.idim, lr_init = som_lr, neighborhood_size = 0.5)
+            self.kw_e = self.kwargs_gas(shape = (self.mapsize_e ** 2, ), dimension = self.idim, lr_init = self.som_lr, neighborhood_size = 0.5)
             self.som_e = Gas(Parameters(**self.kw_e))
 
         # SOM proprioceptive stimuli 3D input
@@ -768,12 +837,12 @@ class smpHebbianSOM(smpModel):
                 mapshape_p = (int(self.mapsize_p), int(self.mapsize_p))
             # 1D better?
             mapshape_p = (self.mapsize_p, )
-            self.kw_p = self.kwargs(shape = mapshape_p, dimension = self.odim, lr_init = som_lr,
-                                    neighborhood_size = som_nhs) #, z = 0.001)
+            self.kw_p = self.kwargs(shape = mapshape_p, dimension = self.odim, lr_init = self.som_lr,
+                                    neighborhood_size = self.som_nhs) #, z = 0.001)
             # self.kw_p = self.kwargs(shape = (int(self.mapsize_p * 1.5), int(self.mapsize_p * 1.5)), dimension = self.odim, lr_init = 0.5, neighborhood_size = 0.7)
             self.som_p = Map(Parameters(**self.kw_p))
         elif maptype == "gas":
-            self.kw_p = self.kwargs_gas(shape = (self.mapsize_p ** 2, ), dimension = self.odim, lr_init = som_lr, neighborhood_size = 0.5)
+            self.kw_p = self.kwargs_gas(shape = (self.mapsize_p ** 2, ), dimension = self.odim, lr_init = self.som_lr, neighborhood_size = 0.5)
             self.som_p = Gas(Parameters(**self.kw_p))
 
         # FIXME: there was a nice trick for node distribution init in _some_ recently added paper
@@ -816,7 +885,7 @@ class smpHebbianSOM(smpModel):
 
         # visualization
         if self.visualize:
-            self.figs.append(plot_nodes_over_data_1d_components_fig(title = self.__class__.__name__, numplots = idim + odim))
+            self.figs.append(plot_nodes_over_data_1d_components_fig(title = self.__class__.__name__, numplots = self.idim + self.odim))
             
     # SOM argument dict
     def kwargs(self, shape=(10, 10), z=0.001, dimension=2, lr_init = 1.0, neighborhood_size = 1):
@@ -1693,12 +1762,22 @@ def test_model(args):
     # pl.show()
 
     mdlcls = get_class_from_name(args.modelclass)
-    mdl = mdlcls(idim = idim, odim = odim)
+    mdlcnf = mdlcls.defaults
+    mdlcnf['idim'] = idim
+    mdlcnf['odim'] = odim
     if args.modelclass == "HebbSOM":
         if args.fitmode == 'incremental':
             args.numepisodes = 1
-        print("HebbianSOM idim", idim, "odim", odim)
-        mdl = mdlcls(idim = idim, odim = odim, numepisodes = args.numepisodes, visualize = True, mapsize_e = 10, mapsize_p = 10)
+        # print("HebbianSOM idim", idim, "odim", odim)
+        # mdl = mdlcls(idim = idim, odim = odim, numepisodes = args.numepisodes, visualize = True, mapsize_e = 10, mapsize_p = 10)
+        mdlcnf['mapsize_e'] = 10
+        mdlcnf['mapsize_p'] = 10
+        mdlcnf['visualize'] = True
+        mdlcnf['som_lr'] = 1e-1
+        mdlcnf['som_nhs'] = 1e-1
+        mdl = mdlcls(conf = mdlcnf)
+    else:
+        mdl = mdlcls(conf = mdlcnf)
 
     print("Testing model class %s, %s" % (mdlcls, mdl))
 
@@ -1729,23 +1808,23 @@ def test_model(args):
         fig = plot_nodes_over_data_1d_components_fig(title = args.modelclass, numplots = X.shape[1] + Y.shape[1])
         plot_nodes_over_data_1d_components(fig, X, Y, mdl, e_nodes, p_nodes, e_nodes_cov, p_nodes_cov, saveplot = saveplot)
         
-        print("2 plot_nodes_over_data_scattermatrix")
-        plot_nodes_over_data_scattermatrix(X, Y, mdl, e_nodes, p_nodes, e_nodes_cov, p_nodes_cov, saveplot = saveplot)
+        # print("2 plot_nodes_over_data_scattermatrix")
+        # plot_nodes_over_data_scattermatrix(X, Y, mdl, e_nodes, p_nodes, e_nodes_cov, p_nodes_cov, saveplot = saveplot)
 
-        print("3 hebbsom_predict_full")
-        predictions, distances, activities = hebbsom_predict_full(X, Y, mdl)
+        # print("3 hebbsom_predict_full")
+        # predictions, distances, activities = hebbsom_predict_full(X, Y, mdl)
     
-        print("4 plot_predictions_over_data")
-        plot_predictions_over_data(X, Y, mdl, saveplot = saveplot)
+        # print("4 plot_predictions_over_data")
+        # plot_predictions_over_data(X, Y, mdl, saveplot = saveplot)
         
-        print("5 plot_predictions_over_data_ts")
-        plot_predictions_over_data_ts(X, Y, mdl, saveplot = saveplot)
+        # print("5 plot_predictions_over_data_ts")
+        # plot_predictions_over_data_ts(X, Y, mdl, saveplot = saveplot)
         
-        print("6 plot_nodes_over_data_scattermatrix_hexbin")
-        plot_nodes_over_data_scattermatrix_hexbin(X, Y, mdl, predictions, distances, activities, saveplot = saveplot)
+        # print("6 plot_nodes_over_data_scattermatrix_hexbin")
+        # plot_nodes_over_data_scattermatrix_hexbin(X, Y, mdl, predictions, distances, activities, saveplot = saveplot)
                 
-        print("7 plot_hebbsom_links_distances_activations")
-        plot_hebbsom_links_distances_activations(X, Y, mdl, predictions, distances, activities, saveplot = saveplot)
+        # print("7 plot_hebbsom_links_distances_activations")
+        # plot_hebbsom_links_distances_activations(X, Y, mdl, predictions, distances, activities, saveplot = saveplot)
                             
         # nodes_e = filter_e.map.neurons[:,:,i]
         # nodes_p = filter_p.map.neurons[:,:,i]
