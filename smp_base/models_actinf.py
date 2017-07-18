@@ -26,6 +26,7 @@ TODO:
    - missing: im/models.py
    - missing: smp/models_seq.py
    - missing: smp/models_karpmdn.py
+   - MDN model: florens, karpathy, hardmaru, amjad, cbonnett, edward
 
    - including 'predict_naive' and 'predict_full' methods that would capture returning confidences about the current prediction
    - other variables that might be used by the context to modulate exploration, learning and behaviour
@@ -771,7 +772,7 @@ class smpIGMM(smpModel):
 class smpHebbianSOM(smpModel):
     defaults = {
         'idim': 1, 'odim': 1, 'numepisodes': 100, 'visualize': False, 'mapsize_e': 10, 'mapsize_p': 10, 'som_lr': 1e-0,
-        'som_nhs': 3}
+        'som_nhs': 3, 'init_range': (-1.0, 1.0)}
     @smpModelInit()
     def __init__(self, conf):
         """smpHebbianSOM
@@ -1391,15 +1392,13 @@ class smpHebbianSOM(smpModel):
         
         return self.y_samples, self.y_samples_
     
-# MDN model: karpathy, hardmaru, amjad, cbonnett, edward
-
 def hebbsom_get_map_nodes(mdl, idim, odim):
     e_nodes = mdl.filter_e.map.neurons
     p_nodes = mdl.filter_p.map.neurons
-    print("e_nodes", e_nodes.shape, "p_nodes", p_nodes.shape)
+    # print("e_nodes", e_nodes.shape, "p_nodes", p_nodes.shape)
     e_nodes = e_nodes.reshape((-1,idim))
     p_nodes = p_nodes.reshape((-1,odim))
-    print("e_nodes", e_nodes.shape, "p_nodes", p_nodes.shape)
+    # print("e_nodes", e_nodes.shape, "p_nodes", p_nodes.shape)
     return (e_nodes, p_nodes)
 
 def plot_nodes_over_data_scattermatrix(X, Y, mdl, e_nodes, p_nodes, e_nodes_cov, p_nodes_cov, saveplot = False):
@@ -1842,8 +1841,8 @@ def test_model(args):
         e_nodes_cov = covs[:,:idim,:idim]
         p_nodes_cov = covs[:,idim:,idim:]
 
-        print("nodes", e_nodes, p_nodes)
-        print("covs",  e_nodes_cov.shape, p_nodes_cov.shape)
+        # print("nodes", e_nodes, p_nodes)
+        # print("covs",  e_nodes_cov.shape, p_nodes_cov.shape)
         
         plot_nodes_over_data_1d_components(X, Y, mdl, e_nodes, p_nodes, e_nodes_cov, p_nodes_cov, saveplot = saveplot)
         
