@@ -1,5 +1,7 @@
 """smp_base/learners.py
 
+FIXME: models_res
+
 learner class using the reservoirs.py model
 
 interface to the robot sensorimotor loop for doing
@@ -17,10 +19,12 @@ import scipy.linalg as sLA
 import ConfigParser, ast
 
 
-from .eligibility import Eligibility
+from smp_base.eligibility import Eligibility
+from smp_base.models import smpModelInit, smpModel
+from smp_base.reservoirs import Reservoir
 
 try:
-    from .measures_infth import init_jpype, dec_compute_infth_soft
+    from smp_base.measures_infth import init_jpype, dec_compute_infth_soft
     from jpype import JPackage
     init_jpype()
     HAVE_JPYPE = True
@@ -37,6 +41,53 @@ TWOPI_SQRT = np.sqrt(2*np.pi)
 def gaussian(m, s, x):
     return 1/(s*TWOPI_SQRT) * np.exp(-0.5*np.square((m-x)/s))
 
+class smpSHL(smpModel):
+    """smpSHL
+
+    Single Hidden Layer model
+
+    The hidden layer's activity is fitted onto a target
+    """
+    defaults = {
+        'idim': 1, 'odim': 1, 'modelsize': 100, 'tau': 0.01, 'multitau': False,
+        'density': 0.1, 'spectral_radius': 0.99, 'w_input': 1.0, 'w_feedback': 0.0, 'w_bias': 0.1,
+        'nonlin_func': np.tanh, 'sparse': True, 'ip': False, 'theta': 0.1, 'theta_state': 0.1,
+        'coeff_a': 0.2, 'visualize': False
+        }
+
+    @smpModelInit()
+    def __init__(self, conf):
+        smpModel.__init__(self, conf)
+
+        self.model = Reservoir(
+            N = self.modelsize,
+            p = self.density,
+            input_num=self.idim,
+            output_num=self.odim,
+            g = self.spectral_radius,
+            tau = self.tau,
+            eta_init = 0,
+            feedback_scale = self.w_feedback,
+            input_scale = self.w_input,
+            bias_scale = self.w_bias,
+            nonlin_func = self.nonlin_func, # np.tanh, # lambda x: x,
+            sparse = True, ip = self.ip,
+            theta = self.theta,
+            theta_state = self.theta_state,
+            coeff_a = self.coeff_a
+        )
+
+    def step(self, X, Y, *args, **kwargs):
+        print "x", X.shape
+        return self.model.execute(X.T).T
+        
+    def predict(self, X):
+        self.step(X, None)
+        # pass
+        
+    def fit(self, X, Y):
+        self.step(X, Y)
+        
 class learnerConf():
     """Common parameters for exploratory Hebbian learners"""
     def __init__(self, cfgfile="default.cfg"):

@@ -1672,6 +1672,9 @@ def get_class_from_name(name = "KNN"):
         cls = partial(smpIGMM, K = 20)
     elif name == "HebbSOM":
         cls = smpHebbianSOM
+    elif name == 'resRLS':
+        from smp_base.learners import smpSHL
+        cls = smpSHL
     else:
         cls = smpKNN
     return cls
@@ -1854,6 +1857,8 @@ def test_model(args):
     else:
         # elif args.modelclass in ["KNN", "SOESGP", "STORKGP"]:
         # print("hello")
+        print ("X", X.shape)
+        print ("Y", Y.shape)
         plot_predictions_over_data_ts(X, Y, mdl, saveplot = saveplot)
         plot_predictions_over_data(X, Y, mdl, saveplot = saveplot)
         
