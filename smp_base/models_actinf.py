@@ -1,40 +1,47 @@
-"""smp_base: models_actinf.py
+"""smp_base/models_actinf.py
 
 Active inference project code
 
 Oswald Berthold, 2016-2017
 
-This file contains the learners which can be used as adaptive models of
-sensorimotor contexts. For forward models there are
+This file contains the learners which can be used as adaptive models
+of sensorimotor contexts designed for an active inference
+approach. Currently implemented models are
  - k nearest neighbours (knn)
  - sparse online gaussian process models powered by Harold Soh's OTL library (soesgp, storkgp)
  - gaussian mixture model based on pypr's gmm (gmm)
  - hebbian connected SOM via bruno lara, guido schillaci (hebbsom)
- - igmm (juan acevedo-valle)
+ - incremental gaussian mixtures (igmm via juan acevedo-valle)
+ - SOMs connected with hebbian associative links
 
-TODO: common calling convention for all model types
- - models:
-   - single hidden layer networks: linear/elm/res with RLS/FORCE/MDN/EH, merge with otl
-   - imol/models.py
-   - im/models.py
-   - smp/models_seq.py
-   - smp/models_karpmdn.py
+TODO:
+ - consolidate calling convention / api for all model types
+  - predict, fit, sample, conditionals, visualize
+  - common test code
 
-   - including 'predict_naive' and 'predict_full' methods that would capture
-     returning confidences about the current prediction
-   - other variables that might be used by the context to modulate
-     exploration, learning and behaviour
+ - implement missing models
+   - missing: single hidden layer networks: linear/elm/res with RLS/FORCE/MDN/EH, merge with otl
+   - missing: imol/models.py
+   - missing: im/models.py
+   - missing: smp/models_seq.py
+   - missing: smp/models_karpmdn.py
+
+   - including 'predict_naive' and 'predict_full' methods that would capture returning confidences about the current prediction
+   - other variables that might be used by the context to modulate exploration, learning and behaviour
    - disambiguate static and dynamic (conditional inference types) idim/odim
+   - consistent sampling from probabilistic models (gmm, hebbsom, ...): sample from prior, stick with last sample's vicinity
 
-TODO: consistency problem when sampling from probabilistic models (gmm, hebbsom, ...)
 
-issues:
- - som track residual error from map training
- - som use residual for adjusting rbf width
- - som extend sampling to sample actual prediction from gaussian with
-   unit's mu and sigma
- - plot current / final som configuration
- - plot densities
+ - model visualization
+   - def visualize for all models
+   - plot current / final som configuration
+   - plot densities
+
+ - hebbsom
+   - som track residual error from map training
+   - som use residual for adjusting rbf width
+   - som extend sampling to sample actual prediction from gaussian with unit's mu and sigma
+
 """
 
 
@@ -60,7 +67,7 @@ except ImportError, e:
     print("couldn't import online GP models:", e)
     HAVE_SOESGP = False
 
-# Gaussian mixtures
+# Gaussian mixtures PyPR
 try:
     import pypr.clustering.gmm as gmm
 except ImportError, e:
@@ -85,9 +92,9 @@ model_classes = ["KNN", "SOESGP", "STORKGP", "GMM", "HebbSOM", ",IGMM", "all"]
 class ActInfModel(object):
     """ActInfModel
 
-    Base class for active inference function approximators / regressors
+    Base class for function approximators / regressors
     """
-    def __init__(self, idim = 1, odim = 1, numepisodes = 10):
+    def __init__(self, idim = 1, odim = 1, numepisodes = 1):
         self.model = None
         self.idim = idim
         self.odim = odim
@@ -1210,83 +1217,84 @@ class ActInfHebbianSOM(ActInfModel):
         sidxs = self.filter_p.sample(100)
         # print("sidxs", stats.mode(sidxs)[0], sidxs)
         # sidx = self.filter_p.sample(1)[0]
+        # find the mode (most frequent realization) of distribution
         sidx = stats.mode(sidxs)[0][0]
         e2p_w_p_weights = self.filter_p.neuron(self.filter_p.flat_to_coords(sidx))
         # e2p_w_p_weights = self.filter_p.neuron(self.filter_p.flat_to_coords(np.argmax(self.filter_p.activity)))
         
-        ret = np.random.normal(e2p_w_p_weights, self.filter_p.sigmas[sidx], (1, self.odim))
+        # ret = np.random.normal(e2p_w_p_weights, self.filter_p.sigmas[sidx], (1, self.odim))
         # ret = np.random.normal(e2p_w_p_weights, 0.01, (1, self.odim))
         # print("hebbsom sample", e2p_w_p_weights, self.filter_p.sigmas[sidx])
-        # ret = e2p_w_p_weights.reshape((1, self.odim))
+        ret = e2p_w_p_weights.reshape((1, self.odim))
         return ret
     
-    def sample_cond_legacy(self, X):
-        """ActInfHebbianSOM.sample_cond: sample from model conditioned on X"""
-        sampling_search_num = 100
+    # def sample_cond_legacy(self, X):
+    #     """ActInfHebbianSOM.sample_cond: sample from model conditioned on X"""
+    #     sampling_search_num = 100
 
-        e_shape = (np.prod(self.filter_e.map._shape), 1)
-        p_shape = (np.prod(self.filter_p.map._shape), 1)
+    #     e_shape = (np.prod(self.filter_e.map._shape), 1)
+    #     p_shape = (np.prod(self.filter_p.map._shape), 1)
 
-        # P_ = np.zeros((X.shape[0], self.odim))
-        # E_ = np.zeros((X.shape[0], self.idim))
+    #     # P_ = np.zeros((X.shape[0], self.odim))
+    #     # E_ = np.zeros((X.shape[0], self.idim))
         
-        e2p_w_p_weights = self.filter_p.neuron(self.filter_p.flat_to_coords(self.filter_p.sample(1)[0]))
-        for i in range(X.shape[0]):
-            # e = EP[i,:dim_e]
-            # p = EP[i,dim_e:]
-            e = X[i]
-            # print np.argmin(som_e.distances(e)), som_e.distances(e)
-            self.filter_e.learn(e)
-            # print "self.filter_e.winner(e)", self.filter_e.winner(e)
-            # filter_p.learn(p)
-            # print "self.filter_e.activity.shape", self.filter_e.activity.shape
-            # import pdb; pdb.set_trace()
-            if self.hebblink_use_activity:
-                e2p_activation = np.dot(self.hebblink_filter.T, self.filter_e.activity.reshape((np.prod(self.filter_e.map._shape), 1)))
-                self.filter_p.activity = np.clip((e2p_activation / np.sum(e2p_activation)).reshape(self.filter_p.map._shape), 0, np.inf)
-            else:
-                e2p_activation = np.dot(self.hebblink_filter.T, self.filter_e.distances(e).flatten().reshape(e_shape))
-            # print "e2p_activation.shape, np.sum(e2p_activation)", e2p_activation.shape, np.sum(e2p_activation)
-            # print "self.filter_p.activity.shape", self.filter_p.activity.shape
-            # print "np.sum(self.filter_p.activity)", np.sum(self.filter_p.activity), (self.filter_p.activity >= 0).all()
+    #     e2p_w_p_weights = self.filter_p.neuron(self.filter_p.flat_to_coords(self.filter_p.sample(1)[0]))
+    #     for i in range(X.shape[0]):
+    #         # e = EP[i,:dim_e]
+    #         # p = EP[i,dim_e:]
+    #         e = X[i]
+    #         # print np.argmin(som_e.distances(e)), som_e.distances(e)
+    #         self.filter_e.learn(e)
+    #         # print "self.filter_e.winner(e)", self.filter_e.winner(e)
+    #         # filter_p.learn(p)
+    #         # print "self.filter_e.activity.shape", self.filter_e.activity.shape
+    #         # import pdb; pdb.set_trace()
+    #         if self.hebblink_use_activity:
+    #             e2p_activation = np.dot(self.hebblink_filter.T, self.filter_e.activity.reshape((np.prod(self.filter_e.map._shape), 1)))
+    #             self.filter_p.activity = np.clip((e2p_activation / np.sum(e2p_activation)).reshape(self.filter_p.map._shape), 0, np.inf)
+    #         else:
+    #             e2p_activation = np.dot(self.hebblink_filter.T, self.filter_e.distances(e).flatten().reshape(e_shape))
+    #         # print "e2p_activation.shape, np.sum(e2p_activation)", e2p_activation.shape, np.sum(e2p_activation)
+    #         # print "self.filter_p.activity.shape", self.filter_p.activity.shape
+    #         # print "np.sum(self.filter_p.activity)", np.sum(self.filter_p.activity), (self.filter_p.activity >= 0).all()
         
-            # self.filter_p.learn(p)
-            # emodes: 0, 1, 2
-            emode = 0 #
-            if i % 1 == 0:
-                if emode == 0:
-                    e2p_w_p_weights_ = []
-                    for k in range(sampling_search_num):
-                        # filter.sample return the index of the sampled unit
-                        e2p_w_p_weights = self.filter_p.neuron(self.filter_p.flat_to_coords(self.filter_p.sample(1)[0]))
-                        e2p_w_p_weights_.append(e2p_w_p_weights)
-                    pred = np.array(e2p_w_p_weights_)
-                    # print "pred", pred
+    #         # self.filter_p.learn(p)
+    #         # emodes: 0, 1, 2
+    #         emode = 0 #
+    #         if i % 1 == 0:
+    #             if emode == 0:
+    #                 e2p_w_p_weights_ = []
+    #                 for k in range(sampling_search_num):
+    #                     # filter.sample return the index of the sampled unit
+    #                     e2p_w_p_weights = self.filter_p.neuron(self.filter_p.flat_to_coords(self.filter_p.sample(1)[0]))
+    #                     e2p_w_p_weights_.append(e2p_w_p_weights)
+    #                 pred = np.array(e2p_w_p_weights_)
+    #                 # print "pred", pred
 
-                    # # if we can compare against something
-                    # pred_err = np.linalg.norm(pred - p, 2, axis=1)
-                    # # print "np.linalg.norm(e2p_w_p_weights - p, 2)", np.linalg.norm(e2p_w_p_weights - p, 2)
-                    # e2p_w_p = np.argmin(pred_err)
+    #                 # # if we can compare against something
+    #                 # pred_err = np.linalg.norm(pred - p, 2, axis=1)
+    #                 # # print "np.linalg.norm(e2p_w_p_weights - p, 2)", np.linalg.norm(e2p_w_p_weights - p, 2)
+    #                 # e2p_w_p = np.argmin(pred_err)
 
-                    # if not pick any
-                    e2p_w_p = np.random.choice(pred.shape[0])
+    #                 # if not pick any
+    #                 e2p_w_p = np.random.choice(pred.shape[0])
                     
-                    # print("pred_err", e2p_w_p, pred_err[e2p_w_p])
-                    e2p_w_p_weights = e2p_w_p_weights_[e2p_w_p]
-                elif emode == 1:
-                    if self.hebblink_use_activity:
-                        e2p_w_p = np.argmax(e2p_activation)
-                    else:
-                        e2p_w_p = np.argmin(e2p_activation)
-                    e2p_w_p_weights = self.filter_p.neuron(self.filter_p.flat_to_coords(e2p_w_p))
+    #                 # print("pred_err", e2p_w_p, pred_err[e2p_w_p])
+    #                 e2p_w_p_weights = e2p_w_p_weights_[e2p_w_p]
+    #             elif emode == 1:
+    #                 if self.hebblink_use_activity:
+    #                     e2p_w_p = np.argmax(e2p_activation)
+    #                 else:
+    #                     e2p_w_p = np.argmin(e2p_activation)
+    #                 e2p_w_p_weights = self.filter_p.neuron(self.filter_p.flat_to_coords(e2p_w_p))
                         
-                elif emode == 2:
-                    e2p_w_p = self.filter_p.winner(p)
-                    e2p_w_p_weights = self.filter_p.neuron(self.filter_p.flat_to_coords(e2p_w_p))
-            # P_[i] = e2p_w_p_weights
-            # E_[i] = environment.compute_sensori_effect(P_[i])
-            # print("e2p shape", e2p_w_p_weights.shape)
-            return e2p_w_p_weights.reshape((1, self.odim))
+    #             elif emode == 2:
+    #                 e2p_w_p = self.filter_p.winner(p)
+    #                 e2p_w_p_weights = self.filter_p.neuron(self.filter_p.flat_to_coords(e2p_w_p))
+    #         # P_[i] = e2p_w_p_weights
+    #         # E_[i] = environment.compute_sensori_effect(P_[i])
+    #         # print("e2p shape", e2p_w_p_weights.shape)
+    #         return e2p_w_p_weights.reshape((1, self.odim))
         
         
     def sample_batch(self, X):
