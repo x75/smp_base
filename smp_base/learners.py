@@ -21,7 +21,7 @@ import ConfigParser, ast
 
 from smp_base.eligibility import Eligibility
 from smp_base.models import smpModelInit, smpModel
-from smp_base.reservoirs import Reservoir
+from smp_base.reservoirs import Reservoir, LearningRules
 
 try:
     from smp_base.measures_infth import init_jpype, dec_compute_infth_soft
@@ -49,21 +49,33 @@ class smpSHL(smpModel):
     The hidden layer's activity is fitted onto a target
     """
     defaults = {
-        'idim': 1, 'odim': 1, 'modelsize': 100, 'tau': 0.01, 'multitau': False,
-        'density': 0.1, 'spectral_radius': 0.99, 'w_input': 1.0, 'w_feedback': 0.0, 'w_bias': 0.1,
-        'nonlin_func': np.tanh, 'sparse': True, 'ip': False, 'theta': 0.1, 'theta_state': 0.1,
-        'coeff_a': 0.2, 'visualize': False
+        'idim': 1, 'odim': 1, 'modelsize': 100, 'tau': 0.1, 'multitau': False,
+        'density': 0.1, 'spectral_radius': 1.2, 'w_input': 1.0, 'w_feedback': 0.0, 'w_bias': 0.1,
+        'nonlin_func': np.tanh, 'sparse': True, 'ip': False, 'theta': 0.1, 'theta_state': 0.01,
+        'coeff_a': 0.2, 'visualize': False, 'alpha': 1.0, 'lrname': 'FORCEmdn', 'mixcomps': 3
         }
 
     @smpModelInit()
     def __init__(self, conf):
+        # base init
         smpModel.__init__(self, conf)
 
+        if self.lrname == 'FORCEmdn':
+            self.odim_real = self.odim * self.mixcomps * 3
+            self.alpha = 100.0
+            self.tau = 0.025
+        else:
+            self.odim_real = self.odim
+
+        # learning rule init
+        self.lr = LearningRules(ndim_out = self.odim_real)
+
+        # reservoir init
         self.model = Reservoir(
             N = self.modelsize,
             p = self.density,
             input_num=self.idim,
-            output_num=self.odim,
+            output_num=self.odim_real,
             g = self.spectral_radius,
             tau = self.tau,
             eta_init = 0,
@@ -74,19 +86,82 @@ class smpSHL(smpModel):
             sparse = True, ip = self.ip,
             theta = self.theta,
             theta_state = self.theta_state,
-            coeff_a = self.coeff_a
+            coeff_a = self.coeff_a,
+            alpha = self.alpha,
         )
 
+        if self.lrname == 'FORCEmdn':
+            # sigmas = [1e-3] * self.mixcomps + [1e-3] * self.mixcomps + [1e-3] * self.mixcomps
+            sigmas = [1e-3] * self.odim_real
+            print "sigmas", sigmas
+            self.model.init_wo_random(np.zeros((1, self.odim_real)), np.array(sigmas))
+
+            # argh, multivariate output
+            self.lr.learnFORCEmdn_setup(mixcomps = self.mixcomps)
+
+        self.cnt_step = 0
+        
     def step(self, X, Y, *args, **kwargs):
-        print "x", X.shape
-        return self.model.execute(X.T).T
+        # print "x", X.shape
+        y = self.model.execute(X.T).T
+
+        if Y is not None:
+            # print "Y", Y.shape # y", y.shape
+            if self.lrname == 'FORCE':
+                # modular learning rule (ugly call)
+                (self.model.P, k, c) = self.lr.learnFORCE_update_P(self.model.P, self.model.r)
+                dw = self.lr.learnFORCE(Y.T, self.model.P, k, c, self.model.r, self.model.z, 0)
+                self.model.wo += dw
+                # for k in range(outsize_):
+                #     dw_t_norm[k,j] = LA.norm(dw[:,k])
+                self.model.perf = self.lr.e # mdn_loss_val
+                y_ = self.model.z # self.model.zn.T
+            elif self.lrname == 'FORCEmdn':
+                # modular learning rule (ugly call)
+                (self.model.P, k, c) = self.lr.learnFORCE_update_P(self.model.P, self.model.r)
+                dw = self.lr.learnFORCEmdn(Y.T, self.model.P, k, c, self.model.r, self.model.z, 0, X.T)
+                # self.model.wo += (1e-1 * dw)
+                # print "dw.shape", dw
+                # when using delta rule
+                leta = (1/np.log((self.cnt_step * 0.1)+2)) * 1e-4
+                leta = 1.0
+                self.model.wo = self.model.wo + (leta * dw)
+                # for k in range(outsize_):
+                #     # wo_t_norm[k,j] = LA.norm(wo_t[:,k,j])
+                #     dw_t_norm[k,j] = LA.norm(dw[:,k])
+
+                # loss_t[0,j] = self.lr.loss
+                # print "mdn_loss = %s" % mdn_loss_val
+                self.model.perf = self.lr.e # mdn_loss_val
+                y_ = self.lr.mixture(
+                    self.model.z[:self.mixcomps,0],
+                    np.exp(self.model.z[self.mixcomps:(2*self.mixcomps),0]),
+                    self.lr.softmax(self.model.z[(2*self.mixcomps):,0])
+                )
+        self.cnt_step += 1
+        return y_.T
         
     def predict(self, X):
-        self.step(X, None)
-        # pass
+        if X.shape[0] > 1: # batch input
+            ret = np.zeros((X.shape[0], self.odim))
+            for i in range(X.shape[0]):
+                ret[i] = self.step(X[i], None)
+            return ret
+        else:
+            # X_ = X.flatten().tolist()
+            # return self.predict_step(X_)
+            return self.step(X, None)
         
     def fit(self, X, Y):
-        self.step(X, Y)
+        if X.shape[0] > 1: # batch input
+            ret = np.zeros((X.shape[0], self.odim))
+            for i in range(X.shape[0]):
+                ret[i] = self.step(X[i], Y[i])
+            return ret
+        else:
+            # X_ = X.flatten().tolist()
+            # return self.predict_step(X_)
+            return self.step(X, Y)
         
 class learnerConf():
     """Common parameters for exploratory Hebbian learners"""

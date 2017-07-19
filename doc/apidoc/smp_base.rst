@@ -4,6 +4,14 @@ smp\_base package
 Submodules
 ----------
 
+smp\_base\.common module
+------------------------
+
+.. automodule:: smp_base.common
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 smp\_base\.dimstack module
 --------------------------
 
@@ -48,6 +56,14 @@ smp\_base\.measures\_infth module
 ---------------------------------
 
 .. automodule:: smp_base.measures_infth
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+smp\_base\.models module
+------------------------
+
+.. automodule:: smp_base.models
     :members:
     :undoc-members:
     :show-inheritance:

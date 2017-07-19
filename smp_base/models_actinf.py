@@ -1607,9 +1607,10 @@ def plot_predictions_over_data_ts(X, Y, mdl, saveplot = False):
     odim = Y.shape[1]
     numsamples = 2
     Y_samples = []
+    print("Xxx", X.shape)
     for i in range(numsamples):
         Y_samples.append(mdl.predict(X))
-    # print("Y_samples[0]", Y_samples[0])
+    print("Y_samples[0]", Y_samples[0])
 
     fig = pl.figure()
     fig.suptitle("Predictions over data timeseries (numsamples = %d), (%s)" % (numsamples, mdl.__class__.__name__))
