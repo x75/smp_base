@@ -52,8 +52,15 @@ class smpSHL(smpModel):
         'idim': 1, 'odim': 1, 'modelsize': 100, 'tau': 0.1, 'multitau': False,
         'density': 0.1, 'spectral_radius': 1.2, 'w_input': 1.0, 'w_feedback': 0.0, 'w_bias': 0.1,
         'nonlin_func': np.tanh, 'sparse': True, 'ip': False, 'theta': 0.1, 'theta_state': 0.01,
-        'coeff_a': 0.2, 'visualize': False, 'alpha': 1.0, 'lrname': 'FORCEmdn', 'mixcomps': 3
-        }
+        'coeff_a': 0.2, 'visualize': False, 'alpha': 1.0, 'lrname': 'EH', 'mixcomps': 3,
+        'eta_init': 5e-4,
+    }
+    # defaults = {
+    #     'idim': 1, 'odim': 1, 'modelsize': 200, 'tau': 1.0, 'multitau': False,
+    #     'density': 0.1, 'spectral_radius': 0.0, 'w_input': 1.0, 'w_feedback': 0.0, 'w_bias': 0.5,
+    #     'nonlin_func': np.tanh, 'sparse': True, 'ip': False, 'theta': 0.01, 'theta_state': 0.01,
+    #     'coeff_a': 0.2, 'visualize': False, 'alpha': 100.0, 'lrname': 'FORCEmdn', 'mixcomps': 7
+    #     }
 
     @smpModelInit()
     def __init__(self, conf):
@@ -62,8 +69,8 @@ class smpSHL(smpModel):
 
         if self.lrname == 'FORCEmdn':
             self.odim_real = self.odim * self.mixcomps * 3
-            self.alpha = 100.0
-            self.tau = 0.025
+            self.alpha = 10.0
+            self.tau = 1.0 # 0.025
         else:
             self.odim_real = self.odim
 
@@ -78,7 +85,7 @@ class smpSHL(smpModel):
             output_num=self.odim_real,
             g = self.spectral_radius,
             tau = self.tau,
-            eta_init = 0,
+            eta_init = self.eta_init,
             feedback_scale = self.w_feedback,
             input_scale = self.w_input,
             bias_scale = self.w_bias,
@@ -98,13 +105,15 @@ class smpSHL(smpModel):
 
             # argh, multivariate output
             self.lr.learnFORCEmdn_setup(mixcomps = self.mixcomps)
+        elif self.lrname == 'RLS':
+            self.lr.learnRLSsetup(x0 = self.model.wo, P0 = np.eye(self.model.N))
 
         self.cnt_step = 0
         
     def step(self, X, Y, *args, **kwargs):
         # print "x", X.shape
         y = self.model.execute(X.T).T
-
+        y_ = y.T
         if Y is not None:
             # print "Y", Y.shape # y", y.shape
             if self.lrname == 'FORCE':
@@ -116,6 +125,13 @@ class smpSHL(smpModel):
                 #     dw_t_norm[k,j] = LA.norm(dw[:,k])
                 self.model.perf = self.lr.e # mdn_loss_val
                 y_ = self.model.z # self.model.zn.T
+            elif self.lrname == 'RLS':
+                dw = self.lr.learnRLS(target = Y.T, r = self.model.r)
+                self.model.wo += dw
+                self.model.perf = self.lr.rls_estimator.y
+                # for k in range(outsize_):
+                #     dw_t_norm[k,j] = LA.norm(dw[:,k])
+                
             elif self.lrname == 'FORCEmdn':
                 # modular learning rule (ugly call)
                 (self.model.P, k, c) = self.lr.learnFORCE_update_P(self.model.P, self.model.r)
@@ -123,9 +139,10 @@ class smpSHL(smpModel):
                 # self.model.wo += (1e-1 * dw)
                 # print "dw.shape", dw
                 # when using delta rule
-                leta = (1/np.log((self.cnt_step * 0.1)+2)) * 1e-4
-                leta = 1.0
-                self.model.wo = self.model.wo + (leta * dw)
+                # leta = (1/np.log((self.cnt_step * 0.1)+2)) * 1e-4
+                # self.model.wo = self.model.wo + (leta * dw)
+                # leta = 1.0
+                self.model.wo += dw
                 # for k in range(outsize_):
                 #     # wo_t_norm[k,j] = LA.norm(wo_t[:,k,j])
                 #     dw_t_norm[k,j] = LA.norm(dw[:,k])
@@ -133,11 +150,23 @@ class smpSHL(smpModel):
                 # loss_t[0,j] = self.lr.loss
                 # print "mdn_loss = %s" % mdn_loss_val
                 self.model.perf = self.lr.e # mdn_loss_val
-                y_ = self.lr.mixture(
-                    self.model.z[:self.mixcomps,0],
-                    np.exp(self.model.z[self.mixcomps:(2*self.mixcomps),0]),
-                    self.lr.softmax(self.model.z[(2*self.mixcomps):,0])
-                )
+            elif self.lrname == 'EH':
+                dw = self.lr.learnEH(target = Y.T, r = self.model.r, pred = self.model.zn, pred_lp = self.model.zn_lp, perf = self.model.perf, perf_lp = self.model.perf_lp, eta = self.model.eta_init)
+                self.model.wo += dw
+                self.model.perf = self.lr.perf
+                self.model.perf_lp = ((1 - self.model.coeff_a) * self.model.perf_lp) + (self.model.coeff_a * self.model.perf)
+
+        if self.lrname in ['RLS', 'FORCE']:
+            y_ = self.model.z
+        elif self.lrname == 'EH':
+            y_ = self.model.zn
+        elif self.lrname == 'FORCEmdn':
+            y_ = self.lr.mixture(
+                self.model.z[:self.mixcomps,0],
+                np.exp(self.model.z[self.mixcomps:(2*self.mixcomps),0]),
+                self.lr.softmax(self.model.z[(2*self.mixcomps):,0])
+            )
+        # print "y_", y_
         self.cnt_step += 1
         return y_.T
         

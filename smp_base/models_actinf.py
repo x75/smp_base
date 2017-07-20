@@ -119,6 +119,9 @@ class smpKNN(smpModel):
 
         self.bootstrap()
 
+    def visualize(self):
+        pass
+        
     def bootstrap(self):
         """smpKNN.bootstrap
 
@@ -1563,10 +1566,13 @@ def plot_hebbsom_links_distances_activations(X, Y, mdl, predictions, distances, 
     fig.show()
 
 def plot_predictions_over_data(X, Y, mdl, saveplot = False):
+    do_hexbin = False
+    if X.shape[0] > 10000:
+        do_hexbin = True
     # plot prediction
     idim = X.shape[1]
     odim = Y.shape[1]
-    numsamples = 2
+    numsamples = 1 # 2
     Y_samples = []
     for i in range(numsamples):
         Y_samples.append(mdl.predict(X))
@@ -1580,11 +1586,17 @@ def plot_predictions_over_data(X, Y, mdl, saveplot = False):
         ax = fig.add_subplot(gs[i])
         target     = Y[:,i]
         
-        ax.plot(X, target, "k.", label="Y_", alpha=0.5)
+        if do_hexbin:
+            ax.hexbin(X, Y, gridsize = 20, alpha=0.75, cmap=pl.get_cmap("gray"))
+        else:
+            ax.plot(X, target, "k.", label="Y_", alpha=0.5)
         for j in range(numsamples):
             prediction = Y_samples[j][:,i]
-            # pl.plot(prediction, target, "r.", label="Y_", alpha=0.25)
-            ax.plot(X, prediction, "r.", label="Y_", alpha=0.25)
+            print("X", X.shape, "prediction", prediction.shape)
+            if do_hexbin:
+                ax.hexbin(X[:,i], prediction, gridsize = 20, alpha=0.75, cmap=pl.get_cmap("Reds"))
+            else:
+                ax.plot(X, prediction, "r.", label="Y_", alpha=0.25)
         # get limits
         xlim = ax.get_xlim()
         ylim = ax.get_ylim()
@@ -1788,6 +1800,11 @@ def test_model(args):
     if args.fitmode == 'incremental':
         for i in range(args.numsteps):
             mdl.fit(X[[i]], Y[[i]])
+            if i % 1000 == 0:
+                if args.modelclass == 'resRLS':
+                    print("step = %d, loss = %s, |w| = %s" % (i, np.linalg.norm(mdl.lr.e), np.linalg.norm(mdl.model.wo)))
+                else:
+                    print("step = %d" % (i, ))
     else:
         # batch fit
         mdl.fit(X, Y)
@@ -1860,7 +1877,7 @@ def test_model(args):
         # print("hello")
         print ("X", X.shape)
         print ("Y", Y.shape)
-        plot_predictions_over_data_ts(X, Y, mdl, saveplot = saveplot)
+        # plot_predictions_over_data_ts(X, Y, mdl, saveplot = saveplot)
         plot_predictions_over_data(X, Y, mdl, saveplot = saveplot)
         
         

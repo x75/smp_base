@@ -160,6 +160,7 @@ class LearningRules(object):
         self.loss = 0
         self.e = np.zeros((self.ndim_out, 1))
         self.perf = self.e # pointer
+        self.e_lp = np.zeros_like(self.e)
 
     ############################################################
     ## learning rule: FORCE
@@ -279,7 +280,8 @@ class LearningRules(object):
         multinom_sample = np.random.multinomial(1, ps)
         multinom_sample_idx = np.where(multinom_sample == 1.0)
         compidx = multinom_sample_idx[0][0]
-        y = np.random.normal(mu[compidx], np.abs(sig[compidx]) + np.random.uniform(0, 1e-3, size=sig[compidx].shape))
+        # print "compidx", compidx, "sig", sig[compidx].shape
+        y = np.random.normal(mu[compidx], np.abs(sig[compidx]) + np.random.uniform(0, 1e-3, size=sig[[compidx]].shape))
         return y
 
     def mdn_loss(self, x, r, z, y, loss_only = False):
