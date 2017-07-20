@@ -62,7 +62,7 @@ class smpSHL(smpModel):
         'idim': 1, 'odim': 1, 'modelsize': 100, 'tau': 1.0, 'multitau': False,
         'density': 0.1, 'spectral_radius': 0.0, 'w_input': 0.66, 'w_feedback': 0.0, 'w_bias': 1.0,
         'nonlin_func': np.tanh, 'sparse': True, 'ip': False, 'theta': 0.01, 'theta_state': 0.01,
-        'coeff_a': 0.2, 'visualize': True, 'alpha': 10.0, 'lrname': 'FORCEmdn', 'mixcomps': 10,
+        'coeff_a': 0.2, 'visualize': True, 'alpha': 10.0, 'lrname': 'FORCEmdn', 'mixcomps': 3,
         'eta_init': 1e-4,
         }
 
@@ -72,7 +72,12 @@ class smpSHL(smpModel):
         smpModel.__init__(self, conf)
 
         if self.lrname == 'FORCEmdn':
-            self.odim_real = self.odim * self.mixcomps * 3
+            # self.odim_real = self.odim * self.mixcomps * 3
+            self.num_mu = self.odim * self.mixcomps
+            # self.num_sig = self.odim ** 2 * self.mixcomps
+            self.num_sig = ((self.odim ** 2 - self.odim)/2 + self.odim) * self.mixcomps
+            self.num_pi = self.mixcomps
+            self.odim_real = self.num_mu + self.num_sig + self.num_pi
             # self.alpha = 10.0
             self.tau = 1.0 # 0.025
         else:
@@ -102,7 +107,7 @@ class smpSHL(smpModel):
         )
 
         if self.lrname == 'FORCEmdn':
-            sigmas = [2e-1] * self.mixcomps + [5e-2] * self.mixcomps + [1.0/self.mixcomps] * self.mixcomps
+            sigmas = [2e-1] * self.num_mu + [5e-2] * self.num_sig + [1.0/self.mixcomps] * self.num_pi
             # sigmas = [1e-1] * self.odim_real
             print "sigmas", sigmas
             self.model.init_wo_random(np.zeros((1, self.odim_real)), np.array(sigmas))
@@ -206,11 +211,18 @@ class smpSHL(smpModel):
         elif self.lrname == 'EH':
             y_ = self.model.zn
         elif self.lrname == 'FORCEmdn':
-            y_ = self.lr.mixture(
-                self.model.z[:self.mixcomps,0],
-                np.exp(self.model.z[self.mixcomps:(2*self.mixcomps),0]),
-                self.lr.softmax(self.model.z[(2*self.mixcomps):,0])
-            )
+            if self.odim < 2:
+                y_ = self.lr.mixture(
+                    self.model.z[:self.mixcomps,0],
+                    np.exp(self.model.z[self.mixcomps:(2*self.mixcomps),0]),
+                    self.lr.softmax(self.model.z[(2*self.mixcomps):,0])
+                )
+            else:
+                y_ = self.lr.mixtureMV(
+                    self.model.z[:self.num_mu],
+                    np.exp(self.model.z[self.num_mu:self.num_mu + self.num_sig]),
+                    self.lr.softmax(self.model.z[self.num_mu + self.num_sig:])
+                )
 
         # print "y_", y_
         self.cnt_step += 1

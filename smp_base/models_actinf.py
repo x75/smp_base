@@ -1791,8 +1791,8 @@ def test_model(args):
         X,Y = generate_inverted_sinewave_dataset(N = args.numsteps)
         idx = range(args.numsteps)
         np.random.shuffle(idx)
-        print("X.shape", X.shape, X[idx].shape)
-        print("idx", idx)
+        # print("X.shape", X.shape, X[idx].shape)
+        # print("idx", idx)
         X = np.tile(X[idx], (1, 2))
         Y = np.tile(Y[idx], (1, 2))
         # X, Y = shuffle(X, Y, random_state=0)
@@ -1831,8 +1831,8 @@ def test_model(args):
             args.numepisodes = 1
         # print("HebbianSOM idim", idim, "odim", odim)
         # mdl = mdlcls(idim = idim, odim = odim, numepisodes = args.numepisodes, visualize = True, mapsize_e = 10, mapsize_p = 10)
-        mdlcnf['mapsize_e'] = 10
-        mdlcnf['mapsize_p'] = 10
+        mdlcnf['mapsize_e'] = 30
+        mdlcnf['mapsize_p'] = 30
         mdlcnf['visualize'] = True
         mdlcnf['som_lr'] = 1e-1
         mdlcnf['som_nhs'] = 1e-1
@@ -1874,11 +1874,11 @@ def test_model(args):
         fig = plot_nodes_over_data_1d_components_fig(title = args.modelclass, numplots = X.shape[1] + Y.shape[1])
         plot_nodes_over_data_1d_components(fig, X, Y, mdl, e_nodes, p_nodes, e_nodes_cov, p_nodes_cov, saveplot = saveplot)
         
-        # print("2 plot_nodes_over_data_scattermatrix")
-        # plot_nodes_over_data_scattermatrix(X, Y, mdl, e_nodes, p_nodes, e_nodes_cov, p_nodes_cov, saveplot = saveplot)
+        print("2 plot_nodes_over_data_scattermatrix")
+        plot_nodes_over_data_scattermatrix(X, Y, mdl, e_nodes, p_nodes, e_nodes_cov, p_nodes_cov, saveplot = saveplot)
 
-        # print("3 hebbsom_predict_full")
-        # predictions, distances, activities = hebbsom_predict_full(X, Y, mdl)
+        print("3 hebbsom_predict_full")
+        predictions, distances, activities = hebbsom_predict_full(X, Y, mdl)
     
         # print("4 plot_predictions_over_data")
         # plot_predictions_over_data(X, Y, mdl, saveplot = saveplot)
@@ -1886,8 +1886,8 @@ def test_model(args):
         # print("5 plot_predictions_over_data_ts")
         # plot_predictions_over_data_ts(X, Y, mdl, saveplot = saveplot)
         
-        # print("6 plot_nodes_over_data_scattermatrix_hexbin")
-        # plot_nodes_over_data_scattermatrix_hexbin(X, Y, mdl, predictions, distances, activities, saveplot = saveplot)
+        print("6 plot_nodes_over_data_scattermatrix_hexbin")
+        plot_nodes_over_data_scattermatrix_hexbin(X, Y, mdl, predictions, distances, activities, saveplot = saveplot)
                 
         # print("7 plot_hebbsom_links_distances_activations")
         # plot_hebbsom_links_distances_activations(X, Y, mdl, predictions, distances, activities, saveplot = saveplot)
@@ -1918,13 +1918,17 @@ def test_model(args):
         plot_predictions_over_data_ts(X, Y, mdl, saveplot = saveplot)
         
         plot_predictions_over_data(X, Y, mdl, saveplot = saveplot)
+
+    elif args.modelclass == "resRLS":
+        plot_mdn_mues_over_data_scan(X, mdl, saveplot = saveplot)
+        plot_predictions_over_data(X, Y, mdl, saveplot = saveplot)
+        
     else:
         # elif args.modelclass in ["KNN", "SOESGP", "STORKGP"]:
         # print("hello")
         print ("models_actinf.test_model: X", X.shape)
         print ("models_actinf.test_model: Y", Y.shape)
-        # plot_predictions_over_data_ts(X, Y, mdl, saveplot = saveplot)
-        plot_mdn_mues_over_data_scan(X, mdl, saveplot = saveplot)
+        plot_predictions_over_data_ts(X, Y, mdl, saveplot = saveplot)
         plot_predictions_over_data(X, Y, mdl, saveplot = saveplot)
         
         

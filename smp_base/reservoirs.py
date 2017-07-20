@@ -30,7 +30,7 @@ import sys, time, argparse
 import numpy as np
 import numpy.linalg as LA
 import scipy.sparse as spa
-import matplotlib.pyplot as pl
+import matplotlib.pyplot as plt
 from matplotlib import gridspec
 
 
@@ -217,7 +217,10 @@ class LearningRules(object):
         FORCE learning rule with MDN loss for reservoir online supervised learning
         """
         # compute error
-        self.e = self.mdn_loss(x, r, z, target)
+        if target.shape[0] < 2:
+            self.e = self.mdn_loss(x, r, z, target)
+        else:
+            self.e = self.mdn_lossMV(x, r, z, target, d = target.shape[0])
         # compute weight update from error
         dw = -self.e.T * k * c
         return dw
@@ -269,7 +272,19 @@ class LearningRules(object):
         Sample from a multivariate gaussian mixture with \mu = means, \Sigma = cov matrix
         """
         print "%s.mixtureMV: Implement me" % (self.__class__.__name__)
-        return None
+
+        # print "mixtureMV", mu, sig, ps
+        
+        d = mu.shape[0]
+        compidx = self.mixture_sample_prior(ps)
+
+        mu_ = mu[compidx]
+        S_  = sig[compidx]
+
+        print "mu_", mu_, "S_", S_
+        
+        y = np.random.multivariate_normal(mu_, S_)
+        return y
 
     # mixture, mdn_loss, and softmax are taken from karpathy's MixtureDensityNets.py
     def mixture(self, mu, sig, ps):
@@ -277,13 +292,19 @@ class LearningRules(object):
 
         Sample from the univariate gaussian mixture
         """
+        # compidx = np.where(np.random.multinomial(1, ps) == 1.0)[0][0]
+        compidx = self.mixture_sample_prior(ps)
+        # print "compidx", compidx, "sig", sig[compidx].shape
+        # y = np.random.normal(mu[compidx], np.abs(sig[compidx]) + np.random.uniform(0, 1e-3, size=sig[[compidx]].shape))
+        y = np.random.normal(mu[compidx], sig[compidx], size = mu[[compidx]].shape)
+        return y
+
+    def mixture_sample_prior(self, ps):
         multinom_sample = np.random.multinomial(1, ps)
         multinom_sample_idx = np.where(multinom_sample == 1.0)
         compidx = multinom_sample_idx[0][0]
-        # print "compidx", compidx, "sig", sig[compidx].shape
-        y = np.random.normal(mu[compidx], np.abs(sig[compidx]) + np.random.uniform(0, 1e-3, size=sig[[compidx]].shape))
-        return y
-
+        return compidx
+    
     def mdn_loss(self, x, r, z, y, loss_only = False):
         """LearningRules.mdn_loss
 
@@ -322,6 +343,115 @@ class LearningRules(object):
 
         return np.vstack((dmu, dlogsig, dpiu))
 
+    def mdn_lossMV(self, x, r, z, y, d = 2):
+        """LearningRules.mdn_lossMV
+
+        Compute the multivariate mixture density (MDN) loss
+        """
+        mixcomps = self.mixcomps
+        num_mu = mixcomps * d
+        # num_sig = mixcomps * d ** 2
+        num_sig = ((d ** 2 - d)/2 + d) * mixcomps
+        num_pi = mixcomps
+        
+        # predict mean
+        mu = z[:num_mu]
+        # predict log variance
+        logsig = z[num_mu:num_mu + num_sig]
+        # unlog it
+        sig = np.exp(logsig)
+        # predict mixture priors
+        piu = z[num_mu + num_sig:]
+        # softmax them
+        pi = self.softmax(piu)
+
+        print "mu", mu.shape, "sig", sig.shape, "pi", pi.shape
+        
+        # compute the loss: mean negative data log likelihood
+        # k, n = mu.shape # number of mixture components
+        # n = float(n)
+
+        # print "k", k, "n", n
+        n = float(mixcomps)
+        
+        # component likelihood
+        # ps = np.exp( - ( (y - mu) ** 2 ) / ( 2 * sig ** 2 ) ) / ( sig * np.sqrt( 2*np.pi))
+
+        """
+                           1                  /    1                                    \
+        p(X) = -------------------------- exp | - --- ( X - MU )^T \Sigma^-1 ( X - MU ) |
+               (2pi)^(d/2) |\Sigma|^(1/2)     \    2                                    /
+        """
+
+        # norm1 = np.tile(x, (mixcomps, 1)) - mu
+
+        p_s = []
+
+        mu_ = mu.reshape((mixcomps, d))
+        S_diag = sig[:(mixcomps * d)].reshape((mixcomps, d))
+        S_triu = sig[(mixcomps * d):].reshape((mixcomps, -1))
+        print "S_diag", S_diag, "S_triu", S_triu
+        
+        for i in range(mixcomps):
+            S_ = np.diag(S_diag[i])
+            S_[np.triu_indices(d,  1)] = S_triu[i]
+            S_[np.tril_indices(d, -1)] = S_triu[i]
+            # S_ = sig.reshape((mixcomps, d, d)) ** 2
+            S_ *= S_
+            print "S_", S_, "sig", sig.shape, "x", x.shape, "mu_", mu_[i].shape
+            
+            norm1 = x - mu_[[i]].T
+            S__ = np.linalg.pinv(S_)
+            p_ = np.exp(-np.dot(norm1.T, np.dot(S__, norm1))/2.0)
+            # print "p_", p_
+            p_s.append(p_.flatten())
+            # print "S * norm", p_s[-1]
+
+        print "x", x.shape, "mu", mu_.shape, "norm1", norm1.shape, "S_", S_.shape
+        
+        # ps = np.exp(norm1.T np.dot(/ 2.0)
+        ps = np.array(p_s)
+
+        # print "ps", ps
+        
+        # mixture likelihood
+        pin = ps * pi
+        # print "pin", pin
+        
+        # negloglikelihood, compare with batch estimate
+        lp = -np.log(np.sum(pin, axis=0, keepdims=True))
+        loss = np.sum(lp) / n
+        self.loss = loss
+
+        # # compute component errors
+        # gammas are pi_i's in bishop94
+        gammas = pin / np.sum(pin, axis=0, keepdims = True)
+
+        dmu = []
+        dlogsig = []
+        dpiu = []
+        for i in range(mixcomps):
+            S_ = np.diag(S_diag[i])
+            S_[np.triu_indices(d,  1)] = S_triu[i]
+            S_[np.tril_indices(d, -1)] = S_triu[i]
+
+            S__ = np.linalg.pinv(S_**2)
+            
+            dmu_ = gammas[i] * (np.dot((mu_[[i]].T - y).T, S__)) / n
+            dmu.append(dmu_)
+            dlogsig_ = gammas[i] * (1.0 - np.dot(S__, ((y-mu_[[i]].T)**2))) / n
+            dlogsig.append(dlogsig_)
+        dpiu_ = (pi - gammas) / n
+        dpiu.append(dpiu_)
+        # print "|dmu| = %f" % (np.linalg.norm(dmu))
+
+        print "dmu", dmu
+        print "dlogisig", dlogsig
+        print "dpiu", dpiu
+        # dmu = np.
+        
+        return np.vstack((dmu, dlogsig, dpiu))
+    
     def softmax(self, x):
         """LearningRules.softmax
 
@@ -1101,12 +1231,12 @@ def get_data(elen, outdim, mode="MSO_s1"):
         d_sig[i] = d
     # print "d_sig.shape", d_sig.shape
 
-    # pl.ioff()
-    # pl.subplot(211)
-    # pl.plot(d_sig_a)
-    # pl.subplot(212)
-    # pl.plot(d_sig_b.T)
-    # pl.show()
+    # plt.ioff()
+    # plt.subplot(211)
+    # plt.plot(d_sig_a)
+    # plt.subplot(212)
+    # plt.plot(d_sig_b.T)
+    # plt.show()
 
     # d_sig = np.sum(d_sig_a, axis=1)/len(d_sig_freqs)
     # d_sig = d_sig.reshape(1, (len(d_sig)))
@@ -1144,36 +1274,36 @@ def test_ip(args):
     sl1 = slice(0, args.length / 3)
     sl2 = slice(args.length / 3, 2 * args.length / 3)
     sl3 = slice(2 * args.length / 3, None)
-    pl.subplot(241)
-    # pl.plot(u_, "k-", lw=0.3)
-    pl.plot(u_ + [i * 10 for i in range(idim)], "k-", lw=0.3)
-    pl.ylabel("Neuron input $x$")
-    pl.subplot(242)
-    pl.hist(u_[sl1], bins=50, normed=True, orientation="horizontal")
-    pl.subplot(243)
-    pl.hist(u_[sl2], bins=50, normed=True, orientation="horizontal")
-    pl.subplot(244)
-    pl.hist(u_[sl3], bins=50, normed=True, orientation="horizontal")
-    pl.subplot(245)
-    # pl.plot(u_ip_, "k-", lw=0.3)
-    pl.plot(u_ip_, "k-", lw=0.3)
-    pl.ylabel("Neuron output $y$")
-    pl.subplot(246)
-    pl.hist(u_ip_[sl1], bins=50, normed=True, orientation="horizontal")
-    pl.subplot(247)
-    pl.hist(u_ip_[sl2], bins=50, normed=True, orientation="horizontal")
-    pl.subplot(248)
-    pl.hist(u_ip_[sl3], bins=50, normed=True, orientation="horizontal")
+    plt.subplot(241)
+    # plt.plot(u_, "k-", lw=0.3)
+    plt.plot(u_ + [i * 10 for i in range(idim)], "k-", lw=0.3)
+    plt.ylabel("Neuron input $x$")
+    plt.subplot(242)
+    plt.hist(u_[sl1], bins=50, normed=True, orientation="horizontal")
+    plt.subplot(243)
+    plt.hist(u_[sl2], bins=50, normed=True, orientation="horizontal")
+    plt.subplot(244)
+    plt.hist(u_[sl3], bins=50, normed=True, orientation="horizontal")
+    plt.subplot(245)
+    # plt.plot(u_ip_, "k-", lw=0.3)
+    plt.plot(u_ip_, "k-", lw=0.3)
+    plt.ylabel("Neuron output $y$")
+    plt.subplot(246)
+    plt.hist(u_ip_[sl1], bins=50, normed=True, orientation="horizontal")
+    plt.subplot(247)
+    plt.hist(u_ip_[sl2], bins=50, normed=True, orientation="horizontal")
+    plt.subplot(248)
+    plt.hist(u_ip_[sl3], bins=50, normed=True, orientation="horizontal")
 
     if saveplot:
-        pl.gcf().set_size_inches((18,10))
-        pl.gcf().savefig("reservoir_test_ip.pdf", dpi=300, bbox_inches="tight")
-    pl.show()
+        plt.gcf().set_size_inches((18,10))
+        plt.gcf().savefig("reservoir_test_ip.pdf", dpi=300, bbox_inches="tight")
+    plt.show()
 
 class ReservoirPlot(object):
     def __init__(self, args):
         self.gs = gridspec.GridSpec(5, 1)
-        self.fig = pl.figure()
+        self.fig = plt.figure()
         self.fig.suptitle("reservoirs.py mode = %s, target = %s, length = %d" % (args.mode, args.target, args.length))
         self.axs = []
         for plotrow in range(5):
@@ -1266,11 +1396,53 @@ class ReservoirPlot(object):
             self.axs[4].plot(perf_t.T, label="perf", alpha=0.5)
         self.axs[4].legend(ncol=2, fontsize=8)
 
-        pl.draw()
-        pl.pause(1e-9)
+        plt.draw()
+        plt.pause(1e-9)
 
+def test_mixtureMV(args):
+
+    
+    mixcomps = 3
+    d = 2
+    mu = np.random.uniform(-1, 1, size = (mixcomps, d))
+    S = np.array([np.eye(d) * 0.01 for c in range(mixcomps)])
+    for s in S:
+        s += 0.05 * np.random.uniform(-1, 1, size = s.shape)
+        s[np.tril_indices(d, -1)] = s[np.triu_indices(d, 1)]
+    pi = np.ones((mixcomps, )) * 1.0/mixcomps
+
+    lr = LearningRules(ndim_out = d)
+    
+    fig = plt.figure()
+    gs = gridspec.GridSpec(2, mixcomps)
+    for g in gs:
+        fig.add_subplot(g)
+
+    ax = fig.axes[0]
+    ax.plot(mu[:,0], mu[:,1], "ko", alpha = 0.5)
+    # ax.set_xlim((-1.1, 1.1))
+    # ax.set_ylim((-1.1, 1.1))
+
+
+    ax = fig.axes[0] # (2 * mixcomps) + c]
+    for i in range(100):
+        y = lr.mixtureMV(mu, S, pi)
+        print "y", y
+        ax.plot([y[0]], [y[1]], "ro", alpha = 0.2, markersize = 3.0)
+
+    ax.set_aspect(1)
+        
+    for c in range(mixcomps):
+        ax = fig.axes[mixcomps + c]
+        ax.imshow(S[c], cmap = plt.get_cmap('PiYG'))
+        
+    fig.show()
+    plt.show()
+    
+    print "mu", mu.shape, "S", S.shape
+        
 class ReservoirTest(object):
-    modes = {"ol_rls": 0, "ol_force": 1, "ol_eh": 2, "ip": 3, "fwd": 4, "ol_pi": 5, "ol_force_mdn": 6}
+    modes = {"ol_rls": 0, "ol_force": 1, "ol_eh": 2, "ip": 3, "fwd": 4, "ol_pi": 5, "ol_force_mdn": 6, 'mixtureMV': 7}
     targets = {"MSO_s1": 0, "MSO_s2": 1, "MSO_s3": 2, "MSO_c1": 3, "MSO_c2": 4, "MG": 5, "wav": 6, "reg3t1": 7, "reg_multimodal_1": 8}
 
 def save_wavfile(out_t, timestr):
@@ -1284,9 +1456,14 @@ def save_wavfile(out_t, timestr):
         print "ImportError for scipy.io.wavfile"
 
 def main(args):
-    if args.mode == "ip":
+    print "mode", args.mode
+    if args.mode == 'ip':
         test_ip(args)
-        sys.exit()
+        sys.exit(0)
+
+    elif args.mode == 'mixtureMV':
+        test_mixtureMV(args)
+        sys.exit(0)
 
     # seed the run
     np.random.seed(args.seed)
@@ -1413,7 +1590,7 @@ def main(args):
             sys.exit(1)
 
         # interactive plotting
-        pl.ion()
+        plt.ion()
         # init reservoir plotting
         rp = ReservoirPlot(args) # bad naming, i is instance of res model size
 
@@ -1540,14 +1717,14 @@ def main(args):
     # compute performance for testing: MSE, freq match without phase
 
     # final plot
-    pl.ioff()
+    plt.ioff()
 
     rpdata = (ds_real, out_t, out_t_mdn_sample, r_t, perf_t, loss_t, wo_t_norm, dw_t_norm)
     rp.plot_data(args = args, data = rpdata, incr = j, lr = lr, testing = testing)
 
     timestr = time.strftime("%Y%m%d_%H%M%S")
     rp.fig.savefig("../data/res_plot_%s.pdf" % (timestr), dpi=300, bbox_inches="tight")
-    pl.show()
+    plt.show()
 
     if args.mode.endswith("mdn"):
         save_wavfile(out_t_mdn_sample, timestr)
