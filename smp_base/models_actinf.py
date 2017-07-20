@@ -1592,17 +1592,26 @@ def plot_mdn_mues_over_data_scan(X, mdl, saveplot = False):
         for j in range(xscan.shape[0]):
             # print("mues", mues[[j],[i]], "pis", pis[j,i])
             ax.plot(xscan[[j]], mues[[j],[i]], "ro", alpha = pis[j,i])
-    ax.plot(xscan, mues - sigs, "b,", alpha = 0.5)
-    ax.plot(xscan, mues + sigs, "b,", alpha = 0.5)
+            ax.plot(xscan[[j]], mues[[j],[i]] - sigs[[j],[i]], "bo", alpha = pis[j,i], markersize = 2.5)
+            ax.plot(xscan[[j]], mues[[j],[i]] + sigs[[j],[i]], "bo", alpha = pis[j,i], markersize = 2.5)
+    # ax.plot(xscan, mues - sigs, "bo", alpha = 0.5, markersize = 2.0)
+    # ax.plot(xscan, mues + sigs, "bo", alpha = 0.5, markersize = 2.0)
     # ax.plot(xscan, mues, "ro", alpha = 0.5)
     # ax.plot(mues, xscan, "ro", alpha = 0.5)
+
+
+    if saveplot:
+        filename = "plot_mdn_mues_over_data_scan_%s.jpg" % (mdl.__class__.__name__,)
+        savefig(fig, filename)
+        
+    fig.show()
     
 def plot_predictions_over_data(X, Y, mdl, saveplot = False):
     do_hexbin = False
-    if X.shape[0] > 10000:
+    if X.shape[0] > 4000:
         do_hexbin = False # True
-        X = X[-10000:]
-        Y = Y[-10000:]
+        X = X[-4000:]
+        Y = Y[-4000:]
     # plot prediction
     idim = X.shape[1]
     odim = Y.shape[1]
