@@ -1184,7 +1184,8 @@ class ReservoirPlot(object):
 
         # plotting params for res hidden activation random projection
         self.selsize = 20
-        self.rindex = np.random.randint(self.ressize, size=self.selsize)
+        # self.rindex = np.random.randint(self.ressize, size=self.selsize)
+        self.rindex = np.random.choice(range(self.ressize), self.selsize, replace=False)
 
     def plot_data(self, args, data, incr = 1000, lr = None, testing = 100):
         (ds_real, out_t, out_t_mdn_sample, r_t, perf_t, loss_t, wo_t_norm, dw_t_norm) = data

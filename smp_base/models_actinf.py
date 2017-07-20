@@ -1240,12 +1240,12 @@ class smpHebbianSOM(smpModel):
         self.fit_hebb(X, y)
         self.fitted = True
 
-        if self.visualize:
-            self.Xhist.append(X)
-            self.Yhist.append(y)
+        # if self.visualize:
+        #     self.Xhist.append(X)
+        #     self.Yhist.append(y)
             
-            if self.cnt_fit % 100 == 0:
-                self.visualize_model()
+        #     if self.cnt_fit % 100 == 0:
+        #         self.visualize_model()
             
         self.cnt_fit += 1
             
@@ -1565,10 +1565,44 @@ def plot_hebbsom_links_distances_activations(X, Y, mdl, predictions, distances, 
         savefig(fig, filename)
     fig.show()
 
+def plot_mdn_mues_over_data_scan(X, mdl, saveplot = False):
+    mues = []
+    sigs = []
+    pis = []
+
+    # print(X.shape)
+    fig = pl.figure()
+    ax = fig.add_subplot(1,1,1)
+    xscan = np.linspace(-np.pi, np.pi, 101).reshape((-1, 1))
+    # xscan = X
+    for xs in xscan:
+        y = mdl.predict(xs)
+        mues.append(mdl.model.z[:mdl.mixcomps,0])
+        sigs.append(np.exp(mdl.model.z[mdl.mixcomps:(2*mdl.mixcomps),0]))
+        pis.append(mdl.lr.softmax(mdl.model.z[(2*mdl.mixcomps):,0]))
+        # print("xs", xs, "ys", y)
+    mues = np.vstack(mues)
+    sigs = np.vstack(sigs)
+    pis = np.vstack(pis)
+    print("mues", mues.shape)
+
+    print("pis", pis)
+
+    for i in range(mdl.mixcomps):
+        for j in range(xscan.shape[0]):
+            # print("mues", mues[[j],[i]], "pis", pis[j,i])
+            ax.plot(xscan[[j]], mues[[j],[i]], "ro", alpha = pis[j,i])
+    ax.plot(xscan, mues - sigs, "b,", alpha = 0.5)
+    ax.plot(xscan, mues + sigs, "b,", alpha = 0.5)
+    # ax.plot(xscan, mues, "ro", alpha = 0.5)
+    # ax.plot(mues, xscan, "ro", alpha = 0.5)
+    
 def plot_predictions_over_data(X, Y, mdl, saveplot = False):
     do_hexbin = False
     if X.shape[0] > 10000:
-        do_hexbin = True
+        do_hexbin = False # True
+        X = X[-10000:]
+        Y = Y[-10000:]
     # plot prediction
     idim = X.shape[1]
     odim = Y.shape[1]
@@ -1587,16 +1621,18 @@ def plot_predictions_over_data(X, Y, mdl, saveplot = False):
         target     = Y[:,i]
         
         if do_hexbin:
-            ax.hexbin(X, Y, gridsize = 20, alpha=0.75, cmap=pl.get_cmap("gray"))
+            ax.hexbin(X, Y, gridsize = 20, alpha=1.0, cmap=pl.get_cmap("gray"))
         else:
             ax.plot(X, target, "k.", label="Y_", alpha=0.5)
         for j in range(numsamples):
             prediction = Y_samples[j][:,i]
-            print("X", X.shape, "prediction", prediction.shape)
+            # print("X", X.shape, "prediction", prediction.shape)
+            # print("X", X, "prediction", prediction)
             if do_hexbin:
-                ax.hexbin(X[:,i], prediction, gridsize = 20, alpha=0.75, cmap=pl.get_cmap("Reds"))
+                ax.hexbin(X[:,i], prediction, gridsize = 30, alpha=0.6, cmap=pl.get_cmap("Reds"))
             else:
-                ax.plot(X, prediction, "r.", label="Y_", alpha=0.25)
+                ax.plot(X[:,i], prediction, "r.", label="Y_", alpha=0.25)
+                
         # get limits
         xlim = ax.get_xlim()
         ylim = ax.get_ylim()
@@ -1607,11 +1643,12 @@ def plot_predictions_over_data(X, Y, mdl, saveplot = False):
         yran = ylim[1] - ylim[0]
         ax.text(xlim[0] + xran * 0.1, ylim[0] + yran * 0.3, "mse = %f" % mse)
         ax.text(xlim[0] + xran * 0.1, ylim[0] + yran * 0.5, "mae = %f" % mae)
+        
     if saveplot:
         filename = "plot_predictions_over_data_%s.jpg" % (mdl.__class__.__name__,)
         savefig(fig, filename)
+        
     fig.show()
-
 
 def plot_predictions_over_data_ts(X, Y, mdl, saveplot = False):
     # plot prediction
@@ -1875,9 +1912,10 @@ def test_model(args):
     else:
         # elif args.modelclass in ["KNN", "SOESGP", "STORKGP"]:
         # print("hello")
-        print ("X", X.shape)
-        print ("Y", Y.shape)
+        print ("models_actinf.test_model: X", X.shape)
+        print ("models_actinf.test_model: Y", Y.shape)
         # plot_predictions_over_data_ts(X, Y, mdl, saveplot = saveplot)
+        plot_mdn_mues_over_data_scan(X, mdl, saveplot = saveplot)
         plot_predictions_over_data(X, Y, mdl, saveplot = saveplot)
         
         

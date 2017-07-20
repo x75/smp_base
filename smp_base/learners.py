@@ -16,11 +16,14 @@ import numpy as np
 import numpy.linalg as LA
 import scipy.linalg as sLA
 
+from matplotlib.pyplot import figure
+
 import ConfigParser, ast
 
 
 from smp_base.eligibility import Eligibility
-from smp_base.models import smpModelInit, smpModel
+from smp_base.models import smpModelInit, smpModelStep, smpModel
+from smp_base.models import make_figure, make_gridspec
 from smp_base.reservoirs import Reservoir, LearningRules
 
 try:
@@ -48,19 +51,20 @@ class smpSHL(smpModel):
 
     The hidden layer's activity is fitted onto a target
     """
-    defaults = {
-        'idim': 1, 'odim': 1, 'modelsize': 100, 'tau': 0.1, 'multitau': False,
-        'density': 0.1, 'spectral_radius': 1.2, 'w_input': 1.0, 'w_feedback': 0.0, 'w_bias': 0.1,
-        'nonlin_func': np.tanh, 'sparse': True, 'ip': False, 'theta': 0.1, 'theta_state': 0.01,
-        'coeff_a': 0.2, 'visualize': False, 'alpha': 1.0, 'lrname': 'EH', 'mixcomps': 3,
-        'eta_init': 5e-4,
-    }
     # defaults = {
-    #     'idim': 1, 'odim': 1, 'modelsize': 200, 'tau': 1.0, 'multitau': False,
-    #     'density': 0.1, 'spectral_radius': 0.0, 'w_input': 1.0, 'w_feedback': 0.0, 'w_bias': 0.5,
-    #     'nonlin_func': np.tanh, 'sparse': True, 'ip': False, 'theta': 0.01, 'theta_state': 0.01,
-    #     'coeff_a': 0.2, 'visualize': False, 'alpha': 100.0, 'lrname': 'FORCEmdn', 'mixcomps': 7
-    #     }
+    #     'idim': 1, 'odim': 1, 'modelsize': 200, 'tau': 0.1, 'multitau': False,
+    #     'density': 0.1, 'spectral_radius': 0.99, 'w_input': 1.0, 'w_feedback': 0.0, 'w_bias': 0.5,
+    #     'nonlin_func': np.tanh, 'sparse': True, 'ip': False, 'theta': 0.05, 'theta_state': 0.02,
+    #     'coeff_a': 0.2, 'visualize': False, 'alpha': 1.0, 'lrname': 'FORCE', 'mixcomps': 3,
+    #     'eta_init': 1e-3,
+    # }
+    defaults = {
+        'idim': 1, 'odim': 1, 'modelsize': 100, 'tau': 1.0, 'multitau': False,
+        'density': 0.1, 'spectral_radius': 0.0, 'w_input': 0.66, 'w_feedback': 0.0, 'w_bias': 1.0,
+        'nonlin_func': np.tanh, 'sparse': True, 'ip': False, 'theta': 0.01, 'theta_state': 0.01,
+        'coeff_a': 0.2, 'visualize': True, 'alpha': 10.0, 'lrname': 'FORCEmdn', 'mixcomps': 10,
+        'eta_init': 1e-4,
+        }
 
     @smpModelInit()
     def __init__(self, conf):
@@ -69,7 +73,7 @@ class smpSHL(smpModel):
 
         if self.lrname == 'FORCEmdn':
             self.odim_real = self.odim * self.mixcomps * 3
-            self.alpha = 10.0
+            # self.alpha = 10.0
             self.tau = 1.0 # 0.025
         else:
             self.odim_real = self.odim
@@ -98,8 +102,8 @@ class smpSHL(smpModel):
         )
 
         if self.lrname == 'FORCEmdn':
-            # sigmas = [1e-3] * self.mixcomps + [1e-3] * self.mixcomps + [1e-3] * self.mixcomps
-            sigmas = [1e-3] * self.odim_real
+            sigmas = [2e-1] * self.mixcomps + [5e-2] * self.mixcomps + [1.0/self.mixcomps] * self.mixcomps
+            # sigmas = [1e-1] * self.odim_real
             print "sigmas", sigmas
             self.model.init_wo_random(np.zeros((1, self.odim_real)), np.array(sigmas))
 
@@ -109,11 +113,52 @@ class smpSHL(smpModel):
             self.lr.learnRLSsetup(x0 = self.model.wo, P0 = np.eye(self.model.N))
 
         self.cnt_step = 0
+
+        print "visualize", self.visualize
         
+    def visualize_model_init(self):
+
+        self.Ridx  = np.random.choice(self.modelsize, min(30, int(self.modelsize * 0.1)))
+        self.Rhist = []
+        self.losshist = []
+        self.Whist = []
+        
+        fig = make_figure()
+        # print "fig", fig
+        self.figs.append(fig)
+        gs = make_gridspec(5, 1)
+        for subplot in gs:
+            self.figs[0].add_subplot(subplot)
+        
+    def visualize_model(self):
+
+        plotdata = []
+        
+        plotdata.append(np.vstack(self.Xhist))
+        plotdata.append(np.vstack(self.Yhist))
+        plotdata.append(np.hstack(self.Rhist)[self.Ridx].T)
+        plotdata.append(np.hstack(self.losshist))
+        plotdata.append(np.hstack(self.Whist))
+
+        print plotdata[-1].shape
+
+        lentotal = len(self.Xhist)
+        backwin = 10000
+
+        sl = slice(max(0, lentotal - backwin), lentotal)
+        
+        # plotting
+        for i, item in enumerate(plotdata):
+            ax = self.figs[0].axes[i]
+            ax.clear()
+            ax.plot(item[sl])
+
+    @smpModelStep()
     def step(self, X, Y, *args, **kwargs):
-        # print "x", X.shape
+        # print "visualize", self.visualize
         y = self.model.execute(X.T).T
         y_ = y.T
+        # print "smpSHL.step(X = %s, Y = %s, y_ = %s)" % ( X.shape, Y, y_)
         if Y is not None:
             # print "Y", Y.shape # y", y.shape
             if self.lrname == 'FORCE':
@@ -166,6 +211,7 @@ class smpSHL(smpModel):
                 np.exp(self.model.z[self.mixcomps:(2*self.mixcomps),0]),
                 self.lr.softmax(self.model.z[(2*self.mixcomps):,0])
             )
+
         # print "y_", y_
         self.cnt_step += 1
         return y_.T
@@ -174,7 +220,8 @@ class smpSHL(smpModel):
         if X.shape[0] > 1: # batch input
             ret = np.zeros((X.shape[0], self.odim))
             for i in range(X.shape[0]):
-                ret[i] = self.step(X[i], None)
+                a = self.step(X[i], None)
+                ret[i] = a
             return ret
         else:
             # X_ = X.flatten().tolist()

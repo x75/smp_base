@@ -5,8 +5,15 @@ from matplotlib import gridspec
 
 from smp_base.common import set_attr_from_dict
 
+
+def make_figure(*args, **kwargs):
+    return plt.figure()
+
+def make_gridspec(rows = 1, cols = 1):
+    return gridspec.GridSpec(rows, cols)
+
 ################################################################################
-# Block decorator init
+# smpModel decorator init
 class smpModelInit():
     """smpModelInit wrapper"""
     def __call__(self, f):
@@ -24,6 +31,47 @@ class smpModelInit():
             
             f(xself, *args, **kwargs)
 
+            xself.cnt_vis = 0
+
+        return wrap
+
+    ################################################################################
+# smpModel decorator step
+class smpModelStep():
+    """smpModelStep wrapper"""
+    def __call__(self, f):
+        def wrap(xself, *args, **kwargs):
+
+            # print "args", args
+            # print "kwargs", kwargs
+
+            ret = f(xself, *args, **kwargs)
+
+            if xself.visualize:
+                # X = kwargs['X']
+                # Y = kwargs['Y']
+                X = args[0]
+                Y = args[1]
+                # print "X", X
+                xself.Xhist.append(X)
+                xself.Yhist.append(Y)
+
+                if hasattr(xself, 'Rhist'):
+                    xself.Rhist.append(xself.model.r.copy())
+                if hasattr(xself, 'losshist'):
+                    xself.losshist.append(np.min(xself.lr.e))
+                if hasattr(xself, 'Whist'):
+                    xself.Whist.append(np.linalg.norm(xself.model.wo))
+                
+                if xself.cnt_vis % 1000 == 0:
+                    xself.visualize_model()
+
+                    plt.draw()
+                    plt.pause(1e-9)
+
+            xself.cnt_vis += 1
+            return ret
+            
         return wrap
 
 class smpModel(object):
@@ -43,6 +91,11 @@ class smpModel(object):
             
         set_attr_from_dict(self, conf)
         self.model = None
+
+        # FIXME: variables for  all models
+        # X, Y
+        # e, perf, loss
+        # dw, |W|
         
         # self.idim = idim
         # self.odim = odim
@@ -55,7 +108,9 @@ class smpModel(object):
             # store data for plotting, another internal model
             self.Xhist = []
             self.Yhist = []
-
+            
+            self.visualize_model_init()
+        
     def bootstrap(self):
         """smpModel.bootstrap
 
@@ -80,6 +135,9 @@ class smpModel(object):
         if self.model is None:
             print("%s.fit: implement me" % (self.__class__.__name__))
 
+    def visualize_model_init(self):
+        return
+        
     def visualize_model(self):
         """smpModel.visualize
 
