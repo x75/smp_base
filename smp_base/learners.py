@@ -84,7 +84,7 @@ class smpSHL(smpModel):
             self.odim_real = self.odim
 
         # learning rule init
-        self.lr = LearningRules(ndim_out = self.odim_real)
+        self.lr = LearningRules(ndim_out = self.odim_real, dim = self.odim)
 
         # reservoir init
         self.model = Reservoir(

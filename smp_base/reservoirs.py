@@ -155,8 +155,9 @@ class LearningRules(object):
     This class implements several different learning rules used for training the reservoir
     in online / incremental mode.
     """
-    def __init__(self, ndim_out = 1):
+    def __init__(self, ndim_out = 1, dim = 1):
         self.ndim_out = ndim_out
+        self.dim = dim
         self.loss = 0
         self.e = np.zeros((self.ndim_out, 1))
         self.perf = self.e # pointer
@@ -271,17 +272,41 @@ class LearningRules(object):
 
         Sample from a multivariate gaussian mixture with \mu = means, \Sigma = cov matrix
         """
-        print "%s.mixtureMV: Implement me" % (self.__class__.__name__)
+        # print "%s.mixtureMV: Implement me" % (self.__class__.__name__)
 
-        # print "mixtureMV", mu, sig, ps
+        print "mixtureMV", "mu", mu.shape, "sig", sig.shape, "ps", ps.shape
         
-        d = mu.shape[0]
+        mixcomps = self.mixcomps
+        d = self.dim
+        
+        assert mixcomps == ps.shape[0]
+        
+        # check flat inputs
+        if mu.shape[1] == 1:
+            mu = mu.reshape((self.mixcomps, self.dim))
+            # mu_ = mu.reshape((mixcomps, d))
+        if sig.shape[1] == 1:
+            # S_diag = sig[:(mixcomps * self.dim)]
+            # S_triu = sig[(mixcomps * self.dim):]
+            S_diag = sig[:(mixcomps * d)].reshape((mixcomps, d))
+            S_triu = sig[(mixcomps * d):].reshape((mixcomps, -1))
+            S = []
+            for i in range(mixcomps):
+                S_ = np.diag(S_diag[i])
+                S_[np.triu_indices(d,  1)] = S_triu[i]
+                S_[np.tril_indices(d, -1)] = S_triu[i] # check if thats correct
+                S.append(S_)
+            sig = np.array(S)
+            
+        print "mixtureMV", "mu", mu.shape, "sig", sig.shape, "ps", ps.shape
+                
+        # d = mu.shape[0]
         compidx = self.mixture_sample_prior(ps)
 
         mu_ = mu[compidx]
         S_  = sig[compidx]
 
-        print "mu_", mu_, "S_", S_
+        print "compidx", compidx, "mu_", mu_, "S_", S_
         
         y = np.random.multivariate_normal(mu_, S_)
         return y
@@ -300,6 +325,9 @@ class LearningRules(object):
         return y
 
     def mixture_sample_prior(self, ps):
+        # print "ps", ps.shape
+        if len(ps.shape) > 1:
+            ps = ps[:,0]
         multinom_sample = np.random.multinomial(1, ps)
         multinom_sample_idx = np.where(multinom_sample == 1.0)
         compidx = multinom_sample_idx[0][0]
@@ -401,7 +429,7 @@ class LearningRules(object):
             print "S_", S_, "sig", sig.shape, "x", x.shape, "mu_", mu_[i].shape
             
             norm1 = x - mu_[[i]].T
-            S__ = np.linalg.pinv(S_)
+            S__ = np.linalg.pinv(S_**2)
             p_ = np.exp(-np.dot(norm1.T, np.dot(S__, norm1))/2.0)
             # print "p_", p_
             p_s.append(p_.flatten())
@@ -429,6 +457,8 @@ class LearningRules(object):
 
         dmu = []
         dlogsig = []
+        d1 = []
+        d2 = []
         dpiu = []
         for i in range(mixcomps):
             S_ = np.diag(S_diag[i])
@@ -436,21 +466,35 @@ class LearningRules(object):
             S_[np.tril_indices(d, -1)] = S_triu[i]
 
             S__ = np.linalg.pinv(S_**2)
+
+            norm1 = mu_[[i]].T - y
             
-            dmu_ = gammas[i] * (np.dot((mu_[[i]].T - y).T, S__)) / n
+            dmu_ = gammas[i] * (np.dot(S__, norm1)) / n
             dmu.append(dmu_)
-            dlogsig_ = gammas[i] * (1.0 - np.dot(S__, ((y-mu_[[i]].T)**2))) / n
-            dlogsig.append(dlogsig_)
-        dpiu_ = (pi - gammas) / n
-        dpiu.append(dpiu_)
+            dlogsig_ = gammas[i] * (1.0 - np.dot(np.dot(S__, norm1), norm1.T)) / n
+            # strip symmetry
+            d1.append(dlogsig_.flatten()[:d])
+            d2.append(dlogsig_[np.triu_indices(d,  1)].flatten())
+            # print "d1", d1, "d2", d2
+            # dlogsig_ = dlogsig_.flatten()
+            # print "dlogsig_", dlogsig_.shape
+            # dlogsig.append(dlogsig_)
+        d_diag = np.hstack(d1)
+        d_triu = np.hstack(d2)
+        # print "d_diag", d_diag
+        # print "d_triu", d_triu
+        dlogsig = np.hstack((d_diag, d_triu))
+            
+        dpiu = (pi - gammas) / n
+        # dpiu.append(dpiu_)
         # print "|dmu| = %f" % (np.linalg.norm(dmu))
 
-        print "dmu", dmu
+        print "dmu", np.array(dmu).flatten()
         print "dlogisig", dlogsig
-        print "dpiu", dpiu
+        print "dpiu", dpiu.flatten()
         # dmu = np.
         
-        return np.vstack((dmu, dlogsig, dpiu))
+        return np.hstack((np.array(dmu).flatten(), dlogsig, dpiu.flatten())).T
     
     def softmax(self, x):
         """LearningRules.softmax
@@ -1411,7 +1455,8 @@ def test_mixtureMV(args):
         s[np.tril_indices(d, -1)] = s[np.triu_indices(d, 1)]
     pi = np.ones((mixcomps, )) * 1.0/mixcomps
 
-    lr = LearningRules(ndim_out = d)
+    lr = LearningRules(ndim_out = d, dim = d)
+    lr.learnFORCEmdn_setup(mixcomps = mixcomps)
     
     fig = plt.figure()
     gs = gridspec.GridSpec(2, mixcomps)
