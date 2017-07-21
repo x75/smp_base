@@ -1570,30 +1570,54 @@ def plot_mdn_mues_over_data_scan(X, mdl, saveplot = False):
     sigs = []
     pis = []
 
-    # print(X.shape)
+    print("plot_mdn_mues_over_data_scan: X", X.shape)
     fig = pl.figure()
-    ax = fig.add_subplot(1,1,1)
+    dim = X.shape[1]
     xscan = np.linspace(-np.pi, np.pi, 101).reshape((-1, 1))
+
+    num_mu = mdl.mixcomps * dim
+    # num_sig = mixcomps * d ** 2
+    num_sig = ((dim ** 2 - dim)/2 + dim) * mdl.mixcomps
+    num_pi = mdl.mixcomps
+    
+    if X.shape[1] > 1:
+        xscan = np.hstack((xscan, xscan))
+        print("xscan", xscan.shape)
     # xscan = X
     for xs in xscan:
+        print("xs", xs)
+        xs = np.atleast_2d(xs)
+        print("xs", xs)
         y = mdl.predict(xs)
-        mues.append(mdl.model.z[:mdl.mixcomps,0])
-        sigs.append(np.exp(mdl.model.z[mdl.mixcomps:(2*mdl.mixcomps),0]))
-        pis.append(mdl.lr.softmax(mdl.model.z[(2*mdl.mixcomps):,0]))
+        # mues.append(mdl.model.z[:mdl.mixcomps,0])
+        # sigs.append(np.exp(mdl.model.z[mdl.mixcomps:(2*mdl.mixcomps),0]))
+        # pis.append(mdl.lr.softmax(mdl.model.z[(2*mdl.mixcomps):,0]))
+        mues.append(mdl.model.z[:num_mu])
+        sigs.append(np.exp(mdl.model.z[num_mu:num_mu + num_sig]))
+        pis.append(mdl.lr.softmax(mdl.model.z[-num_pi:]))
         # print("xs", xs, "ys", y)
-    mues = np.vstack(mues)
-    sigs = np.vstack(sigs)
-    pis = np.vstack(pis)
+    # print("mues", mues)
+    mues = np.vstack(mues).reshape((101, mdl.mixcomps, dim))
+    sigs = np.vstack(sigs).reshape((101, mdl.mixcomps, num_sig / mdl.mixcomps))
+    pis = np.vstack(pis).reshape((101, mdl.mixcomps))
+
     print("mues", mues.shape)
+    print("sigs", sigs.shape)
+    print("pis", pis.shape)
 
-    print("pis", pis)
 
+    colors = ['r', 'g', 'b', 'k', 'c', 'y', 'm']
+    for h in range(dim):
+        ax = fig.add_subplot(dim, 2, h + 1)
+        for i in range(mdl.mixcomps):
+            for j in range(xscan.shape[0]):
+                # print("mues", mues[[j],[i]], "pis", pis[j,i])
+                ax.plot(xscan[[j]], mues[[j],[i],[h]], marker = 'o', markerfacecolor = colors[i % len(colors)], alpha = pis[j,i])
+                # ax.plot(xscan[[j]], mues[[j],[i],[h]] - sigs[[j],[i],[h]], "bo", alpha = pis[j,i], markersize = 2.5)
+                # ax.plot(xscan[[j]], mues[[j],[i],[h]] + sigs[[j],[i],[h]], "bo", alpha = pis[j,i], markersize = 2.5)
+    ax = fig.add_subplot(dim, 2, h + 2)
     for i in range(mdl.mixcomps):
-        for j in range(xscan.shape[0]):
-            # print("mues", mues[[j],[i]], "pis", pis[j,i])
-            ax.plot(xscan[[j]], mues[[j],[i]], "ro", alpha = pis[j,i])
-            ax.plot(xscan[[j]], mues[[j],[i]] - sigs[[j],[i]], "bo", alpha = pis[j,i], markersize = 2.5)
-            ax.plot(xscan[[j]], mues[[j],[i]] + sigs[[j],[i]], "bo", alpha = pis[j,i], markersize = 2.5)
+        ax.plot(mues[:,i], marker = 'o', markerfacecolor = colors[i % len(colors)], alpha = np.mean(pis[:,i]))
     # ax.plot(xscan, mues - sigs, "bo", alpha = 0.5, markersize = 2.0)
     # ax.plot(xscan, mues + sigs, "bo", alpha = 0.5, markersize = 2.0)
     # ax.plot(xscan, mues, "ro", alpha = 0.5)
@@ -1738,9 +1762,10 @@ def get_class_from_name(name = "KNN"):
         cls = smpKNN
     return cls
 
-def generate_inverted_sinewave_dataset(N = 1000):
+def generate_inverted_sinewave_dataset(N = 1000, f = 1.0, p = 0.0, a1 = 1.0, a2 = 0.3):
     X = np.linspace(0,1,N)
-    Y = X + 0.3 * np.sin(2*3.1415926*X) + np.random.uniform(-0.1, 0.1, N)
+    # FIXME: include phase p
+    Y = a1 * X + a2 * np.sin(f * (2 * 3.1415926) * X) + np.random.uniform(-0.1, 0.1, N)
     X,Y = Y[:,np.newaxis],X[:,np.newaxis]
     
     # pl.subplot(211)
@@ -1788,13 +1813,21 @@ def test_model(args):
     elif args.datafile.startswith("2dinverted"):
         idim = 2
         odim = 2
-        X,Y = generate_inverted_sinewave_dataset(N = args.numsteps)
+        X1,Y1 = generate_inverted_sinewave_dataset(N = args.numsteps, f = 1.0, a1 = 0.0)
+        # X2,Y2 = generate_inverted_sinewave_dataset(N = args.numsteps, f = 2.0, a1 = -0.5, a2 = 0.5)
+        # X2,Y2 = generate_inverted_sinewave_dataset(N = args.numsteps, f = 1.5, a1 = 1.0, a2 = 0.4)
+        X2,Y2 = generate_inverted_sinewave_dataset(N = args.numsteps, f = 1.0, p = np.pi/2.0, a1 = 0.0, a2 = 0.3)
         idx = range(args.numsteps)
         np.random.shuffle(idx)
-        # print("X.shape", X.shape, X[idx].shape)
+        print("X1.shape", X1.shape, X1[idx].shape)
         # print("idx", idx)
-        X = np.tile(X[idx], (1, 2))
-        Y = np.tile(Y[idx], (1, 2))
+        
+        X = np.tile(X1[idx], (1, 2))
+        Y = np.tile(Y1[idx], (1, 2))
+
+        X = np.hstack((X1[idx], X2[idx]))
+        Y = np.hstack((Y1[idx], Y2[idx]))
+        
         # X, Y = shuffle(X, Y, random_state=0)
         np.random.seed(args.seed)
     else:
@@ -1833,12 +1866,15 @@ def test_model(args):
         # mdl = mdlcls(idim = idim, odim = odim, numepisodes = args.numepisodes, visualize = True, mapsize_e = 10, mapsize_p = 10)
         mdlcnf['mapsize_e'] = 30
         mdlcnf['mapsize_p'] = 30
-        mdlcnf['visualize'] = True
+        mdlcnf['visualize'] = False # True
         mdlcnf['som_lr'] = 1e-1
         mdlcnf['som_nhs'] = 1e-1
         mdl = mdlcls(conf = mdlcnf)
-    else:
-        mdl = mdlcls(conf = mdlcnf)
+    elif args.modelclass == "resRLS":
+        mdlcnf['alpha'] = 1.0 # 100.0
+        mdlcnf['mixcomps'] = 12
+        
+    mdl = mdlcls(conf = mdlcnf)
 
     print("Testing model class %s, %s" % (mdlcls, mdl))
 

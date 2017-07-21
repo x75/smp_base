@@ -29,6 +29,7 @@ import sys, time, argparse
 
 import numpy as np
 import numpy.linalg as LA
+import scipy as sp
 import scipy.sparse as spa
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
@@ -163,6 +164,8 @@ class LearningRules(object):
         self.perf = self.e # pointer
         self.e_lp = np.zeros_like(self.e)
 
+        self.cnt = 0
+
     ############################################################
     ## learning rule: FORCE
     # - David Sussillo, L.F. Abbott, Generating Coherent Patterns of
@@ -224,6 +227,8 @@ class LearningRules(object):
             self.e = self.mdn_lossMV(x, r, z, target, d = target.shape[0])
         # compute weight update from error
         dw = -self.e.T * k * c
+
+        self.cnt += 1
         return dw
 
     def learnRLSsetup(self, x0 = None, P0 = None, modelsize = 1, noise = 1e-2):
@@ -274,12 +279,15 @@ class LearningRules(object):
         """
         # print "%s.mixtureMV: Implement me" % (self.__class__.__name__)
 
-        print "mixtureMV", "mu", mu.shape, "sig", sig.shape, "ps", ps.shape
+        # print "mixtureMV", "mu", mu.shape, "sig", sig.shape, "ps", ps.shape
         
         mixcomps = self.mixcomps
         d = self.dim
         
         assert mixcomps == ps.shape[0]
+        assert not np.isnan(mu).any()
+        assert not np.isnan(sig).any()
+        assert not np.isnan(ps).any()
         
         # check flat inputs
         if mu.shape[1] == 1:
@@ -298,7 +306,7 @@ class LearningRules(object):
                 S.append(S_)
             sig = np.array(S)
             
-        print "mixtureMV", "mu", mu.shape, "sig", sig.shape, "ps", ps.shape
+        # print "mixtureMV", "mu", mu.shape, "sig", sig.shape, "ps", ps.shape
                 
         # d = mu.shape[0]
         compidx = self.mixture_sample_prior(ps)
@@ -306,7 +314,7 @@ class LearningRules(object):
         mu_ = mu[compidx]
         S_  = sig[compidx]
 
-        print "compidx", compidx, "mu_", mu_, "S_", S_
+        # print "compidx", compidx, "mu_", mu_, "S_", S_
         
         y = np.random.multivariate_normal(mu_, S_)
         return y
@@ -393,7 +401,7 @@ class LearningRules(object):
         # softmax them
         pi = self.softmax(piu)
 
-        print "mu", mu.shape, "sig", sig.shape, "pi", pi.shape
+        # print "mdn_lossMV", "mu", mu.shape, "sig", sig.shape, "pi", pi.shape
         
         # compute the loss: mean negative data log likelihood
         # k, n = mu.shape # number of mixture components
@@ -413,12 +421,13 @@ class LearningRules(object):
 
         # norm1 = np.tile(x, (mixcomps, 1)) - mu
 
+        # compute mixture component likelihood (posterior)
         p_s = []
 
         mu_ = mu.reshape((mixcomps, d))
         S_diag = sig[:(mixcomps * d)].reshape((mixcomps, d))
         S_triu = sig[(mixcomps * d):].reshape((mixcomps, -1))
-        print "S_diag", S_diag, "S_triu", S_triu
+        # print "S_diag", S_diag, "S_triu", S_triu
         
         for i in range(mixcomps):
             S_ = np.diag(S_diag[i])
@@ -426,23 +435,27 @@ class LearningRules(object):
             S_[np.tril_indices(d, -1)] = S_triu[i]
             # S_ = sig.reshape((mixcomps, d, d)) ** 2
             S_ *= S_
-            print "S_", S_, "sig", sig.shape, "x", x.shape, "mu_", mu_[i].shape
+            # print "S_", S_, "sig", sig.shape, "x", x.shape, "mu_", mu_[i].shape
             
             norm1 = x - mu_[[i]].T
-            S__ = np.linalg.pinv(S_**2)
+            S__ = np.linalg.pinv(S_)
+            S___ = sp.linalg.pinv(S_)
+            # print "    S__", S__
+            # print "    S___", S___
+            S__ = np.clip(S__, -1, 1)
             p_ = np.exp(-np.dot(norm1.T, np.dot(S__, norm1))/2.0)
             # print "p_", p_
             p_s.append(p_.flatten())
             # print "S * norm", p_s[-1]
 
-        print "x", x.shape, "mu", mu_.shape, "norm1", norm1.shape, "S_", S_.shape
+        # print "mdn_lossMV", "x", x.shape, "mu", mu_.shape, "norm1", norm1.shape, "S_", S_.shape
         
         # ps = np.exp(norm1.T np.dot(/ 2.0)
         ps = np.array(p_s)
 
         # print "ps", ps
         
-        # mixture likelihood
+        # mixture components likelihood
         pin = ps * pi
         # print "pin", pin
         
@@ -450,11 +463,15 @@ class LearningRules(object):
         lp = -np.log(np.sum(pin, axis=0, keepdims=True))
         loss = np.sum(lp) / n
         self.loss = loss
+        # assert loss > 0.0, "loss must be greater zero?"
+        # print "loss", loss
 
-        # # compute component errors
+        # compute component errors
         # gammas are pi_i's in bishop94
         gammas = pin / np.sum(pin, axis=0, keepdims = True)
 
+        # print "gammas", pin, gammas
+        
         dmu = []
         dlogsig = []
         d1 = []
@@ -462,20 +479,40 @@ class LearningRules(object):
         dpiu = []
         for i in range(mixcomps):
             S_ = np.diag(S_diag[i])
+            # print "S_ pre  triu", S_[np.triu_indices(d,  1)].shape, S_triu[i].shape
             S_[np.triu_indices(d,  1)] = S_triu[i]
-            S_[np.tril_indices(d, -1)] = S_triu[i]
+            # print "S_ post triu", S_[np.triu_indices(d,  1)]
+            S_[np.tril_indices(d, -1)] = S_[np.triu_indices(d,  1)] # S_triu[i]
 
-            S__ = np.linalg.pinv(S_**2)
+
+            S_2 = S_ ** 2
+            S__ = np.linalg.pinv(S_2)
 
             norm1 = mu_[[i]].T - y
-            
-            dmu_ = gammas[i] * (np.dot(S__, norm1)) / n
+
+            # print "norm1", norm1, "S__", S__
+            # dmu_ = gammas[i] * (np.dot(norm1.T, S__)) / n
+
+            # dmu = prior times (error normalized by vector component variance)
+            dmu_ = gammas[i] * (norm1 / np.diag(S_).reshape((-1, 1))**2) / n
+            # print "dmu_", dmu_
             dmu.append(dmu_)
-            dlogsig_ = gammas[i] * (1.0 - np.dot(np.dot(S__, norm1), norm1.T)) / n
+            # dlogsig_ = gammas[i] * (1.0 - np.dot(np.dot(S__, norm1), norm1.T)) / n
+            # dlogsig_ = gammas[i] * (1.0 - (np.dot(norm1, norm1.T) * S__)) / n
+            # print "    norm", norm1
+            # print "    S_ = %s\nS_2 = %s\nS_-1 = %s" % ( S_, S_2, S__)
+            # print "S_2 < 1e-6",
+            if np.any(S_2 < 1e-6):
+                S_2 += np.random.uniform(-1e-3, 1e-3, size = S_2.shape)
+            mu_y_sig = np.dot(norm1, norm1.T) / S_2
+            # print "    mu_y_sig", mu_y_sig
+            dlogsig_ = gammas[i] * (1.0 - mu_y_sig) / n
+            dlogsig_ = np.clip(dlogsig_, -1.0, 1.0)
             # strip symmetry
-            d1.append(dlogsig_.flatten()[:d])
-            d2.append(dlogsig_[np.triu_indices(d,  1)].flatten())
-            # print "d1", d1, "d2", d2
+            # d1.append(dlogsig_.flatten()[:d]) # variances
+            d1.append(np.diag(dlogsig_)) # variances
+            d2.append(dlogsig_[np.triu_indices(d,  1)].flatten()) # covariances
+            # print "    d1", d1, "d2", d2
             # dlogsig_ = dlogsig_.flatten()
             # print "dlogsig_", dlogsig_.shape
             # dlogsig.append(dlogsig_)
@@ -485,15 +522,16 @@ class LearningRules(object):
         # print "d_triu", d_triu
         dlogsig = np.hstack((d_diag, d_triu))
             
-        dpiu = (pi - gammas) / n
+        dpiu = (pi - gammas) # / n
         # dpiu.append(dpiu_)
         # print "|dmu| = %f" % (np.linalg.norm(dmu))
 
-        print "dmu", np.array(dmu).flatten()
-        print "dlogisig", dlogsig
-        print "dpiu", dpiu.flatten()
-        # dmu = np.
-        
+        if self.cnt % 100 == 0:
+            print "count[%d]" % self.cnt
+            print "    dmu", np.linalg.norm(np.array(dmu).flatten())
+            print "    dlogisig", np.linalg.norm(dlogsig)
+            print "    dpiu", np.linalg.norm(dpiu.flatten())
+            
         return np.hstack((np.array(dmu).flatten(), dlogsig, dpiu.flatten())).T
     
     def softmax(self, x):
@@ -1444,7 +1482,10 @@ class ReservoirPlot(object):
         plt.pause(1e-9)
 
 def test_mixtureMV(args):
+    """test_mixtureMV
 
+    Test mixtureMV() by sampling from dummy statistics mu, S, p
+    """
     
     mixcomps = 3
     d = 2
@@ -1470,7 +1511,7 @@ def test_mixtureMV(args):
 
 
     ax = fig.axes[0] # (2 * mixcomps) + c]
-    for i in range(100):
+    for i in range(1000):
         y = lr.mixtureMV(mu, S, pi)
         print "y", y
         ax.plot([y[0]], [y[1]], "ro", alpha = 0.2, markersize = 3.0)

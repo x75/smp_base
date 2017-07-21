@@ -138,6 +138,8 @@ class smpSHL(smpModel):
     def visualize_model(self):
 
         plotdata = []
+
+        # print "Yhist", self.Yhist
         
         plotdata.append(np.vstack(self.Xhist))
         plotdata.append(np.vstack(self.Yhist))

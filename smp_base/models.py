@@ -53,15 +53,16 @@ class smpModelStep():
                 X = args[0]
                 Y = args[1]
                 # print "X", X
-                xself.Xhist.append(X)
-                xself.Yhist.append(Y)
+                if Y is not None:
+                    xself.Xhist.append(X)
+                    xself.Yhist.append(Y)
 
-                if hasattr(xself, 'Rhist'):
-                    xself.Rhist.append(xself.model.r.copy())
-                if hasattr(xself, 'losshist'):
-                    xself.losshist.append(np.min(xself.lr.e))
-                if hasattr(xself, 'Whist'):
-                    xself.Whist.append(np.linalg.norm(xself.model.wo))
+                    if hasattr(xself, 'Rhist'):
+                        xself.Rhist.append(xself.model.r.copy())
+                    if hasattr(xself, 'losshist'):
+                        xself.losshist.append(np.min(xself.lr.e))
+                    if hasattr(xself, 'Whist'):
+                        xself.Whist.append(np.linalg.norm(xself.model.wo))
                 
                 if xself.cnt_vis % 1000 == 0:
                     xself.visualize_model()
