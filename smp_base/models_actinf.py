@@ -91,6 +91,8 @@ try:
 except ImportError, e:
     print("Couldn't import IGMM lib", e)
 
+from smp_base.reservoirs import LearningRules
+    
 saveplot = True
 model_classes = ["KNN", "SOESGP", "STORKGP", "GMM", "HebbSOM", ",IGMM", "all"]
         
@@ -1612,7 +1614,11 @@ def plot_mdn_mues_over_data_scan(X, mdl, saveplot = False):
         for i in range(mdl.mixcomps):
             for j in range(xscan.shape[0]):
                 # print("mues", mues[[j],[i]], "pis", pis[j,i])
-                ax.plot(xscan[[j]], mues[[j],[i],[h]], marker = 'o', markerfacecolor = colors[i % len(colors)], alpha = pis[j,i])
+                ax.plot(
+                    xscan[[j]], mues[[j],[i],[h]],
+                    marker = 'o', markerfacecolor = colors[i % len(colors)],
+                    markeredgecolor = colors[i % len(colors)],
+                    alpha = pis[j,i])
                 # ax.plot(xscan[[j]], mues[[j],[i],[h]] - sigs[[j],[i],[h]], "bo", alpha = pis[j,i], markersize = 2.5)
                 # ax.plot(xscan[[j]], mues[[j],[i],[h]] + sigs[[j],[i],[h]], "bo", alpha = pis[j,i], markersize = 2.5)
     ax = fig.add_subplot(dim, 2, h + 2)
@@ -1816,7 +1822,7 @@ def test_model(args):
         X1,Y1 = generate_inverted_sinewave_dataset(N = args.numsteps, f = 1.0, a1 = 0.0)
         # X2,Y2 = generate_inverted_sinewave_dataset(N = args.numsteps, f = 2.0, a1 = -0.5, a2 = 0.5)
         # X2,Y2 = generate_inverted_sinewave_dataset(N = args.numsteps, f = 1.5, a1 = 1.0, a2 = 0.4)
-        X2,Y2 = generate_inverted_sinewave_dataset(N = args.numsteps, f = 1.0, p = np.pi/2.0, a1 = 0.0, a2 = 0.3)
+        X2,Y2 = generate_inverted_sinewave_dataset(N = args.numsteps, f = 0.25, p = np.pi/2.0, a1 = 0.0, a2 = 0.3)
         idx = range(args.numsteps)
         np.random.shuffle(idx)
         print("X1.shape", X1.shape, X1[idx].shape)
@@ -1830,6 +1836,30 @@ def test_model(args):
         
         # X, Y = shuffle(X, Y, random_state=0)
         np.random.seed(args.seed)
+    elif args.datafile.startswith("2dsimple"):
+        idim = 2
+        odim = 2
+
+        mixcomps = 3
+        d = 4
+        mu = np.random.uniform(-1, 1, size = (mixcomps, d))
+        S = np.array([np.eye(d) * 0.01 for c in range(mixcomps)])
+        for s in S:
+            s += 0.05 * np.random.uniform(-1, 1, size = s.shape)
+            s[np.tril_indices(d, -1)] = s[np.triu_indices(d, 1)]
+        pi = np.ones((mixcomps, )) * 1.0/mixcomps
+
+        lr = LearningRules(ndim_out = d, dim = d)
+        lr.learnFORCEmdn_setup(mixcomps = mixcomps)
+        X = np.zeros((args.numsteps, d))
+        for i in range(args.numsteps):
+            X[[i]] = lr.mixtureMV(mu, S, pi)
+
+        Y = X[:,odim:]
+        X = X[:,:odim]
+        print("X.shape", X.shape)
+        print("Y.shape", Y.shape)
+
     else:
         idim = 1
         odim = 1
