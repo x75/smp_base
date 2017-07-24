@@ -61,7 +61,7 @@ class smpSHL(smpModel):
     defaults = {
         'idim': 1, 'odim': 1, 'modelsize': 100, 'tau': 1.0, 'multitau': False,
         'density': 0.1, 'spectral_radius': 0.0, 'w_input': 0.66, 'w_feedback': 0.0, 'w_bias': 1.0,
-        'nonlin_func': np.tanh, 'sparse': True, 'ip': False, 'theta': 0.01, 'theta_state': 0.01,
+        'nonlin_func': np.tanh, 'sparse': True, 'ip': False, 'theta': 0.01, 'theta_state': 0.05,
         'coeff_a': 0.2, 'visualize': True, 'alpha': 10.0, 'lrname': 'FORCEmdn', 'mixcomps': 3,
         'eta_init': 1e-4,
         }
@@ -80,6 +80,7 @@ class smpSHL(smpModel):
             self.odim_real = self.num_mu + self.num_sig + self.num_pi
             # self.alpha = 10.0
             self.tau = 1.0 # 0.025
+            print "self.alpha", self.alpha
         else:
             self.odim_real = self.odim
 
@@ -107,9 +108,11 @@ class smpSHL(smpModel):
         )
 
         if self.lrname == 'FORCEmdn':
-            sigmas = [2e-1] * self.num_mu + [5e-2] * self.num_sig + [1.0/self.mixcomps] * self.num_pi
+            # sigmas = [2e-1] * self.num_mu + [5e-2] * self.num_sig + [1.0/self.mixcomps] * self.num_pi
+            sigmas = [self.sigma_mu] * self.num_mu + [self.sigma_sig] * self.num_sig + [self.sigma_pi] * self.num_pi
             # sigmas = [1e-1] * self.odim_real
             print "sigmas", sigmas
+            # output weight initialization
             self.model.init_wo_random(np.zeros((1, self.odim_real)), np.array(sigmas))
 
             # argh, multivariate output
@@ -140,10 +143,13 @@ class smpSHL(smpModel):
         plotdata = []
 
         # print "Yhist", self.Yhist
+
+        plottitles = ['X', 'Y', 'r', 'loss', '|W|']
         
         plotdata.append(np.vstack(self.Xhist))
         plotdata.append(np.vstack(self.Yhist))
         plotdata.append(np.hstack(self.Rhist)[self.Ridx].T)
+        # plotdata.append(np.hstack(self.losshist)/self.cnt_step)
         plotdata.append(np.hstack(self.losshist))
         plotdata.append(np.hstack(self.Whist))
 
@@ -159,6 +165,7 @@ class smpSHL(smpModel):
             ax = self.figs[0].axes[i]
             ax.clear()
             ax.plot(item[sl])
+            ax.set_title(plottitles[i])
 
     @smpModelStep()
     def step(self, X, Y, *args, **kwargs):

@@ -457,12 +457,14 @@ class LearningRules(object):
         
         # mixture components likelihood
         pin = ps * pi
-        # print "pin", pin
+        # print "pin", pin.T
         
         # negloglikelihood, compare with batch estimate
         lp = -np.log(np.sum(pin, axis=0, keepdims=True))
+        # print 'lp', lp
         loss = np.sum(lp) / n
-        self.loss = loss
+        # self.loss += loss
+        self.loss = 0.9 * self.loss + 0.1 * -np.log(np.max(pin)) # loss
         # assert loss > 0.0, "loss must be greater zero?"
         # print "loss", loss
 
@@ -528,6 +530,8 @@ class LearningRules(object):
 
         if self.cnt % 100 == 0:
             print "count[%d]" % self.cnt
+            # print "    loss = %f / %f / %d" % (self.loss/self.cnt, self.loss, self.cnt)
+            print "    loss = %f / %d" % (self.loss, self.cnt)
             print "    dmu", np.linalg.norm(np.array(dmu).flatten())
             print "    dlogisig", np.linalg.norm(dlogsig)
             print "    dpiu", np.linalg.norm(dpiu.flatten())
@@ -1528,6 +1532,7 @@ def test_mixtureMV(args):
     print "mu", mu.shape, "S", S.shape
         
 class ReservoirTest(object):
+
     modes = {"ol_rls": 0, "ol_force": 1, "ol_eh": 2, "ip": 3, "fwd": 4, "ol_pi": 5, "ol_force_mdn": 6, 'mixtureMV': 7}
     targets = {"MSO_s1": 0, "MSO_s2": 1, "MSO_s3": 2, "MSO_c1": 3, "MSO_c2": 4, "MG": 5, "wav": 6, "reg3t1": 7, "reg_multimodal_1": 8}
 

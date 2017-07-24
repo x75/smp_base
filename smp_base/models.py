@@ -60,7 +60,7 @@ class smpModelStep():
                     if hasattr(xself, 'Rhist'):
                         xself.Rhist.append(xself.model.r.copy())
                     if hasattr(xself, 'losshist'):
-                        xself.losshist.append(np.min(xself.lr.e))
+                        xself.losshist.append(np.min(xself.lr.loss))
                     if hasattr(xself, 'Whist'):
                         xself.Whist.append(np.linalg.norm(xself.model.wo))
                 

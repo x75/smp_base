@@ -93,7 +93,7 @@ except ImportError, e:
 
 from smp_base.reservoirs import LearningRules
     
-saveplot = True
+saveplot = False # True
 model_classes = ["KNN", "SOESGP", "STORKGP", "GMM", "HebbSOM", ",IGMM", "all"]
         
 class smpKNN(smpModel):
@@ -1567,13 +1567,14 @@ def plot_hebbsom_links_distances_activations(X, Y, mdl, predictions, distances, 
         savefig(fig, filename)
     fig.show()
 
-def plot_mdn_mues_over_data_scan(X, mdl, saveplot = False):
+def plot_mdn_mues_over_data_scan(X, Y, mdl, saveplot = False):
     mues = []
     sigs = []
     pis = []
 
     print("plot_mdn_mues_over_data_scan: X", X.shape)
     fig = pl.figure()
+    gs = gridspec.GridSpec(2, 2)
     dim = X.shape[1]
     xscan = np.linspace(-np.pi, np.pi, 101).reshape((-1, 1))
 
@@ -1585,7 +1586,7 @@ def plot_mdn_mues_over_data_scan(X, mdl, saveplot = False):
     if X.shape[1] > 1:
         xscan = np.hstack((xscan, xscan))
         print("xscan", xscan.shape)
-    # xscan = X
+    xscan = X[:100]
     for xs in xscan:
         print("xs", xs)
         xs = np.atleast_2d(xs)
@@ -1599,9 +1600,10 @@ def plot_mdn_mues_over_data_scan(X, mdl, saveplot = False):
         pis.append(mdl.lr.softmax(mdl.model.z[-num_pi:]))
         # print("xs", xs, "ys", y)
     # print("mues", mues)
-    mues = np.vstack(mues).reshape((101, mdl.mixcomps, dim))
-    sigs = np.vstack(sigs).reshape((101, mdl.mixcomps, num_sig / mdl.mixcomps))
-    pis = np.vstack(pis).reshape((101, mdl.mixcomps))
+    numpoints = xscan.shape[0]
+    mues = np.vstack(mues).reshape((numpoints, mdl.mixcomps, dim))
+    sigs = np.vstack(sigs).reshape((numpoints, mdl.mixcomps, num_sig / mdl.mixcomps))
+    pis = np.vstack(pis).reshape((numpoints, mdl.mixcomps))
 
     print("mues", mues.shape)
     print("sigs", sigs.shape)
@@ -1610,7 +1612,8 @@ def plot_mdn_mues_over_data_scan(X, mdl, saveplot = False):
 
     colors = ['r', 'g', 'b', 'k', 'c', 'y', 'm']
     for h in range(dim):
-        ax = fig.add_subplot(dim, 2, h + 1)
+        # ax = fig.add_subplot(dim, 2, h + 1)
+        ax = fig.add_subplot(gs[h,0])
         for i in range(mdl.mixcomps):
             for j in range(xscan.shape[0]):
                 # print("mues", mues[[j],[i]], "pis", pis[j,i])
@@ -1621,9 +1624,11 @@ def plot_mdn_mues_over_data_scan(X, mdl, saveplot = False):
                     alpha = pis[j,i])
                 # ax.plot(xscan[[j]], mues[[j],[i],[h]] - sigs[[j],[i],[h]], "bo", alpha = pis[j,i], markersize = 2.5)
                 # ax.plot(xscan[[j]], mues[[j],[i],[h]] + sigs[[j],[i],[h]], "bo", alpha = pis[j,i], markersize = 2.5)
-    ax = fig.add_subplot(dim, 2, h + 2)
+    ax = fig.add_subplot(gs[0,1])
+    plot_predictions_over_data_2D(X, Y, mdl, saveplot, ax = ax, datalim = 1000)
+
     for i in range(mdl.mixcomps):
-        ax.plot(mues[:,i], marker = 'o', markerfacecolor = colors[i % len(colors)], alpha = np.mean(pis[:,i]))
+        ax.plot(mues[:,i,0], mues[:,i,1], marker = 'o', markerfacecolor = colors[i % len(colors)], alpha = np.mean(pis[:,i]))
     # ax.plot(xscan, mues - sigs, "bo", alpha = 0.5, markersize = 2.0)
     # ax.plot(xscan, mues + sigs, "bo", alpha = 0.5, markersize = 2.0)
     # ax.plot(xscan, mues, "ro", alpha = 0.5)
@@ -1689,6 +1694,70 @@ def plot_predictions_over_data(X, Y, mdl, saveplot = False):
         
     fig.show()
 
+def plot_predictions_over_data_2D(X, Y, mdl, saveplot = False, ax = None, datalim = 1000):
+    do_hexbin = False
+    if X.shape[0] > datalim:
+        do_hexbin = False # True
+        X = X[-datalim:]
+        Y = Y[-datalim:]
+    # plot prediction
+    idim = X.shape[1]
+    odim = Y.shape[1]
+    numsamples = 1 # 2
+    Y_samples = []
+    for i in range(numsamples):
+        Y_samples.append(mdl.predict(X))
+    # print("Y_samples[0]", Y_samples[0].shape)
+    # Y_samples
+
+    if ax is None:
+        fig = pl.figure()
+        fig.suptitle("Predictions over data xy (numsamples = %d, (%s)" % (numsamples, mdl.__class__.__name__))
+        gs = gridspec.GridSpec(1, 1)
+
+        ax = fig.add_subplot(gs[0])
+    else:
+        fig = None
+        
+    ax.plot(Y[:,0], Y[:,1], 'ko', alpha = 0.1)
+    ax.plot(Y_samples[0][:,0], Y_samples[0][:,1], 'r.', alpha = 0.1)
+    ax.set_aspect(1)
+    
+    # for i in range(odim):
+    #     ax = fig.add_subplot(gs[i])
+    #     target     = Y[:,i]
+        
+    #     if do_hexbin:
+    #         ax.hexbin(X, Y, gridsize = 20, alpha=1.0, cmap=pl.get_cmap("gray"))
+    #     else:
+    #         ax.plot(X, target, "k.", label="Y_", alpha=0.5)
+    #     for j in range(numsamples):
+    #         prediction = Y_samples[j][:,i]
+    #         # print("X", X.shape, "prediction", prediction.shape)
+    #         # print("X", X, "prediction", prediction)
+    #         if do_hexbin:
+    #             ax.hexbin(X[:,i], prediction, gridsize = 30, alpha=0.6, cmap=pl.get_cmap("Reds"))
+    #         else:
+    #             ax.plot(X[:,i], prediction, "r.", label="Y_", alpha=0.25)
+                
+    #     # get limits
+    #     xlim = ax.get_xlim()
+    #     ylim = ax.get_ylim()
+    #     error = target - prediction
+    #     mse   = np.mean(np.square(error))
+    #     mae   = np.mean(np.abs(error))
+    #     xran = xlim[1] - xlim[0]
+    #     yran = ylim[1] - ylim[0]
+    #     ax.text(xlim[0] + xran * 0.1, ylim[0] + yran * 0.3, "mse = %f" % mse)
+    #     ax.text(xlim[0] + xran * 0.1, ylim[0] + yran * 0.5, "mae = %f" % mae)
+
+    if fig is not None:
+        if saveplot:
+            filename = "plot_predictions_over_data_%s.jpg" % (mdl.__class__.__name__,)
+            savefig(fig, filename)
+        
+        fig.show()
+    
 def plot_predictions_over_data_ts(X, Y, mdl, saveplot = False):
     # plot prediction
     idim = X.shape[1]
@@ -1901,8 +1970,11 @@ def test_model(args):
         mdlcnf['som_nhs'] = 1e-1
         mdl = mdlcls(conf = mdlcnf)
     elif args.modelclass == "resRLS":
-        mdlcnf['alpha'] = 1.0 # 100.0
-        mdlcnf['mixcomps'] = 12
+        mdlcnf['alpha'] = 1.0 # 1.0 # 100.0
+        mdlcnf['mixcomps'] = 20 # 3 # 6 # 12
+        mdlcnf['sigma_mu'] = 1e-1
+        mdlcnf['sigma_sig'] = 1e-1
+        mdlcnf['sigma_pi'] = 1e-1 # 1.0/mdlcnf['mixcomps']
         
     mdl = mdlcls(conf = mdlcnf)
 
@@ -1986,8 +2058,10 @@ def test_model(args):
         plot_predictions_over_data(X, Y, mdl, saveplot = saveplot)
 
     elif args.modelclass == "resRLS":
-        plot_mdn_mues_over_data_scan(X, mdl, saveplot = saveplot)
-        plot_predictions_over_data(X, Y, mdl, saveplot = saveplot)
+        # reservoir, mixture density
+        plot_mdn_mues_over_data_scan(X, Y, mdl, saveplot = saveplot)
+        plot_predictions_over_data_2D(X, Y, mdl, saveplot = saveplot)
+        # plot_predictions_over_data(X, Y, mdl, saveplot = saveplot)
         
     else:
         # elif args.modelclass in ["KNN", "SOESGP", "STORKGP"]:
