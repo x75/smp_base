@@ -1575,7 +1575,7 @@ def plot_mdn_mues_over_data_scan(X, Y, mdl, saveplot = False):
     print("plot_mdn_mues_over_data_scan: X", X.shape)
     fig = pl.figure()
     gs = gridspec.GridSpec(2, 2)
-    dim = X.shape[1]
+    dim = Y.shape[1]
     xscan = np.linspace(-np.pi, np.pi, 101).reshape((-1, 1))
 
     num_mu = mdl.mixcomps * dim
@@ -1588,7 +1588,7 @@ def plot_mdn_mues_over_data_scan(X, Y, mdl, saveplot = False):
         print("xscan", xscan.shape)
     xscan = X[:100]
     for xs in xscan:
-        print("xs", xs)
+        # print("xs", xs)
         xs = np.atleast_2d(xs)
         print("xs", xs)
         y = mdl.predict(xs)
@@ -1610,7 +1610,7 @@ def plot_mdn_mues_over_data_scan(X, Y, mdl, saveplot = False):
     print("pis", pis.shape)
 
 
-    colors = ['r', 'g', 'b', 'k', 'c', 'y', 'm']
+    colors = ['r', 'g', 'b', 'c', 'y', 'm']
     for h in range(dim):
         # ax = fig.add_subplot(dim, 2, h + 1)
         ax = fig.add_subplot(gs[h,0])
@@ -1624,11 +1624,15 @@ def plot_mdn_mues_over_data_scan(X, Y, mdl, saveplot = False):
                     alpha = pis[j,i])
                 # ax.plot(xscan[[j]], mues[[j],[i],[h]] - sigs[[j],[i],[h]], "bo", alpha = pis[j,i], markersize = 2.5)
                 # ax.plot(xscan[[j]], mues[[j],[i],[h]] + sigs[[j],[i],[h]], "bo", alpha = pis[j,i], markersize = 2.5)
+                
     ax = fig.add_subplot(gs[0,1])
-    plot_predictions_over_data_2D(X, Y, mdl, saveplot, ax = ax, datalim = 1000)
+    if dim == 1:
+        plot_predictions_over_data(X, Y, mdl, saveplot, ax = ax, datalim = 1000)
+    else:
+        plot_predictions_over_data_2D(X, Y, mdl, saveplot, ax = ax, datalim = 1000)
 
-    for i in range(mdl.mixcomps):
-        ax.plot(mues[:,i,0], mues[:,i,1], marker = 'o', markerfacecolor = colors[i % len(colors)], alpha = np.mean(pis[:,i]))
+        for i in range(mdl.mixcomps):
+            ax.plot(mues[:,i,0], mues[:,i,1], linestyle = "none", marker = 'o', markerfacecolor = colors[i % len(colors)], alpha = np.mean(pis[:,i]))
     # ax.plot(xscan, mues - sigs, "bo", alpha = 0.5, markersize = 2.0)
     # ax.plot(xscan, mues + sigs, "bo", alpha = 0.5, markersize = 2.0)
     # ax.plot(xscan, mues, "ro", alpha = 0.5)
@@ -1641,7 +1645,7 @@ def plot_mdn_mues_over_data_scan(X, Y, mdl, saveplot = False):
         
     fig.show()
     
-def plot_predictions_over_data(X, Y, mdl, saveplot = False):
+def plot_predictions_over_data(X, Y, mdl, saveplot = False, ax = None, datalim = 1000):
     do_hexbin = False
     if X.shape[0] > 4000:
         do_hexbin = False # True
@@ -1851,6 +1855,14 @@ def generate_inverted_sinewave_dataset(N = 1000, f = 1.0, p = 0.0, a1 = 1.0, a2 
     
     return X,Y
 
+def generate_2devensimpler_component(x):
+    y1_1 = np.sin(x * 10.0) * 0.5 + x * 0.3 + x ** 2 * 0.05
+    y1_1 += np.random.normal(0, np.abs(x - np.mean(x)) * 0.3)
+    y1_2 = np.sin(x * 5.0) * 0.3 + x * 0.5 - x ** 2 * 0.2
+    y1_2 += np.random.normal(0, np.abs(x - np.mean(x)) * 0.3)
+    print(y1_1.shape, y1_2.shape)
+    return np.vstack((y1_1, y1_2)).T
+
 def test_model(args):
     """actinf_models.test_model
 
@@ -1928,6 +1940,64 @@ def test_model(args):
         X = X[:,:odim]
         print("X.shape", X.shape)
         print("Y.shape", Y.shape)
+        
+    elif args.datafile.startswith("2devensimpler"):
+        idim = 1
+        odim = 2
+
+        numcomp_steps = args.numsteps / 3
+        setattr(args, 'numsteps', numcomp_steps * 3)
+        
+        # 3 input clusters
+        x1 = np.linspace(-1.0, -0.5, numcomp_steps) # + 0.5
+        x2 = np.linspace(-0.25, 0.25, numcomp_steps) 
+        x3 = np.linspace(0.5, 1.0, numcomp_steps) # - 0.5
+
+        y1 = generate_2devensimpler_component(x1)
+        y2 = generate_2devensimpler_component(x2)
+        y3 = generate_2devensimpler_component(x3)
+        
+        pl.subplot(121)
+        pl.plot(x1)
+        pl.plot(x2)
+        pl.plot(x3)
+        pl.subplot(122)
+        pl.plot(y1[:,0], y1[:,1], "ko", alpha = 0.1)
+        pl.plot(y2[:,0], y2[:,1], "ro", alpha = 0.1)
+        pl.plot(y3[:,0], y3[:,1], "go", alpha = 0.1)
+        # pl.plot(y1_2)
+        pl.show()
+
+        X = np.hstack((x1, x2, x3)).reshape((args.numsteps, 1))
+        Y = np.vstack((y1, y2, y3))
+
+        print("X", X.shape, "Y", Y.shape)
+
+        idx = range(args.numsteps)
+        np.random.shuffle(idx)
+
+        X = X[idx]
+        Y = Y[idx]
+        
+        # mixcomps = 3
+        # d = 4
+        # mu = np.random.uniform(-1, 1, size = (mixcomps, d))
+        # S = np.array([np.eye(d) * 0.01 for c in range(mixcomps)])
+        # for s in S:
+        #     s += 0.05 * np.random.uniform(-1, 1, size = s.shape)
+        #     s[np.tril_indices(d, -1)] = s[np.triu_indices(d, 1)]
+        # pi = np.ones((mixcomps, )) * 1.0/mixcomps
+
+        # lr = LearningRules(ndim_out = d, dim = d)
+        # lr.learnFORCEmdn_setup(mixcomps = mixcomps)
+        # X = np.zeros((args.numsteps, d))
+        # for i in range(args.numsteps):
+        #     X[[i]] = lr.mixtureMV(mu, S, pi)
+
+        # Y = X[:,odim:]
+        # X = X[:,:odim]
+        # print("X.shape", X.shape)
+        # print("Y.shape", Y.shape)
 
     else:
         idim = 1
@@ -1970,8 +2040,8 @@ def test_model(args):
         mdlcnf['som_nhs'] = 1e-1
         mdl = mdlcls(conf = mdlcnf)
     elif args.modelclass == "resRLS":
-        mdlcnf['alpha'] = 1.0 # 1.0 # 100.0
-        mdlcnf['mixcomps'] = 20 # 3 # 6 # 12
+        mdlcnf['alpha'] = 1000.0 # 1.0 # 100.0
+        mdlcnf['mixcomps'] = 30 # 3 # 6 # 12
         mdlcnf['sigma_mu'] = 1e-1
         mdlcnf['sigma_sig'] = 1e-1
         mdlcnf['sigma_pi'] = 1e-1 # 1.0/mdlcnf['mixcomps']
@@ -2060,8 +2130,11 @@ def test_model(args):
     elif args.modelclass == "resRLS":
         # reservoir, mixture density
         plot_mdn_mues_over_data_scan(X, Y, mdl, saveplot = saveplot)
-        plot_predictions_over_data_2D(X, Y, mdl, saveplot = saveplot)
-        # plot_predictions_over_data(X, Y, mdl, saveplot = saveplot)
+        
+        if odim == 1:
+            plot_predictions_over_data(X, Y, mdl, saveplot = saveplot)
+        else:
+            plot_predictions_over_data_2D(X, Y, mdl, saveplot = saveplot)
         
     else:
         # elif args.modelclass in ["KNN", "SOESGP", "STORKGP"]:

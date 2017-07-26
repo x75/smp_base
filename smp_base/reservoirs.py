@@ -210,7 +210,7 @@ class LearningRules(object):
 
         Setup MDN variables before applying FORCEmdn learning rule
         """
-        self.loss = 0
+        self.loss = 10.0
         self.e = np.zeros((self.ndim_out, 1))
         self.mixcomps = mixcomps
 
@@ -1245,9 +1245,11 @@ def get_data(elen, outdim, mode="MSO_s1"):
         rate, data = wavfile.read(args.file)
         # rate, data = wavfile.read("drinksonus_mono_short.wav")
         offset = np.random.randint(0, data.shape[0] - elen)
-        print data.dtype, offset
+        print "get_data: wav:", data.dtype, offset
         data = data.astype(np.float)
-        data = data[offset:offset+elen].reshape((1, -1))
+        # data = data[offset:offset+elen].reshape((outdim, -1))
+        data = data[offset:offset+elen].reshape((-1, outdim)).T
+        data -= np.mean(data)
         data /= np.max(np.abs(data))
         # print data.shape
         # sys.exit()
@@ -1574,14 +1576,14 @@ def main(args):
     # for feedback
     percent_factor = 1./(episode_len/100.)
     alpha = 1.0
-    input_scale = 2.0
+    input_scale = 1.2 # 2.0
     feedback_scale = args.scale_feedback
     g = 1.5
     # tau = 0.1
     # tau = 0.075
-    # tau = 0.05
+    tau = 0.05
     # tau = 0.025
-    tau = 0.01
+    # tau = 0.01
     # tau = 0.005
     # tau = 0.0025
     # tau = 0.001
@@ -1605,6 +1607,7 @@ def main(args):
 
     # get training data
     ds_real = get_data(episode_len+1, outsize, args.target)
+    print "ds_real.shape", ds_real.shape
 
     # compute effective tapping for these timeseries problems
     # non AR regression setup
@@ -1632,7 +1635,7 @@ def main(args):
         res = Reservoir(
             N = i, input_num = insize, output_num = outsize_, g = g, tau = tau,
             alpha = alpha, feedback_scale = feedback_scale, input_scale = input_scale,
-            bias_scale = 0.8, eta_init = eta_init_, theta = 2.5e-1, theta_state = 1e-2,
+            bias_scale = 0.8, eta_init = eta_init_, theta = 2.5e-1, theta_state = 1e-3,
             coeff_a = 0.2, mtau=args.multitau
         )
 
@@ -1689,7 +1692,7 @@ def main(args):
         for j in range(episode_len):
 
             # teacher forcing
-            if args.teacher_forcing and j < testing:
+            if args.teacher_testing or (args.teacher_forcing and j < testing):
                 inputs = ds_real[:,[j-1]] # .reshape((insize, 1))
             elif args.feedback_only:
                 inputs = np.zeros((args.ndim_in, 1))
@@ -1717,7 +1720,7 @@ def main(args):
                     # res.learnRLS(target)
                     dw = lr.learnRLS(target = target, r = res.r)
                     res.wo += dw
-                    res.perf = lr.rls_estimator.y
+                    res.perf = lr.rls_estimator.y.T
                     for k in range(outsize_):
                         dw_t_norm[k,j] = LA.norm(dw[:,k])
                         
@@ -1841,6 +1844,8 @@ if __name__ == "__main__":
     parser.add_argument("-f", "--file", help="File to use as data input", dest="file", default="data/notype_mono_short.wav")
     parser.add_argument("-tf", "--teacher_forcing", dest="teacher_forcing", action="store_true",
                         help="Use teacher forcing during training [False]")
+    parser.add_argument("-tt", "--teacher_testing", dest="teacher_testing", action="store_true",
+                        help="Use teacher forcing during testing [False]")
     parser.add_argument("-fo", "--feedback_only", dest="feedback_only", action="store_true",
                         help="Use only the global output feedback [False]")
 
