@@ -82,6 +82,7 @@ except ImportError, e:
 try:
     from kohonen.kohonen import Map, Parameters, ExponentialTimeseries, ConstantTimeseries
     from kohonen.kohonen import Gas, GrowingGas, GrowingGasParameters, Filter
+    from kohonen.kohonen import argsample
 except ImportError, e:
     print("Couldn't import lmjohns3's kohonon SOM lib", e)
 
@@ -1005,7 +1006,7 @@ class smpHebbianSOM(smpModel):
             # print("%s.fit_soms batch p |dW| = %f, %f, %f" % (self.__class__.__name__, dWnorm_p, dWnorm_p_, dWnorm_p__))
             j += 1
 
-        if self.soms_cnt_fit % 100 == 0:
+        if False and self.soms_cnt_fit % 100 == 0:
             print("%s.fit_soms batch e mean error = %f, min = %f, max = %f" % (
                 self.__class__.__name__,
                 np.asarray(self.filter_e.distances_).mean(),
@@ -1221,12 +1222,12 @@ class smpHebbianSOM(smpModel):
             
             j += 1
 
-        if self.hebb_cnt_fit % 100 == 0:
+        if False and self.hebb_cnt_fit % 100 == 0:
             # print("hebblink_filter type", type(self.hebblink_filter))
             # print(Z_err_norm)
             # print("%s.fit_hebb error p/p_bar %f" % (self.__class__.__name__, np.array(Z_err_norm)[:logidx].mean()))
             print("%s.fit_hebb |dW| = %f, |W| = %f, mean err = %f / %f" % (self.__class__.__name__, dWnorm_, w_norm, np.min(z_err), np.max(z_err)))
-             # z_err_norm_, z_err_norm__))
+            # z_err_norm_, z_err_norm__))
             # print("%s.fit_hebb |W|  = %f" % (self.__class__.__name__, w_norm))
         self.hebb_cnt_fit += 1
             
@@ -1305,7 +1306,18 @@ class smpHebbianSOM(smpModel):
         # print("hebbsom sample", e2p_w_p_weights, self.filter_p.sigmas[sidx])
         ret = e2p_w_p_weights.reshape((1, self.odim))
         return ret
-    
+
+    def sample_prior(self):
+        # print("pr")
+        # pass
+        # print("prior", self.filter_e.map.prior)
+        sidxs = argsample(self.filter_e.map.prior, n = 1)
+        prior_sample_mu = self.filter_e.neuron(self.filter_e.flat_to_coords(sidxs[0]))
+        # print ('prior_sample_mu', prior_sample_mu.shape, self.filter_e.sigmas[sidxs[0]].shape)
+        prior_sample = np.random.normal(prior_sample_mu, self.filter_e.sigmas[sidxs[0]]).reshape((self.idim, 1))
+        # print("prior_sample", prior_sample)
+        return prior_sample
+        
     # def sample_cond_legacy(self, X):
     #     """smpHebbianSOM.sample_cond: sample from model conditioned on X"""
     #     sampling_search_num = 100
