@@ -1308,13 +1308,19 @@ class smpHebbianSOM(smpModel):
         return ret
 
     def sample_prior(self):
+        """HebbianSOM.sample_prior
+
+        Sample from input map prior distribution
+        """
         # print("pr")
         # pass
         # print("prior", self.filter_e.map.prior)
-        sidxs = argsample(self.filter_e.map.prior, n = 1)
+        # sidxs = argsample(self.filter_e.map.prior, n = 1)
+        sidxs = argsample(np.sum(self.filter_e.sigmas, axis = 1), n = 1)
         prior_sample_mu = self.filter_e.neuron(self.filter_e.flat_to_coords(sidxs[0]))
         # print ('prior_sample_mu', prior_sample_mu.shape, self.filter_e.sigmas[sidxs[0]].shape)
-        prior_sample = np.random.normal(prior_sample_mu, self.filter_e.sigmas[sidxs[0]]).reshape((self.idim, 1))
+        # prior_sample = np.random.normal(prior_sample_mu, self.filter_e.sigmas[sidxs[0]]).reshape((self.idim, 1))
+        prior_sample = prior_sample_mu.reshape((self.idim, 1))
         # print("prior_sample", prior_sample)
         return prior_sample
         
