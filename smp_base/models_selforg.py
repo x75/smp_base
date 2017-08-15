@@ -62,7 +62,7 @@ class HK():
         self.C  = np.zeros((self.nummot, self.numsen))
         self.C[range(self.nummot),range(self.nummot)] = 1 # * 0.4
         # self.C  = np.random.uniform(-1e-2, 1e-2, (self.nummot, self.numsen))
-        print "self.C", self.C
+        # print "models_selforg.py: HK.__init__: self.C", self.C
         self.h  = np.zeros((self.nummot,1))
         self.g  = np.tanh # sigmoidal activation function
         self.g_ = dtanh # derivative of sigmoidal activation function
