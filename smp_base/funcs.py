@@ -1,6 +1,6 @@
 """smp_base.funcs
 
-Some common simple functions
+Some simple functions commonly used
 """
 
 from numpy import tanh, clip, inf, cos, sin, array, poly1d, sign

@@ -388,7 +388,16 @@ class learnerIOSMem(learnerIOS):
         self.itae_ = np.zeros((self.len, self.odim)) # integral of time-weighted absolute error
         
 class learnerReward(object):
-    # infth stuff
+    """learnerReward class
+
+    This class captures all the reward functions used in the smp project.
+
+    TODO
+    - use measures and measures_infth.py from smp_base
+    """
+
+    ################################################################################
+    # infth setup stuff
     
     # discretization base
     base = 1000
@@ -419,11 +428,12 @@ class learnerReward(object):
     
     """Learner reward data"""
     def __init__(self, idim=1, odim=1, memlen=1000, coeff_a = 0.2):
-        """Init learnerReward
+        """learnerReward.init
         
         idim: input dimensionality (default: 1) \n
         odim: output dimensionality (default: 1) \n
-        memlen: length of memory to be kept, in steps (default: 1000)"""
+        memlen: length of memory to be kept, in steps (default: 1000)
+        """
         
         self.idim = idim
         self.odim = odim

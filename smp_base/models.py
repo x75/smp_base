@@ -162,6 +162,56 @@ class smpModel(object):
         """
         return cPickle.load(open(filename, "rb"))
 
+
+################################################################################
+# simple models
+def iir_firstorder_freq_to_coef(f = 0.1):
+    """iir_firstorder_freq_to_coef
+
+    Compute the coefficients for a first order IIR filter given a cutoff freqency f
+
+    https://dsp.stackexchange.com/questions/28308/exponential-weighted-moving-average-time-constant/28314#28314
+    """
+    a = np.cos(f) - 1 - np.sqrt(np.cos(f)**2 - 4 * np.cos(f) + 3)
+    a = np.abs(a)
+    b = 1 - a
+    return b, a
+
+def iir_firstorder_coef_to_freq(b = 0.8, a = 0.2):
+    """iir_firstorder_coef_to_freq
+
+    Compute the resulting cutoff frequency for a first order IIR filter given coefficients b, a
+
+    from sympy import symbols
+    a, f = symbols('a f')
+    expr = sympy.cos(f) - 1 - sympy.sqrt(sympy.cos(f)**2 - 4 * sympy.cos(f) + 3) - a
+    sympy.solve(expr, f)
+
+    [acos((a**2/2 + a - 1)/(a - 1))]
+    """
+    f = np.arccos( (a**2/2 + a - 1) / (a - 1))
+    return f
+
+class iir_fo(object):
+    # FIXME: make it smpModel
+    def __init__(self, b = None, a = 0.2, dim = 1):
+        self.a = a
+        if b is None:
+            self.b = 1 - self.a
+        else:
+            self.b = b
+        self.dim = dim
+        self.y = np.zeros((self.dim, 1))
+
+    def predict(self, x):
+        self.y = self.b * self.y + self.a * x
+        return self.y
+        
+    
+################################################################################
+# plotting utilities
+    
+
 def savefig(fig, filename):
     fig_scale_inches = 0.75
     fig.set_size_inches((16 * fig_scale_inches, 9 * fig_scale_inches))
@@ -238,3 +288,14 @@ def plot_nodes_over_data_1d_components(fig, X, Y, mdl, e_nodes, p_nodes, e_nodes
     # plt.show()
 
     
+
+if __name__ == '__main__':
+    print "testing iir_firstorder coef/freq conversion"
+    # loop over frequencies
+    for f in np.logspace(0.001, 0.2, 21, base = np.exp(1)) - 1:
+        # compute coeffs
+        b, a = iir_firstorder_freq_to_coef(f = f)
+        # reconstruct f_c
+        f_ = iir_firstorder_coef_to_freq(b = b, a = -a)
+        # print stuff
+        print "f = %f, b = %f, a = %f, f_ = %f" % (f, b, a, f_)

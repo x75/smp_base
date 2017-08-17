@@ -145,16 +145,17 @@ def res_input_matrix_disjunct_proj(idim = 1, odim = 1):
     return wi
 
 ################################################################################
-# standalone class for learning rules, not sure yet if that's smart
-# - FORCE
-# - FORCEmdn: (univariate) mixture density version, using FORCE update
-# - missing: RLS (depends on rlspy.py)
-# - missing: Exploratory Hebbian
+# Standalone class for learning rules
+# - Recursive Least Squares (RLS, depends on rlspy.py): the vanilla online supervised
+#   reservoir training method
+# - First-order reduced and controlled error or FORCE learning (Sussillo & Abbott, 2012)
+# - FORCEmdn: Mixture density output layer using FORCE rule (Berthold, 2017)
+# - Exploratory Hebbian learning (Legenstein & others, 2010)
 class LearningRules(object):
-    """LearningRules
+    """LearningRules class
 
-    This class implements several different learning rules used for training the reservoir
-    in online / incremental mode.
+    This class implements different learning rules used for training the reservoir
+    in online (aka incremental, single-time step, closed-loop) mode.
     """
     def __init__(self, ndim_out = 1, dim = 1):
         self.ndim_out = ndim_out
@@ -549,7 +550,7 @@ class LearningRules(object):
         en = e / np.sum(e, axis=0, keepdims=True)
         return en
 
-    def learnEH(self, target, r, pred, pred_lp, perf, perf_lp, eta):
+    def learnEH(self, target, r, pred, pred_lp, perf, perf_lp, eta = 1e-4):
         """LearningRules.learnEH
 
         Exploratory Hebbian learning rule. This function computes the
@@ -566,8 +567,9 @@ class LearningRules(object):
          - perf: performance ~ error
          - perf_lp: performance moving avg
         """
-        # eta = self.eta_init # 0.0003
-
+        # # debugging
+        # print "%s.learnEH args target = %s, r = %s, pred = %s, pred_lp = %s, perf = %s, perf_lp = %s, eta = %s" % (self.__class__.__name__, target.shape, r.shape, pred.shape, pred_lp.shape, perf.shape, perf_lp.shape, eta)
+        
         self.perf = -np.square(pred - target)
         
         # binary modulator
