@@ -1313,7 +1313,7 @@ class smpHebbianSOM(smpModel):
         return ret
 
     def sample_prior(self):
-        """HebbianSOM.sample_prior
+        """smpHebbianSOM.sample_prior
 
         Sample from input map prior distribution
         """
@@ -1420,7 +1420,15 @@ class smpHebbianSOM(smpModel):
         
         return self.y_samples, self.y_samples_
     
+################################################################################
+# models_actinf: model testing and plotting code
+################################################################################
+
 def hebbsom_get_map_nodes(mdl, idim, odim):
+    """hebbsom_get_map_nodes
+
+    Get all the nodes of the coupled SOM maps
+    """
     e_nodes = mdl.filter_e.map.neurons
     p_nodes = mdl.filter_p.map.neurons
     # print("e_nodes", e_nodes.shape, "p_nodes", p_nodes.shape)
@@ -1429,9 +1437,36 @@ def hebbsom_get_map_nodes(mdl, idim, odim):
     # print("e_nodes", e_nodes.shape, "p_nodes", p_nodes.shape)
     return (e_nodes, p_nodes)
 
+def hebbsom_predict_full(X, Y, mdl):
+    """hebbsom_predict_full
+
+    Predict using a HebbSOM and return full internal activations as tuple
+    - (predictions (samples), distances (SOM distance func), activiations (distances after act. func))
+    """
+    distances = []
+    activities = []
+    predictions = np.zeros_like(Y)
+    # have to loop over single steps until we generalize predict function to also yield distances and activities
+    for h in range(X.shape[0]):
+        # X_ = (Y[h]).reshape((1, odim))
+        X_ = X[h]
+        # print("X_", X_.shape, X_)
+        # predict proprio 3D from extero 2D
+        predictions[h] = mdl.predict(X_)
+        # print("X_.shape = %s, %d" % (X_.shape, 0))
+        # print("prediction.shape = %s, %d" % (prediction.shape, 0))
+        distances.append(mdl.filter_e.distances(X_).flatten())
+        activities.append(mdl.filter_e.activity.flatten())
+        activities_sorted = activities[-1].argsort()
+        # print("Y[h]", h, Y[h].shape, prediction.shape)
+    return (predictions, distances, activities)
+    
 def plot_nodes_over_data_scattermatrix(X, Y, mdl, e_nodes, p_nodes, e_nodes_cov, p_nodes_cov, saveplot = False):
-    """plot input data distribution and SOM node locations as scattermatrix all X comps over all Y comps
-    X, Y, e_nodes, p_nodes"""
+    """plot_nodes_over_data_scattermatrix
+
+    Plot SOM node locations over input data as scattermatrix all X
+    comps over all Y comps.
+    """
     
     import pandas as pd
     from pandas.tools.plotting import scatter_matrix
@@ -1481,29 +1516,12 @@ def plot_nodes_over_data_scattermatrix(X, Y, mdl, e_nodes, p_nodes, e_nodes_cov,
         savefig(fig, filename)
     fig.show()
 
-def hebbsom_predict_full(X, Y, mdl):
-    distances = []
-    activities = []
-    predictions = np.zeros_like(Y)
-    # have to loop over single steps until we generalize predict function to also yield distances and activities
-    for h in range(X.shape[0]):
-        # X_ = (Y[h]).reshape((1, odim))
-        X_ = X[h]
-        # print("X_", X_.shape, X_)
-        # predict proprio 3D from extero 2D
-        predictions[h] = mdl.predict(X_)
-        # print("X_.shape = %s, %d" % (X_.shape, 0))
-        # print("prediction.shape = %s, %d" % (prediction.shape, 0))
-        distances.append(mdl.filter_e.distances(X_).flatten())
-        activities.append(mdl.filter_e.activity.flatten())
-        activities_sorted = activities[-1].argsort()
-        # print("Y[h]", h, Y[h].shape, prediction.shape)
-    return (predictions, distances, activities)
-    
-################################################################################
-# plot nodes over data with scattermatrix and data hexbin
 def plot_nodes_over_data_scattermatrix_hexbin(X, Y, mdl, predictions, distances, activities, saveplot = False):
-    """plot single components X over Y with SOM sample"""
+    """models_actinf.plot_nodes_over_data_scattermatrix_hexbin
+
+    Plot models nodes (if applicable) over the hexbinned data
+    expanding dimensions as a scattermatrix.
+    """
     
     idim = X.shape[1]
     odim = Y.shape[1]
@@ -1845,6 +1863,10 @@ def plot_predictions_over_data_ts(X, Y, mdl, saveplot = False):
     fig.show()
         
 def get_class_from_name(name = "KNN"):
+    """models_actinf.get_class_from_name
+
+    Get a class by a common name string.
+    """
     if name == "KNN":
         cls = smpKNN
     elif name == "SOESGP":
@@ -1865,6 +1887,14 @@ def get_class_from_name(name = "KNN"):
     return cls
 
 def generate_inverted_sinewave_dataset(N = 1000, f = 1.0, p = 0.0, a1 = 1.0, a2 = 0.3):
+    """models_actinf.generate_inverted_sinewave_dataset
+
+    Generate the inverted sine dataset used in Bishop's (Bishop96)
+    mixture density paper
+
+    Returns:
+    - matrices X, Y
+    """
     X = np.linspace(0,1,N)
     # FIXME: include phase p
     Y = a1 * X + a2 * np.sin(f * (2 * 3.1415926) * X) + np.random.uniform(-0.1, 0.1, N)
@@ -1879,6 +1909,15 @@ def generate_inverted_sinewave_dataset(N = 1000, f = 1.0, p = 0.0, a1 = 1.0, a2 
     return X,Y
 
 def generate_2devensimpler_component(x):
+    """models_actinf.generate_2devensimpler_component
+
+    Generate a two-dimensional correspondence dataset to test
+    covariance learning of the multivariate mixture density learning
+    rule.
+
+    Returns:
+    - matrix X
+    """
     y1_1 = np.sin(x * 10.0) * 0.5 + x * 0.3 + x ** 2 * 0.05
     y1_1 += np.random.normal(0, np.abs(x - np.mean(x)) * 0.3)
     y1_2 = np.sin(x * 5.0) * 0.3 + x * 0.5 - x ** 2 * 0.2

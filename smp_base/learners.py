@@ -45,11 +45,14 @@ def gaussian(m, s, x):
     return 1/(s*TWOPI_SQRT) * np.exp(-0.5*np.square((m-x)/s))
 
 class smpSHL(smpModel):
-    """smpSHL
+    """smpSHL class
 
-    Single Hidden Layer model
+    Single Hidden Layer neural network model class.
 
-    The hidden layer's activity is fitted onto a target
+    This class can be used both for Reservoir networks as well as
+    extreme learning machines which are most often used by fitting the
+    target output to the single hidden layer activations with some
+    kind of regression fit.
     """
     # defaults = {
     #     'idim': 1, 'odim': 1, 'modelsize': 200, 'tau': 0.1, 'multitau': False,
