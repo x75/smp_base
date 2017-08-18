@@ -62,11 +62,28 @@ class smpSHL(smpModel):
     #     'eta_init': 1e-3,
     # }
     defaults = {
-        'idim': 1, 'odim': 1, 'modelsize': 100, 'tau': 1.0, 'multitau': False,
-        'density': 0.1, 'spectral_radius': 0.0, 'w_input': 0.66, 'w_feedback': 0.0, 'w_bias': 1.0,
-        'nonlin_func': np.tanh, 'sparse': True, 'ip': False, 'theta': 0.01, 'theta_state': 0.05,
-        'coeff_a': 0.2, 'visualize': True, 'alpha': 10.0, 'lrname': 'FORCEmdn', 'mixcomps': 3,
+        'idim': 1,
+        'odim': 1,
+        'tau': 1.0,
+        'multitau': False,
+        'modelsize': 100,
+        'density': 0.1,
+        'spectral_radius': 0.0,
+        'w_input': 0.66,
+        'w_feedback': 0.0,
+        'w_bias': 1.0,
+        'nonlin_func': np.tanh,
+        'sparse': True,
+        'ip': False,
+        'theta': 0.01,
+        'theta_state': 0.05,
+        'coeff_a': 0.2,
+        'visualize': True,
+        'alpha': 10.0,
+        'lrname': 'FORCEmdn',
+        'mixcomps': 3,
         'eta_init': 1e-4,
+        'oversampling': 1,
         }
 
     @smpModelInit()
@@ -173,7 +190,11 @@ class smpSHL(smpModel):
     @smpModelStep()
     def step(self, X, Y, *args, **kwargs):
         # print "visualize", self.visualize
-        y = self.model.execute(X.T).T
+        # oversample reservoir: clamp inputs and step the network
+        for i in range(self.oversampling):
+            _ = self.res.execute(X.T)
+        
+        y = _ # self.model.execute(X.T).T
         y_ = y.T
         # print "smpSHL.step(X = %s, Y = %s, y_ = %s)" % ( X.shape, Y, y_)
         if Y is not None:
