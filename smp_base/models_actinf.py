@@ -409,7 +409,8 @@ class smpGMM(smpModel):
     Gaussian mixture model based on PyPR's gmm
     """
     defaults = {
-        'idim': 1, 'odim': 1, 'K': 10, 'numepisodes': 10}
+        'idim': 1, 'odim': 1, 'K': 10, 'numepisodes': 10,
+        'visualize': False}
     
     @smpModelInit()
     def __init__(self, conf):
@@ -915,6 +916,10 @@ class smpHebbianSOM(smpModel):
             noise_variance=z)
 
     def visualize_model(self):
+        """smpHebbianSOM.visualize_model
+
+        Plot the model state visualization
+        """
         e_nodes, p_nodes = hebbsom_get_map_nodes(self, self.idim, self.odim)
         e_nodes_cov = np.tile(np.eye(self.idim) * 0.05, e_nodes.shape[0]).T.reshape((e_nodes.shape[0], self.idim, self.idim))
         p_nodes_cov = np.tile(np.eye(self.odim) * 0.05, p_nodes.shape[0]).T.reshape((p_nodes.shape[0], self.odim, self.odim))

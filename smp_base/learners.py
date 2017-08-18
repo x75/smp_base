@@ -388,7 +388,16 @@ class learnerIOSMem(learnerIOS):
         self.itae_ = np.zeros((self.len, self.odim)) # integral of time-weighted absolute error
         
 class learnerReward(object):
-    # infth stuff
+    """learnerReward class
+
+    This class captures all the reward functions used in the smp project.
+
+    TODO
+    - use measures and measures_infth.py from smp_base
+    """
+
+    ################################################################################
+    # infth setup stuff
     
     # discretization base
     base = 1000
@@ -419,11 +428,12 @@ class learnerReward(object):
     
     """Learner reward data"""
     def __init__(self, idim=1, odim=1, memlen=1000, coeff_a = 0.2):
-        """Init learnerReward
+        """learnerReward.init
         
         idim: input dimensionality (default: 1) \n
         odim: output dimensionality (default: 1) \n
-        memlen: length of memory to be kept, in steps (default: 1000)"""
+        memlen: length of memory to be kept, in steps (default: 1000)
+        """
         
         self.idim = idim
         self.odim = odim
@@ -449,6 +459,11 @@ class learnerReward(object):
     def perf_accel(self, err, acc):
         """Simple reward: let body acceleration point into reduced error direction"""
         self.perf[0:self.odim,0] = np.sign(err) * acc
+        # self.perf = np.sign(err) * np.sign(acc) * acc**2
+        
+    def perf_accel_sum(self, err, acc):
+        """Simple reward: let body acceleration point into reduced error direction"""
+        self.perf[0:self.odim,0] = -np.sum(np.square(err)) # np.sign(err) * acc
         # self.perf = np.sign(err) * np.sign(acc) * acc**2
         
     def perf_pos(self, err, acc):
@@ -488,13 +503,18 @@ class learnerReward(object):
     def perf_pi_continuous(self, x):
         # Use history length 1 (Schreiber k=1), kernel width of 0.5 normalised units
         # learnerReward.piCalcC.initialise(40, 1, 0.5);
-        # print "perf_pi_continuous", x
-        learnerReward.piCalcC.initialise(100, 1)
+        # learnerReward.piCalcC.initialise(1, 1, 0.5);
         # src = np.atleast_2d(x[0:-1]).T # start to end - 1
         # dst = np.atleast_2d(x[1:]).T # 1 to end
         # learnerReward.piCalcC.setObservations(src, dst)
+        
+        # print "perf_pi_continuous", x
+        # learnerReward.piCalcC.initialise(100, 1);
+        # learnerReward.piCalcC.initialise(50, 1);
+        learnerReward.piCalcC.initialise(10, 1);
         # src = np.atleast_2d(x).T # start to end - 1
         # learnerReward.piCalcC.setObservations(src.reshape((src.shape[0],)))
+        # print "x", x.shape
         learnerReward.piCalcC.setObservations(x)
         # print type(src), type(dst)
         # print src.shape, dst.shape
@@ -505,7 +525,8 @@ class learnerReward(object):
         # Use history length 1 (Schreiber k=1), kernel width of 0.5 normalised units
         # learnerReward.piCalcC.initialise(40, 1, 0.5);
         # print "perf_pi_continuous", x
-        learnerReward.aisCalcC.initialise(100, 1);
+        learnerReward.aisCalcC.initialise(10, 1);
+        # learnerReward.aisCalcC.initialise(10, 10);
         # src = np.atleast_2d(x[0:-1]).T # start to end - 1
         # dst = np.atleast_2d(x[1:]).T # 1 to end
         # learnerReward.piCalcC.setObservations(src, dst)
