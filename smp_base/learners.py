@@ -390,10 +390,10 @@ class learnerIOSMem(learnerIOS):
 class learnerReward(object):
     """learnerReward class
 
-    This class captures all the reward functions used in the smp project.
+    This class holds reward functions for use in learnerEH and elsewhere.
 
     TODO
-    - use measures and measures_infth.py from smp_base
+    - use measures and measures_infth.py from smp_base or merge and delete
     """
 
     ################################################################################
@@ -467,7 +467,10 @@ class learnerReward(object):
         # self.perf = np.sign(err) * np.sign(acc) * acc**2
         
     def perf_pos(self, err, acc):
-        """Simple reward: let body acceleration point into reduced error direction"""
+        """perf_pos
+
+        Position error, 0th order, return err
+        """
         self.perf = err
 
     def perf_gauss_double(self, mean=0., sigma=1.0, accel=0.):

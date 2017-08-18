@@ -550,7 +550,7 @@ class LearningRules(object):
         en = e / np.sum(e, axis=0, keepdims=True)
         return en
 
-    def learnEH(self, target, r, pred, pred_lp, perf, perf_lp, eta = 1e-4):
+    def learnEH(self, target, r, pred, pred_lp, perf = None, perf_lp = 0.0, eta = 1e-4):
         """LearningRules.learnEH
 
         Exploratory Hebbian learning rule. This function computes the
@@ -569,8 +569,14 @@ class LearningRules(object):
         """
         # # debugging
         # print "%s.learnEH args target = %s, r = %s, pred = %s, pred_lp = %s, perf = %s, perf_lp = %s, eta = %s" % (self.__class__.__name__, target.shape, r.shape, pred.shape, pred_lp.shape, perf.shape, perf_lp.shape, eta)
-        
-        self.perf = -np.square(pred - target)
+
+        # if no performance perf is supplied as an argument, the default neg squared error is used
+        # FIXME: clean up because it implies the same to be used for perf_lp to be computed somewhere
+        #        outside this function
+        if perf is None:
+            self.perf = -np.square(pred - target)
+        else:
+            self.perf = perf
         
         # binary modulator
         mdltr = (np.clip(self.perf - perf_lp, 0, 1) > 0) * 1.0
