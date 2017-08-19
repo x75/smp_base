@@ -27,6 +27,7 @@ class smpModelInit():
             else:
                 for k, v in xself.defaults.items():
                     if not conf.has_key(k):
+                        # print "models.init setting default", k, v
                         conf[k] = v
             
             f(xself, *args, **kwargs)
@@ -48,10 +49,16 @@ class smpModelStep():
             ret = f(xself, *args, **kwargs)
 
             if xself.visualize:
-                # X = kwargs['X']
-                # Y = kwargs['Y']
-                X = args[0]
-                Y = args[1]
+                if kwargs.has_key('X'):
+                    X = kwargs['X']
+                else:
+                    X = args[0]
+
+                if kwargs.has_key('Y'):
+                    Y = kwargs['Y']
+                else:
+                    Y = args[1]
+                    
                 # print "X", X
                 if Y is not None:
                     xself.Xhist.append(X)

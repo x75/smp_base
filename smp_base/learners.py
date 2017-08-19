@@ -91,6 +91,9 @@ class smpSHL(smpModel):
         # base init
         smpModel.__init__(self, conf)
 
+        print "smpSHL.lrname", self.lrname, conf['lrname']
+        print "smpSHL.theta", self.theta, conf['theta']
+        
         if self.lrname == 'FORCEmdn':
             # self.odim_real = self.odim * self.mixcomps * 3
             self.num_mu = self.odim * self.mixcomps
@@ -104,10 +107,10 @@ class smpSHL(smpModel):
         else:
             self.odim_real = self.odim
 
-        # learning rule init
+        # smpSHL learning rule init
         self.lr = LearningRules(ndim_out = self.odim_real, dim = self.odim)
 
-        # reservoir init
+        # smpSHL reservoir init 
         self.model = Reservoir(
             N = self.modelsize,
             p = self.density,
@@ -127,6 +130,7 @@ class smpSHL(smpModel):
             alpha = self.alpha,
         )
 
+        print "smpSHL.lrname", self.lrname
         if self.lrname == 'FORCEmdn':
             # sigmas = [2e-1] * self.num_mu + [5e-2] * self.num_sig + [1.0/self.mixcomps] * self.num_pi
             sigmas = [self.sigma_mu] * self.num_mu + [self.sigma_sig] * self.num_sig + [self.sigma_pi] * self.num_pi
@@ -189,16 +193,20 @@ class smpSHL(smpModel):
 
     @smpModelStep()
     def step(self, X, Y, *args, **kwargs):
-        # print "visualize", self.visualize
-        # oversample reservoir: clamp inputs and step the network
-        for i in range(self.oversampling):
-            _ = self.res.execute(X.T)
+
+        # # oversample reservoir: clamp inputs and step the network
+        # for i in range(self.oversampling):
+        #     _ = self.model.execute(X.T)
         
-        y = _ # self.model.execute(X.T).T
-        y_ = y.T
+        # y_ = _.T
+        # # y_ = y.T
+        
         # print "smpSHL.step(X = %s, Y = %s, y_ = %s)" % ( X.shape, Y, y_)
+
+        # fit (maximization)
         if Y is not None:
-            # print "Y", Y.shape # y", y.shape
+            
+            # handle different learning rules
             if self.lrname == 'FORCE':
                 # modular learning rule (ugly call)
                 (self.model.P, k, c) = self.lr.learnFORCE_update_P(self.model.P, self.model.r)
@@ -207,7 +215,7 @@ class smpSHL(smpModel):
                 # for k in range(outsize_):
                 #     dw_t_norm[k,j] = LA.norm(dw[:,k])
                 self.model.perf = self.lr.e # mdn_loss_val
-                y_ = self.model.z # self.model.zn.T
+                # y_ = self.model.z # self.model.zn.T
             elif self.lrname == 'RLS':
                 dw = self.lr.learnRLS(target = Y.T, r = self.model.r)
                 self.model.wo += dw
@@ -233,12 +241,45 @@ class smpSHL(smpModel):
                 # loss_t[0,j] = self.lr.loss
                 # print "mdn_loss = %s" % mdn_loss_val
                 self.model.perf = self.lr.e # mdn_loss_val
-            elif self.lrname == 'EH':
-                dw = self.lr.learnEH(target = Y.T, r = self.model.r, pred = self.model.zn, pred_lp = self.model.zn_lp, perf = self.model.perf, perf_lp = self.model.perf_lp, eta = self.model.eta_init)
-                self.model.wo += dw
-                self.model.perf = self.lr.perf
-                self.model.perf_lp = ((1 - self.model.coeff_a) * self.model.perf_lp) + (self.model.coeff_a * self.model.perf)
+            elif self.lrname in ['EH', 'eh']:
+                """untested"""
+                # EH: egal: Y
 
+                # dw = self.lr.learnEH(
+                #     target = Y.T,
+                #     r = self.model.r,
+                #     pred = self.model.zn,
+                #     pred_lp = self.model.zn_lp,
+                #     perf = self.model.perf,
+                #     perf_lp = self.model.perf_lp,
+                #     eta = self.model.eta_init
+                # )
+                
+                dw = self.lr.learnEH(
+                    target = Y.T,
+                    r = kwargs['r'],
+                    pred = kwargs['pred'],
+                    pred_lp = kwargs['pred_lp'],
+                    perf = kwargs['perf'],
+                    perf_lp = kwargs['perf_lp'],
+                    eta = kwargs['eta']
+                )
+                
+                self.model.wo += dw
+                # self.model.perf = self.lr.perf
+                # self.model.perf_lp = ((1 - self.model.coeff_a) * self.model.perf_lp) + (self.model.coeff_a * self.model.perf)
+
+                
+        # prediction (expectation)
+        
+        # oversample reservoir: clamp inputs and step the network
+        for i in range(self.oversampling):
+            _ = self.model.execute(X)
+        
+        # y_ = _.T
+        y_ = self.model.zn
+        # y_ = y.T
+        
         if self.lrname in ['RLS', 'FORCE']:
             y_ = self.model.z
         elif self.lrname == 'EH':
@@ -257,8 +298,10 @@ class smpSHL(smpModel):
                     self.lr.softmax(self.model.z[self.num_mu + self.num_sig:])
                 )
 
-        # print "y_", y_
+        # keep counting, it's important
         self.cnt_step += 1
+        
+        # return new prediction
         return y_.T
         
     def predict(self, X):

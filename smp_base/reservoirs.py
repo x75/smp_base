@@ -574,19 +574,26 @@ class LearningRules(object):
         # FIXME: clean up because it implies the same to be used for perf_lp to be computed somewhere
         #        outside this function
         if perf is None:
+            assert target is not None, "Either perf = %s or target = %s need to be not %s" % (perf, target, None)
             self.perf = -np.square(pred - target)
         else:
             self.perf = perf
+
+        # print "perf", self.perf
+        print "perf_lp", perf_lp
         
         # binary modulator
         mdltr = (np.clip(self.perf - perf_lp, 0, 1) > 0) * 1.0
+        print "mdltr", mdltr
+        mdltr *= perf_lp <= -0.025
+        print "mdltr", mdltr
         # continuous modulator
         # vmdltr = (self.perf - self.perf_lp)
         # vmdltr /= np.sum(np.abs(vmdltr))
         # OR  modulator
-        # mdltr = np.ones_like(self.zn) * np.clip(np.sum(mdltr), 0, 1)
+        # mdltr = np.ones_like(pred) * np.clip(np.sum(mdltr), 0, 1)
         # AND modulator
-        mdltr = np.ones_like(pred) * (np.sum(mdltr) >= 1) # FIXME: >=, ?
+        # mdltr = np.ones_like(pred) * (np.sum(mdltr) >= 1) # FIXME: >=, ?
         # print "Reservoir.learnEH perf = %s, modulator = %s" % (self.perf, mdltr)
 
         # compute dw
