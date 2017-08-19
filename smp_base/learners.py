@@ -88,6 +88,11 @@ class smpSHL(smpModel):
 
     @smpModelInit()
     def __init__(self, conf):
+        """smpSHL.init
+
+        Use conf dictionary to select, configure and load an adaptive
+        model from smp_base.
+        """
         # base init
         smpModel.__init__(self, conf)
 
@@ -141,6 +146,8 @@ class smpSHL(smpModel):
 
             # argh, multivariate output
             self.lr.learnFORCEmdn_setup(mixcomps = self.mixcomps)
+        elif self.lrname == 'FORCE':
+            self.lr.learnFORCEsetup(self.alpha, self.modelsize)
         elif self.lrname == 'RLS':
             self.lr.learnRLSsetup(x0 = self.model.wo, P0 = np.eye(self.model.N))
 
@@ -201,8 +208,6 @@ class smpSHL(smpModel):
         # y_ = _.T
         # # y_ = y.T
         
-        # print "smpSHL.step(X = %s, Y = %s, y_ = %s)" % ( X.shape, Y, y_)
-
         # fit (maximization)
         if Y is not None:
             
@@ -217,6 +222,7 @@ class smpSHL(smpModel):
                 self.model.perf = self.lr.e # mdn_loss_val
                 # y_ = self.model.z # self.model.zn.T
             elif self.lrname == 'RLS':
+                print "RLS", self.cnt_step
                 dw = self.lr.learnRLS(target = Y.T, r = self.model.r)
                 self.model.wo += dw
                 self.model.perf = self.lr.rls_estimator.y
@@ -273,13 +279,11 @@ class smpSHL(smpModel):
         # prediction (expectation)
         
         # oversample reservoir: clamp inputs and step the network
+        # print "smpSHL.step X", X.shape
+        
         for i in range(self.oversampling):
-            _ = self.model.execute(X)
-        
-        # y_ = _.T
-        y_ = self.model.zn
-        # y_ = y.T
-        
+            _ = self.model.execute(X.T)
+                
         if self.lrname in ['RLS', 'FORCE']:
             y_ = self.model.z
         elif self.lrname == 'EH':
@@ -297,11 +301,18 @@ class smpSHL(smpModel):
                     np.exp(self.model.z[self.num_mu:self.num_mu + self.num_sig]),
                     self.lr.softmax(self.model.z[self.num_mu + self.num_sig:])
                 )
+        else:
+            # y_ = _.T
+            y_ = self.model.zn
+            # y_ = y.T
+
+        # print "smpSHL.step(X = %s, Y = %s, y_ = %s)" % ( X.shape, Y, y_)
 
         # keep counting, it's important
         self.cnt_step += 1
         
         # return new prediction
+        # print "Y", Y.shape, "y_", y_.shape
         return y_.T
         
     def predict(self, X):

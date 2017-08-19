@@ -157,7 +157,7 @@ class LearningRules(object):
     This class implements different learning rules used for training the reservoir
     in online (aka incremental, single-time step, closed-loop) mode.
     """
-    def __init__(self, ndim_out = 1, dim = 1):
+    def __init__(self, ndim_out = 1, dim = 1, alpha = None):
         self.ndim_out = ndim_out
         self.dim = dim
         self.loss = 0
@@ -165,6 +165,7 @@ class LearningRules(object):
         self.perf = self.e # pointer
         self.e_lp = np.zeros_like(self.e)
 
+        # keep counting
         self.cnt = 0
 
     ############################################################
@@ -174,11 +175,23 @@ class LearningRules(object):
     # 4, 27 August 2009, Pages 544-557, ISSN 0896-6273,
     # http://dx.doi.org/10.1016/j.neuron.2009.07.018. (http://www.sciencedirect.com/science/article/pii/S0896627309005479)
     # Keywords: SYSNEURO
+    def learnFORCEsetup(self, alpha = None, dim = 1):
+        if alpha is None:
+            self.alpha = 1.0
+        else:
+            self.alpha = alpha
+            
+        # FORCE stuff
+        self.P = (1.0/self.alpha) * np.eye(dim)
+
     def learnFORCE_update_P(self, P, r):
         """LearningRules.learnFORCE_update_P
 
         Perform the covariance update for the FORCE learning rule
         """
+        if hasattr(self, P):
+           P = self.P
+            
         k = np.dot(P, r)
         rPr = np.dot(r.T, k)
         c = 1.0/(1.0 + rPr)
@@ -580,13 +593,13 @@ class LearningRules(object):
             self.perf = perf
 
         # print "perf", self.perf
-        print "perf_lp", perf_lp
+        # print "perf_lp", perf_lp
         
         # binary modulator
         mdltr = (np.clip(self.perf - perf_lp, 0, 1) > 0) * 1.0
-        print "mdltr", mdltr
+        # print "mdltr", mdltr
         mdltr *= perf_lp <= -0.025
-        print "mdltr", mdltr
+        # print "mdltr", mdltr
         # continuous modulator
         # vmdltr = (self.perf - self.perf_lp)
         # vmdltr /= np.sum(np.abs(vmdltr))
@@ -899,6 +912,12 @@ class Reservoir(object):
     ############################################################
     # learn: FORCE, EH, recursive regression (RLS)?
     def learnFORCE(self, target):
+        """Reservoir.learnFORCE
+
+        FORCE learning rule
+
+        Reservoir class member
+        """
         # update statistics
         k = np.dot(self.P, self.r)
         rPr = np.dot(self.r.T, k)
@@ -913,6 +932,12 @@ class Reservoir(object):
         self.wo += dw
 
     def learnRLSsetup(self,wo_init, P0_init):
+        """Reservoir.learnRLSsetup
+
+        RLS learning rule setup hook
+
+        Reservoir class member
+        """
         # Attention! not using function parameters
 
         #self.rls_E = rlspy.data_matrix.Estimator(np.zeros(shape=(self.N, 1)) ,(1.0/self.alpha)*np.eye(self.N))
@@ -932,6 +957,12 @@ class Reservoir(object):
         #self.wo = np.random.uniform(0,1, size=(self.N, self.output_num))
 
     def learnRLS(self, target):
+        """Reservoir.learnRLS
+
+        RLS learning rule
+
+        Reservoir class member
+        """
         # print "%s.learnRLS, target.shape = %s" % (self.__class__.__name__, target.shape)
         self.rls_E.update(self.r.T, target.T, self.theta_state)
         self.wo = self.rls_E.x
@@ -944,6 +975,8 @@ class Reservoir(object):
         update with that reward, which can be binary or
         continuous. The exploratory part is happening in execute() by
         adding gaussian noise centered on current prediction.
+
+        Reservoir class member
         """
         eta = self.eta_init # 0.0003
 
