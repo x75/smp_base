@@ -36,7 +36,7 @@ class smpModelInit():
 
         return wrap
 
-    ################################################################################
+################################################################################
 # smpModel decorator step
 class smpModelStep():
     """smpModelStep wrapper"""

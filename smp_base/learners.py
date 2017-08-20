@@ -48,21 +48,24 @@ class smpSHL(smpModel):
 
     Single Hidden Layer neural network model class.
 
-    This class can be used both for Reservoir networks as well as
-    extreme learning machines which are most often used by fitting the
-    target output to the single hidden layer activations with some
-    kind of regression fit.
+    This class implements networks in the spectrum from reservoir
+    networks (echo state network, liquid state machines) to extreme
+    learning machines. Networks are trained by fitting output weights
+    to approximate a target from the single hidden layer
+    activations. Current learning algorithms are recursive least
+    squares variants (rls, force) and reward modulated hebbian
+    learning (eh).
+
+    Because this is a stateful model (it has memory) the fit step
+    needs to know the sensorimotor tapping context to be able to
+    correlate past activation states and outputs with delayed error
+    feedback or rewards.
     """
-    # defaults = {
-    #     'idim': 1, 'odim': 1, 'modelsize': 200, 'tau': 0.1, 'multitau': False,
-    #     'density': 0.1, 'spectral_radius': 0.99, 'w_input': 1.0, 'w_feedback': 0.0, 'w_bias': 0.5,
-    #     'nonlin_func': np.tanh, 'sparse': True, 'ip': False, 'theta': 0.05, 'theta_state': 0.02,
-    #     'coeff_a': 0.2, 'visualize': False, 'alpha': 1.0, 'lrname': 'FORCE', 'mixcomps': 3,
-    #     'eta_init': 1e-3,
-    # }
+    
     defaults = {
         'idim': 1,
         'odim': 1,
+        'memory': 1,
         'tau': 1.0,
         'multitau': False,
         'modelsize': 100,
@@ -96,9 +99,12 @@ class smpSHL(smpModel):
         # base init
         smpModel.__init__(self, conf)
 
-        print "smpSHL.lrname", self.lrname, conf['lrname']
-        print "smpSHL.theta", self.theta, conf['theta']
-        
+        # debugging
+        for v in ['lrname', 'theta', 'input_coupling', 'visualize']:
+            print "%s.%s = %s, conf[%s] = %s" % (
+                self.__class__.__name__, v, getattr(self, v), v, conf[v])
+
+        # representation specific pre config
         if self.lrname == 'FORCEmdn':
             # self.odim_real = self.odim * self.mixcomps * 3
             self.num_mu = self.odim * self.mixcomps
@@ -112,12 +118,15 @@ class smpSHL(smpModel):
         else:
             self.odim_real = self.odim
 
+        # explicit short term memory
+        self.r_ = np.zeros((self.modelsize, self.memory))
+        self.y_ = np.zeros((self.odim_real, self.memory))
+        self.y_lp_ = np.zeros((self.odim_real, self.memory))
+
         # smpSHL learning rule init
         self.lr = LearningRules(ndim_out = self.odim_real, dim = self.odim)
-
-        print "smpSHL.input_coupling = %s" % self.input_coupling
         
-        # smpSHL reservoir init 
+        # smpSHL reservoir init
         self.model = Reservoir(
             N = self.modelsize,
             p = self.density,
@@ -138,15 +147,16 @@ class smpSHL(smpModel):
             input_coupling = self.input_coupling,
         )
 
-        print "smpSHL.lrname", self.lrname
+        # learning rule specific initializations
         if self.lrname == 'FORCEmdn':
-            # sigmas = [2e-1] * self.num_mu + [5e-2] * self.num_sig + [1.0/self.mixcomps] * self.num_pi
             sigmas = [self.sigma_mu] * self.num_mu + [self.sigma_sig] * self.num_sig + [self.sigma_pi] * self.num_pi
             # sigmas = [1e-1] * self.odim_real
-            print "sigmas", sigmas
+            print "%s.init sigmas = %s" % (self.__class__.__name__, sigmas)
             # output weight initialization
-            self.model.init_wo_random(np.zeros((1, self.odim_real)), np.array(sigmas))
-
+            self.model.init_wo_random(
+                np.zeros((1, self.odim_real)),
+                np.array(sigmas)
+            )
             # argh, multivariate output
             self.lr.learnFORCEmdn_setup(mixcomps = self.mixcomps)
         elif self.lrname == 'FORCE':
@@ -154,9 +164,8 @@ class smpSHL(smpModel):
         elif self.lrname == 'RLS':
             self.lr.learnRLSsetup(x0 = self.model.wo, P0 = np.eye(self.model.N))
 
+        # everybody counts
         self.cnt_step = 0
-
-        print "visualize", self.visualize
         
     def visualize_model_init(self):
 
@@ -251,19 +260,8 @@ class smpSHL(smpModel):
                 # print "mdn_loss = %s" % mdn_loss_val
                 self.model.perf = self.lr.e # mdn_loss_val
             elif self.lrname in ['EH', 'eh']:
-                """untested"""
-                # EH: egal: Y
+                """exploratory hebbian rule"""
 
-                # dw = self.lr.learnEH(
-                #     target = Y.T,
-                #     r = self.model.r,
-                #     pred = self.model.zn,
-                #     pred_lp = self.model.zn_lp,
-                #     perf = self.model.perf,
-                #     perf_lp = self.model.perf_lp,
-                #     eta = self.model.eta_init
-                # )
-                
                 dw = self.lr.learnEH(
                     target = Y.T,
                     r = kwargs['r'],
@@ -275,7 +273,7 @@ class smpSHL(smpModel):
                 )
                 
                 self.model.wo += dw
-                # self.model.perf = self.lr.perf
+                self.model.perf = self.lr.perf
                 # self.model.perf_lp = ((1 - self.model.coeff_a) * self.model.perf_lp) + (self.model.coeff_a * self.model.perf)
 
                 
@@ -286,7 +284,8 @@ class smpSHL(smpModel):
         
         for i in range(self.oversampling):
             _ = self.model.execute(X.T)
-                
+
+        # prepare output
         if self.lrname in ['RLS', 'FORCE']:
             y_ = self.model.z
         elif self.lrname == 'EH':
@@ -311,6 +310,18 @@ class smpSHL(smpModel):
 
         # print "smpSHL.step(X = %s, Y = %s, y_ = %s)" % ( X.shape, Y, y_)
 
+        # roll memory buffer
+        for mem in ['r_', 'y_', 'y_lp_']:
+            # print "smpSHL.step %s pre roll = %s" % (mem, getattr(self, mem))
+            setattr(self, mem, np.roll(getattr(self, mem), shift = 1, axis = 1))
+            # print "smpSHL.step %s post roll = %s" % (mem, getattr(self, mem))
+            
+        # commit to memory
+        self.r_[...,[0]] = self.model.r.copy()
+        self.y_[...,[0]] = y_.copy()
+        # print "smpSHL.step %s post update = %s" % ('y_', getattr(self, 'y_'))
+        self.y_lp_[...,[0]] = y_.copy() # FIXME y_lp_
+            
         # keep counting, it's important
         self.cnt_step += 1
         
@@ -819,9 +830,11 @@ class learnerEH(learner):
         return ret
     
     def predict_and_learn(self, ti):
-        ############################################################
-        # forward model
-        # compute time delayed predictions
+        """learnerEH.predict_and_learn
+
+        Train an additional multi-step forward model alongside the
+        inverse one.
+        """
         pre_r = np.zeros((len(self.pre.pre_delay), self.cfg.N, 1))
         e = np.zeros((self.pre.pre_num, 1))
         for idx,pre_delay in enumerate(self.pre.pre_delay):
@@ -861,7 +874,10 @@ class learnerEH(learner):
                 self.pre.pre_w[idx,:,ti+1] = self.pre.pre_w[idx,:,ti]
         
     def learnEH(self, channel=0):
-        """Apply modulator with Hebbian LR"""
+        """learnerEH.learnEH
+
+        Apply modulator with Hebbian LR
+        """
         now = self.cnt_main
         
         bi = (now - self.cfg.lag) # backindex
@@ -906,10 +922,13 @@ class learnerEH(learner):
                 self.res.wo[:,i] += dw[:]
 
     def learnEHE(self):
-        """Apply modulator with Hebbian LR using eligibility traces"""
+        """learnerEH.learnEHE
+
+        Apply modulator with Hebbian LR using eligibility traces
+        """
         # current time step
         now = self.cnt_main
-        # print "learnEHE ----"
+
         # eta = self.cfg.eta_EH * self.ewin_inv
         if self.cfg.use_anneal:
             eta = self.anneal(self.cfg.eta_EH, self.cnt_main, self.cfg.anneal_const)
@@ -917,8 +936,11 @@ class learnerEH(learner):
             self.res.set_theta(theta)
         else:
             eta = self.cfg.eta_EH
-        print "eta", eta
-        print "theta", self.res.theta
+            
+        print "%s.learnEHE eta = %s" % (self.__class__.__name__, eta)
+        print "%s.learnEHE theta = %s, self.res.theta = %s" % (
+            self.__class__.__name__, theta, self.res.theta)
+        
         #  rescale for eligibility window
         # eta *= self.ewin_inv
         # eta = eta_EH * anneal factor
@@ -951,6 +973,7 @@ class learnerEH(learner):
                 ddw = eta_eff * postsyn * presyn * mdltr # * et
                 # self.et_corr[0,j] += np.abs(np.sum(ddw))
                 self.et_corr[0,j] += np.sum(ddw)
+                # accumulate dw for each slot in the eligibility window
                 dw += ddw
 
             print "et corr argmax:", self.et_corr.argmax()
