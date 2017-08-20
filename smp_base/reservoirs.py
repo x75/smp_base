@@ -52,9 +52,10 @@ except ImportError:
 ############################################################
 # utility functions
 def create_matrix_sparse_random(rows = 2, cols = 2, density = 0.1, dist = "normal"):
-    """create_matrix_sparse_random
+    """reservoirs.create_matrix_sparse_random
 
-    Create a sparse (density p) random (distribution dist) matrix for use in the recurrent network
+    Create a sparse (density p) random (distribution dist) matrix for
+    use in the recurrent network.
     """
     m = spa.rand(rows, cols, density)
     m = m.todense()
@@ -62,18 +63,19 @@ def create_matrix_sparse_random(rows = 2, cols = 2, density = 0.1, dist = "norma
     valtmp = m[validx]
     # print "validx", validx.shape
     # print "m", m[validx]#.shape
-    if dist == "normal":
+    if dist in ['normal', 'sparse_normal']:
         valtmp_rnd = np.random.normal(0,   1, size=(valtmp.shape[1], ))
-    elif dist == "uniform":
+    elif dist in ['uniform', 'sparse_uniform']:
         valtmp_rnd = np.random.uniform(-1, 1, size=(valtmp.shape[1], ))
     # why array?
     m[validx] = valtmp_rnd
     return np.array(m)
 
 def create_matrix_reservoir(N, p):
-    """create_matrix_reservoir
+    """reservoirs.create_matrix_reservoir
 
-    Create an NxN reservoir recurrence matrix with density p. Wrapper for create_matrix_sparse_random.
+    Create an NxN reservoir recurrence matrix with density p. Wrapper
+    for create_matrix_sparse_random.
     """
     # M = spa.rand(N, N, p)
     # M = M.todense()
@@ -84,10 +86,11 @@ def create_matrix_reservoir(N, p):
     # # return dense representation
     # return np.array(M).copy()
     # # return spa.bsr_matrix(M)
+    
     return create_matrix_sparse_random(N, N, p, dist = "normal")
 
 def normalize_spectral_radius(M, g):
-    """normalize_spectral_radius
+    """reservoirs.normalize_spectral_radius
 
     Normalize the spectral radius of a given matrix M to scale to g
     """
@@ -108,10 +111,20 @@ def normalize_spectral_radius(M, g):
 
 ################################################################################
 # input matrix creation
-def res_input_matrix_random_sparse(idim = 1, odim = 1, density=0.1):
-    """res_input_matrix_random_sparse
+def res_input_matrix_random_sparse(idim = 1, odim = 1, density=0.1, dist = 'normal'):
+    """reservoirs.res_input_matrix_random_sparse
 
-    Create a sparse reservoir input matrix. Wrapper for create_matrix_sparse_random.
+    Create a sparse reservoir input matrix. Wrapper for
+    create_matrix_sparse_random.
+
+    Arguments:
+    idim: input dimension
+    odim: hidden dimension
+    density: density
+    dist: distribution
+
+    Returns:
+    wi: input matrix
     """
     # p_wi = density
     # wi_ = spa.rand(odim, idim, p_wi)
@@ -124,12 +137,13 @@ def res_input_matrix_random_sparse(idim = 1, odim = 1, density=0.1):
     # wi[tmp_idx] = tmp_r
     # # return dense repr
     # return np.asarray(wi)
-    return create_matrix_sparse_random(odim, idim, density, dist = "uniform")
+    return create_matrix_sparse_random(odim, idim, density, dist = dist)
 
 def res_input_matrix_disjunct_proj(idim = 1, odim = 1):
-    """res_input_matrix_disjunct_proj
+    """reservoirs.res_input_matrix_disjunct_proj
 
-    Create an input matrix that projects inputs onto disjunct regions of the hidden space
+    Create an input matrix that projects inputs onto disjunct regions
+    of the hidden space.
     """
     
     # all matrices tensor
@@ -144,6 +158,13 @@ def res_input_matrix_disjunct_proj(idim = 1, odim = 1):
     wi = np.sum(wi_, axis=0)
     return wi
 
+def res_input_matrix_random(idim = 1, odim = 1, dist = 'normal'):
+    if dist == 'uniform':
+        wi = np.random.uniform(-1.0, 1.0, (odim, idim))
+    elif dist == 'normal':
+        wi = np.random.normal(0.0, 1.0, (odim, idim))
+    return wi
+
 ################################################################################
 # Standalone class for learning rules
 # - Recursive Least Squares (RLS, depends on rlspy.py): the vanilla online supervised
@@ -154,8 +175,9 @@ def res_input_matrix_disjunct_proj(idim = 1, odim = 1):
 class LearningRules(object):
     """LearningRules class
 
-    This class implements different learning rules used for training the reservoir
-    in online (aka incremental, single-time step, closed-loop) mode.
+    This class implements different learning rules used for training
+    the reservoir in online (aka incremental, single-time step,
+    closed-loop) mode.
     """
     def __init__(self, ndim_out = 1, dim = 1, alpha = None):
         self.ndim_out = ndim_out
@@ -628,15 +650,18 @@ class Reservoir(object):
 
     Leaky integrator single reservoir layer
     """
-    def __init__(self, N=100, p = 0.1, g = 1.2, alpha = 1.0, tau = 0.1,
-                 input_num=1, output_num=1, input_scale = 0.05,
-                 feedback_scale = 0.01, bias_scale = 0.,
-                 eta_init=1e-5, theta = 1e-1, theta_state = 1e-2,
-                 nonlin_func=np.tanh,
-                 sparse=True,
-                 ip=False,
-                 coeff_a = 0.2,
-                 mtau=False):
+    def __init__(
+            self, N = 100, p = 0.1, g = 1.2, alpha = 1.0, tau = 0.1,
+            input_num = 1, output_num = 1, input_scale = 0.05,
+            feedback_scale = 0.01, bias_scale = 0.,
+            eta_init = 1e-5, theta = 1e-1, theta_state = 1e-2,
+            nonlin_func = np.tanh,
+            sparse = True,
+            ip = False,
+            coeff_a = 0.2,
+            mtau = False,
+            input_coupling = 'normal',
+        ):
         """
         Reservoir.__init__
 
@@ -649,6 +674,9 @@ class Reservoir(object):
             Weight matrix density [0.1]
           g
             Spectral radius [1.2]
+
+        TODO:
+        - unify: wi_amp, input_scaling, res_input_scaling, ...
         """
 
         # reservoir size
@@ -676,9 +704,10 @@ class Reservoir(object):
 
         # inputs and input weight matrix
         self.input_num = input_num
+        self.input_coupling = input_coupling
         self.wi_amp = input_scale
-        # self.wi = np.random.uniform(-self.wi_amp, self.wi_amp, (self.N, self.input_num))
-        self.wi = np.random.normal(0, self.wi_amp, (self.N, self.input_num))
+        self.init_wi()
+        print "reservoirs.init wi = %s" % (self.wi.shape, )
 
         # readout feedback term
         self.output_num = output_num
@@ -805,10 +834,40 @@ class Reservoir(object):
         self.wo = np.zeros((self.N, self.output_num))
 
     ############################################################
+    # initialize input weight matrix
+    def init_wi(self):
+        if hasattr(self, 'input_coupling'):
+            if self.input_coupling in ['uniform', 'normal']:
+                self.wi = res_input_matrix_random(
+                    idim = self.input_num,
+                    odim = self.N,
+                    dist = self.input_coupling) * self.wi_amp
+                
+            elif self.input_coupling in ['sparse_uniform', 'sparse_normal']:
+                self.wi = res_input_matrix_random_sparse(
+                    idim = self.input_num,
+                    odim = self.N,
+                    density = 0.2, # default
+                    dist = self.input_coupling) * self.wi_amp
+            elif self.input_coupling in ['disjunct']:
+                self.wi = res_input_matrix_disjunct_proj(
+                    idim = self.input_num,
+                    odim = self.N) * self.wi_amp
+            elif self.input_coupling in ['identity']:
+                self.init_wi_identity()
+            elif self.input_coupling in ['ones']:
+                self.init_wi_ones()
+            else:
+                print "Reservoir.init_wi: unknown input_coupling = '%s'" % (self.input_coupling, )
+                sys.exit(-1)
+        else:
+            self.wi = res_input_matrix_random(idim = self.input_num, odim = self.N, dist = 'normal') * self.wi_amp
+            
+    ############################################################
     # initialize input weights to I
     def init_wi_identity(self):
         # self.wo = np.eye((self.N, self.output_num))
-        self.wi = np.eye((self.input_num))
+        self.wi = np.eye((self.input_num)) # hm?
 
     ############################################################
     # initialize input weights to ones

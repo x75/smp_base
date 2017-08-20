@@ -20,7 +20,6 @@ from matplotlib.pyplot import figure
 
 import ConfigParser, ast
 
-
 from smp_base.eligibility import Eligibility
 from smp_base.models import smpModelInit, smpModelStep, smpModel
 from smp_base.models import make_figure, make_gridspec
@@ -84,6 +83,7 @@ class smpSHL(smpModel):
         'mixcomps': 3,
         'eta_init': 1e-4,
         'oversampling': 1,
+        'input_coupling': 'normal',
         }
 
     @smpModelInit()
@@ -115,6 +115,8 @@ class smpSHL(smpModel):
         # smpSHL learning rule init
         self.lr = LearningRules(ndim_out = self.odim_real, dim = self.odim)
 
+        print "smpSHL.input_coupling = %s" % self.input_coupling
+        
         # smpSHL reservoir init 
         self.model = Reservoir(
             N = self.modelsize,
@@ -133,6 +135,7 @@ class smpSHL(smpModel):
             theta_state = self.theta_state,
             coeff_a = self.coeff_a,
             alpha = self.alpha,
+            input_coupling = self.input_coupling,
         )
 
         print "smpSHL.lrname", self.lrname
