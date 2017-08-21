@@ -18,3 +18,22 @@ class meas(object):
     def step(self, x):
         pass
 
+    @staticmethod
+    def square(x):
+        return np.square(x)
+
+    @staticmethod
+    def abs(x):
+        return np.abs(x)
+
+    @staticmethod
+    def sum_abs(x):
+        return np.sum(np.abs(x))
+
+    @staticmethod
+    def sum_square(x):
+        return np.sum(np.square(x))
+
+    @staticmethod
+    def sum_sqrt(x):
+        return np.sum(np.sqrt(meas.abs(x)))

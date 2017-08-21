@@ -122,6 +122,7 @@ class smpSHL(smpModel):
         #
         if self.lrname in ['eh', 'EH']:
             # algorithm variables
+            # FIXME: these should all go into learning rule
             self.y_model = iir_fo(a = 0.2, dim = self.odim_real)    # output model
             self.perf_model = iir_fo(a = 0.2, dim = self.odim_real) # performance model (reward prediction)
 
@@ -224,8 +225,19 @@ class smpSHL(smpModel):
             ax.set_title(plottitles[i])
 
     def learnEH_prepare(self, perf = None):
-        print "perf", perf
-        self.perf = np.reshape(perf, (self.odim_real, 1))
+        """smpSHL.learnEH_prepare
+
+        Prepare variables for learning rule input which are not
+        covered by step()'s calling pattern.
+        """
+        # make sure shape agrees with output
+        # print "perf", perf.shape
+        if np.isscalar(perf) or len(perf.shape) < 1:
+            perf_ = -np.ones_like(self.y) * perf
+        else:
+            perf_ = -np.ones_like(self.y) * perf.reshape(self.odim_real, 1)
+        self.perf = perf_
+        # copy perf to lr loss
         self.lr.loss = self.perf
         
     @smpModelStep()
@@ -279,33 +291,25 @@ class smpSHL(smpModel):
                 self.model.perf = self.lr.e # mdn_loss_val
             elif self.lrname in ['EH', 'eh']:
                 """exploratory hebbian rule"""
-                # outside: lag info, X, Y, error
-                # inside: r, Y_bar, error_bar
+                # outside: lag info, X, Y, perf
+                # inside: r, Y_bar, perf_bar
 
-                # dw = self.lr.learnEH(
-                #     target = Y.T,
-                #     r = kwargs['r'],
-                #     pred = kwargs['pred'],
-                #     pred_lp = kwargs['pred_lp'],
-                #     perf = kwargs['perf'],
-                #     perf_lp = kwargs['perf_lp'],
-                #     eta = kwargs['eta']
-                # )
+                # shorthand
+                lag = self.minlag
 
-                lag = 1
-
+                # compute dw
                 dw = self.lr.learnEH(
                     target = None,
                     r = self.r_[...,[-lag]],
-                    pred = self.y, # Y,
-                    pred_lp = self.y_lp,
+                    pred = self.y_[...,[-lag]], # Y,
+                    pred_lp = self.y_lp_[...,[-lag]],
                     perf = self.perf,
                     perf_lp = self.perf_lp,
                     eta = self.eta,
                     )
-                
+                # apply dw
                 self.model.wo += dw
-                self.model.perf = self.lr.perf
+                self.model.perf = self.lr.perf # hm?
                 # self.model.perf_lp = ((1 - self.model.coeff_a) * self.model.perf_lp) + (self.model.coeff_a * self.model.perf)
 
                 
@@ -323,20 +327,21 @@ class smpSHL(smpModel):
         elif self.lrname in ['eh', 'EH']:
             self.y = self.model.zn
             
-            self.y_lp = self.y_model.predict(self.y)
-            self.perf_lp = self.perf_model.predict(self.perf)
-            
             # roll memory buffer
             for mem in ['r_', 'y_', 'y_lp_']:
                 # print "smpSHL.step %s pre roll = %s" % (mem, getattr(self, mem))
-                setattr(self, mem, np.roll(getattr(self, mem), shift = 1, axis = 1))
+                setattr(self, mem, np.roll(getattr(self, mem), shift = -1, axis = 1))
                 # print "smpSHL.step %s post roll = %s" % (mem, getattr(self, mem))
             
             # commit to memory
-            self.r_[...,[0]] = self.model.r.copy()
-            self.y_[...,[0]] = self.y.copy()
+            self.r_[...,[-1]] = self.model.r.copy()
+            self.y_[...,[-1]] = self.y.copy()
             # print "smpSHL.step %s post update = %s" % ('y_', getattr(self, 'y_'))
-            self.y_lp_[...,[0]] = self.y_lp.copy() # FIXME y_lp_
+            self.y_lp_[...,[-1]] = self.y_lp.copy() # FIXME y_lp_
+
+            # update output and perf prediction
+            self.y_lp = self.y_model.predict(self.y)
+            self.perf_lp = self.perf_model.predict(self.perf)
             
         elif self.lrname == 'FORCEmdn':
             if self.odim < 2:
