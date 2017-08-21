@@ -116,22 +116,25 @@ class smpSHL(smpModel):
             # self.alpha = 10.0
             self.tau = 1.0 # 0.025
             print "self.alpha", self.alpha
-        elif self.lrname in ['eh', 'EH']:
+        else:
+            self.odim_real = self.odim
+
+        #
+        if self.lrname in ['eh', 'EH']:
             # algorithm variables
             self.y_model = iir_fo(a = 0.2, dim = self.odim_real)    # output model
             self.perf_model = iir_fo(a = 0.2, dim = self.odim_real) # performance model (reward prediction)
-        
+
+            # output variables
+            self.y     = np.zeros((self.odim_real, 1))   # output
             self.y_lp  = np.zeros((self.odim_real, 1))   # output prediction
             self.perf    = np.zeros((self.odim_real, 1)) # performance (-|error|)
             self.perf_lp = np.zeros((self.odim_real, 1)) # performance prediction
         
-            # explicit short term memory
+            # explicit short term memory needed for tapping, lambda and gamma
             self.r_ = np.zeros((self.modelsize, self.memory))
             self.y_ = np.zeros((self.odim_real, self.memory))
             self.y_lp_ = np.zeros((self.odim_real, self.memory))
-
-        else:
-            self.odim_real = self.odim
 
         # smpSHL learning rule init
         self.lr = LearningRules(ndim_out = self.odim_real, dim = self.odim)
@@ -220,6 +223,11 @@ class smpSHL(smpModel):
             ax.plot(item[sl])
             ax.set_title(plottitles[i])
 
+    def learnEH_prepare(self, perf = None):
+        print "perf", perf
+        self.perf = np.reshape(perf, (self.odim_real, 1))
+        self.lr.loss = self.perf
+        
     @smpModelStep()
     def step(self, X, Y, *args, **kwargs):
 
@@ -289,9 +297,9 @@ class smpSHL(smpModel):
                 dw = self.lr.learnEH(
                     target = None,
                     r = self.r_[...,[-lag]],
-                    pred = Y,
-                    pred_lp = self.y_lp
-                    perf = self.perf
+                    pred = self.y, # Y,
+                    pred_lp = self.y_lp,
+                    perf = self.perf,
                     perf_lp = self.perf_lp,
                     eta = self.eta,
                     )
@@ -311,47 +319,51 @@ class smpSHL(smpModel):
 
         # prepare output
         if self.lrname in ['RLS', 'FORCE']:
-            y_ = self.model.z
-        elif self.lrname == 'EH':
-            y_ = self.model.zn
+            self.y = self.model.z
+        elif self.lrname in ['eh', 'EH']:
+            self.y = self.model.zn
+            
+            self.y_lp = self.y_model.predict(self.y)
+            self.perf_lp = self.perf_model.predict(self.perf)
+            
+            # roll memory buffer
+            for mem in ['r_', 'y_', 'y_lp_']:
+                # print "smpSHL.step %s pre roll = %s" % (mem, getattr(self, mem))
+                setattr(self, mem, np.roll(getattr(self, mem), shift = 1, axis = 1))
+                # print "smpSHL.step %s post roll = %s" % (mem, getattr(self, mem))
+            
+            # commit to memory
+            self.r_[...,[0]] = self.model.r.copy()
+            self.y_[...,[0]] = self.y.copy()
+            # print "smpSHL.step %s post update = %s" % ('y_', getattr(self, 'y_'))
+            self.y_lp_[...,[0]] = self.y_lp.copy() # FIXME y_lp_
+            
         elif self.lrname == 'FORCEmdn':
             if self.odim < 2:
-                y_ = self.lr.mixture(
+                self.y = self.lr.mixture(
                     self.model.z[:self.mixcomps,0],
                     np.exp(self.model.z[self.mixcomps:(2*self.mixcomps),0]),
                     self.lr.softmax(self.model.z[(2*self.mixcomps):,0])
                 )
             else:
-                y_ = self.lr.mixtureMV(
+                self.y = self.lr.mixtureMV(
                     self.model.z[:self.num_mu],
                     np.exp(self.model.z[self.num_mu:self.num_mu + self.num_sig]),
                     self.lr.softmax(self.model.z[self.num_mu + self.num_sig:])
                 )
         else:
-            # y_ = _.T
-            y_ = self.model.zn
-            # y_ = y.T
+            # self.y = _.T
+            self.y = self.model.zn
+            # self.y = y.T
 
-        # print "smpSHL.step(X = %s, Y = %s, y_ = %s)" % ( X.shape, Y, y_)
+        # print "smpSHL.step(X = %s, Y = %s, y_ = %s)" % ( X.shape, Y, self.y)
 
-        # roll memory buffer
-        for mem in ['r_', 'y_', 'y_lp_']:
-            # print "smpSHL.step %s pre roll = %s" % (mem, getattr(self, mem))
-            setattr(self, mem, np.roll(getattr(self, mem), shift = 1, axis = 1))
-            # print "smpSHL.step %s post roll = %s" % (mem, getattr(self, mem))
-            
-        # commit to memory
-        self.r_[...,[0]] = self.model.r.copy()
-        self.y_[...,[0]] = y_.copy()
-        # print "smpSHL.step %s post update = %s" % ('y_', getattr(self, 'y_'))
-        self.y_lp_[...,[0]] = y_.copy() # FIXME y_lp_
-            
         # keep counting, it's important
         self.cnt_step += 1
         
         # return new prediction
-        # print "Y", Y.shape, "y_", y_.shape
-        return y_.T
+        # print "Y", Y.shape, "y_", self.y.shape
+        return self.y.T
         
     def predict(self, X):
         if X.shape[0] > 1: # batch input
