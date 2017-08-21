@@ -23,6 +23,7 @@ import ConfigParser, ast
 from smp_base.eligibility import Eligibility
 from smp_base.models import smpModelInit, smpModelStep, smpModel
 from smp_base.models import make_figure, make_gridspec
+from smp_base.models import iir_fo
 from smp_base.reservoirs import Reservoir, LearningRules
 
 try:
@@ -115,13 +116,22 @@ class smpSHL(smpModel):
             # self.alpha = 10.0
             self.tau = 1.0 # 0.025
             print "self.alpha", self.alpha
+        elif self.lrname in ['eh', 'EH']:
+            # algorithm variables
+            self.y_model = iir_fo(a = 0.2, dim = self.odim_real)    # output model
+            self.perf_model = iir_fo(a = 0.2, dim = self.odim_real) # performance model (reward prediction)
+        
+            self.y_lp  = np.zeros((self.odim_real, 1))   # output prediction
+            self.perf    = np.zeros((self.odim_real, 1)) # performance (-|error|)
+            self.perf_lp = np.zeros((self.odim_real, 1)) # performance prediction
+        
+            # explicit short term memory
+            self.r_ = np.zeros((self.modelsize, self.memory))
+            self.y_ = np.zeros((self.odim_real, self.memory))
+            self.y_lp_ = np.zeros((self.odim_real, self.memory))
+
         else:
             self.odim_real = self.odim
-
-        # explicit short term memory
-        self.r_ = np.zeros((self.modelsize, self.memory))
-        self.y_ = np.zeros((self.odim_real, self.memory))
-        self.y_lp_ = np.zeros((self.odim_real, self.memory))
 
         # smpSHL learning rule init
         self.lr = LearningRules(ndim_out = self.odim_real, dim = self.odim)
@@ -261,16 +271,30 @@ class smpSHL(smpModel):
                 self.model.perf = self.lr.e # mdn_loss_val
             elif self.lrname in ['EH', 'eh']:
                 """exploratory hebbian rule"""
+                # outside: lag info, X, Y, error
+                # inside: r, Y_bar, error_bar
+
+                # dw = self.lr.learnEH(
+                #     target = Y.T,
+                #     r = kwargs['r'],
+                #     pred = kwargs['pred'],
+                #     pred_lp = kwargs['pred_lp'],
+                #     perf = kwargs['perf'],
+                #     perf_lp = kwargs['perf_lp'],
+                #     eta = kwargs['eta']
+                # )
+
+                lag = 1
 
                 dw = self.lr.learnEH(
-                    target = Y.T,
-                    r = kwargs['r'],
-                    pred = kwargs['pred'],
-                    pred_lp = kwargs['pred_lp'],
-                    perf = kwargs['perf'],
-                    perf_lp = kwargs['perf_lp'],
-                    eta = kwargs['eta']
-                )
+                    target = None,
+                    r = self.r_[...,[-lag]],
+                    pred = Y,
+                    pred_lp = self.y_lp
+                    perf = self.perf
+                    perf_lp = self.perf_lp,
+                    eta = self.eta,
+                    )
                 
                 self.model.wo += dw
                 self.model.perf = self.lr.perf
