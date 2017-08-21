@@ -311,7 +311,6 @@ class smpSHL(smpModel):
                 self.model.wo += dw
                 self.model.perf = self.lr.perf # hm?
                 # self.model.perf_lp = ((1 - self.model.coeff_a) * self.model.perf_lp) + (self.model.coeff_a * self.model.perf)
-
                 
         # prediction (expectation)
         
