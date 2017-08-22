@@ -37,3 +37,16 @@ class meas(object):
     @staticmethod
     def sum_sqrt(x):
         return np.ones_like(x) * np.sum(np.sqrt(meas.abs(x)))
+
+    # accel
+    @staticmethod
+    def abs_accel(x):
+        return np.abs(x)
+
+    @staticmethod
+    def perf_accel(err, acc):
+        """Simple reward: let body acceleration point into reduced error direction"""
+        return np.sign(err) * acc
+        # self.perf = np.sign(err) * np.sign(acc) * acc**2
+
+    

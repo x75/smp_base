@@ -155,8 +155,8 @@ class smpSHL(smpModel):
         self.model = Reservoir(
             N = self.modelsize,
             p = self.density,
-            input_num=self.idim,
-            output_num=self.odim_real,
+            input_num = self.idim,
+            output_num = self.odim_real,
             g = self.spectral_radius,
             tau = self.tau,
             eta_init = self.eta_init,
