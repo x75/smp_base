@@ -3,7 +3,7 @@
 Some simple functions commonly used
 """
 
-from numpy import tanh, clip, inf, cos, sin, array, poly1d, sign
+from numpy import pi, tanh, clip, inf, cos, sin, array, poly1d, sign
 from numpy.linalg import norm
 
 
@@ -16,11 +16,11 @@ def linear(x, a = 1.0, b = 0.0):
 def nonlin_1(x, a = 1.0, b = 0.0):
     return tanh(linear(x, a, b))
 
-def nonlin_2(x, a = 1.0, b = 1.0):
+def nonlin_2(x, a = 1.0, b = -1.0):
     return clip(linear(x, a, b = 0), 0, inf) + b
 
-def nonlin_3(x, a = 1.0, b = 0.0):
-    return cos(linear(x, a, b = 0))
+def nonlin_3(x, a = pi, b = 0.0):
+    return cos(linear(x, a, b = b))
 
 def nonlin_poly(self, u):
     """nonlin_poly
