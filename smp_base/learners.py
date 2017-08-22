@@ -135,7 +135,7 @@ class smpSHL(smpModel):
             self.perf_model = iir_fo(a = 0.2, dim = self.odim_real) # performance model (reward prediction)
 
             # output variables
-            self.y     = np.zeros((self.odim_real, 1))   # output
+            # self.y     = np.zeros((self.odim_real, 1))   # output
             self.y_lp  = np.zeros((self.odim_real, 1))   # output prediction
             self.perf    = np.zeros((self.odim_real, 1)) # performance (-|error|)
             self.perf_lp = np.zeros((self.odim_real, 1)) # performance prediction
@@ -147,6 +147,7 @@ class smpSHL(smpModel):
             self.perf_ = np.zeros((self.odim_real, self.memory))
             self.perf_lp_ = np.zeros((self.odim_real, self.memory))
 
+        self.y     = np.zeros((self.odim_real, 1))   # output
         # smpSHL learning rule init
         self.lr = LearningRules(ndim_out = self.odim_real, dim = self.odim)
         
@@ -251,7 +252,7 @@ class smpSHL(smpModel):
         self.lr.loss = self.perf
         
     @smpModelStep()
-    def step(self, X, Y, *args, **kwargs):
+    def step(self, X, Y, update = True, *args, **kwargs):
 
         # # oversample reservoir: clamp inputs and step the network
         # for i in range(self.oversampling):
@@ -344,9 +345,13 @@ class smpSHL(smpModel):
                 self.model.wo += dw
                 self.model.perf = self.lr.perf # hm?
                 # self.model.perf_lp = ((1 - self.model.coeff_a) * self.model.perf_lp) + (self.model.coeff_a * self.model.perf)
-                
+
+        if not update:
+            print "returning", self.cnt_step
+            return self.y.T
+            
         # prediction (expectation)
-        
+
         # oversample reservoir: clamp inputs and step the network
         # print "smpSHL.step X", X.shape
         
@@ -411,18 +416,18 @@ class smpSHL(smpModel):
         else:
             # X_ = X.flatten().tolist()
             # return self.predict_step(X_)
-            return self.step(X, None)
+            return self.step(X, None, update = True)
         
-    def fit(self, X, Y):
+    def fit(self, X, Y, update = True):
         if X.shape[0] > 1: # batch input
             ret = np.zeros((X.shape[0], self.odim))
             for i in range(X.shape[0]):
-                ret[i] = self.step(X[i], Y[i])
+                ret[i] = self.step(X[i], Y[i], update = True)
             return ret
         else:
             # X_ = X.flatten().tolist()
             # return self.predict_step(X_)
-            return self.step(X, Y)
+            return self.step(X, Y, update = update)
         
 class learnerConf():
     """Common parameters for exploratory Hebbian learners"""
