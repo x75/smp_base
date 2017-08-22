@@ -122,7 +122,15 @@ class smpSHL(smpModel):
         #
         if self.lrname in ['eh', 'EH']:
             # algorithm variables
-            # FIXME: these should all go into learning rule
+            # FIXME: these should all go into the learning rule class
+            # tapping spec
+            self.laglen_past = self.lag_past[1] - self.lag_past[0]
+            self.laglen_future = self.lag_future[1] - self.lag_future[0]
+            self.idim_single = self.idim / self.laglen_past
+            self.odim_single = self.odim_real / self.laglen_future
+            # adjust eta for multiple updates
+            self.eta = self.eta / float(self.laglen_past)
+            
             self.y_model = iir_fo(a = 0.2, dim = self.odim_real)    # output model
             self.perf_model = iir_fo(a = 0.2, dim = self.odim_real) # performance model (reward prediction)
 
@@ -136,6 +144,8 @@ class smpSHL(smpModel):
             self.r_ = np.zeros((self.modelsize, self.memory))
             self.y_ = np.zeros((self.odim_real, self.memory))
             self.y_lp_ = np.zeros((self.odim_real, self.memory))
+            self.perf_ = np.zeros((self.odim_real, self.memory))
+            self.perf_lp_ = np.zeros((self.odim_real, self.memory))
 
         # smpSHL learning rule init
         self.lr = LearningRules(ndim_out = self.odim_real, dim = self.odim)
@@ -247,9 +257,6 @@ class smpSHL(smpModel):
         # for i in range(self.oversampling):
         #     _ = self.model.execute(X.T)
         
-        # y_ = _.T
-        # # y_ = y.T
-        
         # fit (maximization)
         if Y is not None:
             
@@ -296,17 +303,43 @@ class smpSHL(smpModel):
 
                 # shorthand
                 lag = self.minlag
+                # print "    %s.step learnEH lag = %d" % (self.__class__.__name__, lag)
 
                 # compute dw
-                dw = self.lr.learnEH(
-                    target = None,
-                    r = self.r_[...,[-lag]],
-                    pred = self.y_[...,[-lag]], # Y,
-                    pred_lp = self.y_lp_[...,[-lag]],
-                    perf = self.perf,
-                    perf_lp = self.perf_lp,
-                    eta = self.eta,
+                dw = np.zeros_like(self.model.wo)
+                # print "        dw", dw.shape
+                
+                # commit to memory
+                self.perf_[...,[-1]] = self.perf.copy()
+                self.perf_lp_[...,[-1]] = self.perf_lp.copy()
+
+                # loop over embedding
+                for i in range(self.lag_past[0], self.lag_past[1]):
+                    # print "        lag_past = %d, " % (i, )
+                    # for j in range(self.lag_future[0], self.lag_future[1]):
+                    # print "            lag_future = %d, " % (j, )
+
+                    lag_past = i
+                    # lag_future = j
+                    dw += self.lr.learnEH(
+                        target = None,
+                        r = self.r_[...,[lag_past]],
+                        pred = self.y_[...,[lag_past]], # Y,
+                        pred_lp = self.y_lp_[...,[lag_past]],
+                        perf = self.perf,
+                        perf_lp = self.perf_lp,
+                        eta = self.eta,
                     )
+                        
+                # dw = self.lr.learnEH(
+                #     target = None,
+                #     r = self.r_[...,[-lag]],
+                #     pred = self.y_[...,[-lag]], # Y,
+                #     pred_lp = self.y_lp_[...,[-lag]],
+                #     perf = self.perf,
+                #     perf_lp = self.perf_lp,
+                #     eta = self.eta,
+                #     )
                 # apply dw
                 self.model.wo += dw
                 self.model.perf = self.lr.perf # hm?
@@ -335,8 +368,7 @@ class smpSHL(smpModel):
             # commit to memory
             self.r_[...,[-1]] = self.model.r.copy()
             self.y_[...,[-1]] = self.y.copy()
-            # print "smpSHL.step %s post update = %s" % ('y_', getattr(self, 'y_'))
-            self.y_lp_[...,[-1]] = self.y_lp.copy() # FIXME y_lp_
+            self.y_lp_[...,[-1]] = self.y_lp.copy()
 
             # update output and perf prediction
             self.y_lp = self.y_model.predict(self.y)

@@ -28,12 +28,12 @@ class meas(object):
 
     @staticmethod
     def sum_abs(x):
-        return np.sum(np.abs(x))
+        return np.ones_like(x) * np.sum(np.abs(x))
 
     @staticmethod
     def sum_square(x):
-        return np.sum(np.square(x))
+        return np.ones_like(x) * np.sum(np.square(x))
 
     @staticmethod
     def sum_sqrt(x):
-        return np.sum(np.sqrt(meas.abs(x)))
+        return np.ones_like(x) * np.sum(np.sqrt(meas.abs(x)))
