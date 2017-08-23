@@ -626,7 +626,7 @@ class LearningRules(object):
         # mdltr = np.any((self.perf - perf_lp) > 0) * 1.0
         mdltr = np.all((self.perf - perf_lp) > 0) * 1.0
         # print "mdltr any", mdltr
-        mdltr *= perf_lp <= -0.025
+        mdltr *= perf_lp <= -0.001 # -0.025
         # print "mdltr thr", mdltr
         
         # print "mdltr", mdltr

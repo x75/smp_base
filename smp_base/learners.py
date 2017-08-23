@@ -381,10 +381,11 @@ class smpSHL(smpModel):
                     # if np.all(self.perf_lp <= 0.05) and np.all(self.perf <= 0.05):
                     self.model.wo += dw
 
-                    if np.linalg.norm(self.model.wo, 2) > 0.1:
+                    thr = 0.3
+                    if np.linalg.norm(self.model.wo, 2) > thr:
                         # self.model.wo *= 0.95
                         self.model.wo /= np.linalg.norm(self.model.wo, 2)
-                        self.model.wo *= 0.1
+                        self.model.wo *= thr
                     # else:
                     #     print "setting theta low"
                     #     # self.theta = 1e-3
