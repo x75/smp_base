@@ -617,10 +617,18 @@ class LearningRules(object):
         # print "perf", self.perf
         # print "perf_lp", perf_lp
         
-        # binary modulator
-        mdltr = (np.clip(self.perf - perf_lp, 0, 1) > 0) * 1.0
-        # print "mdltr", mdltr
+        # # binary clipped modulator with error threshold
+        # mdltr = (np.clip(self.perf - perf_lp, 0, 1) > 0) * 1.0
+        # # print "mdltr", mdltr
+        # mdltr *= perf_lp <= -0.025
+
+        # binary modulator with error threshold
+        # mdltr = np.any((self.perf - perf_lp) > 0) * 1.0
+        mdltr = np.all((self.perf - perf_lp) > 0) * 1.0
+        # print "mdltr any", mdltr
         mdltr *= perf_lp <= -0.025
+        # print "mdltr thr", mdltr
+        
         # print "mdltr", mdltr
         # continuous modulator
         # vmdltr = (self.perf - self.perf_lp)

@@ -27,6 +27,10 @@ class meas(object):
         return np.abs(x)
 
     @staticmethod
+    def abs_sqrt(x):
+        return np.sqrt(np.abs(x))
+
+    @staticmethod
     def sum_abs(x):
         return np.ones_like(x) * np.sum(np.abs(x))
 

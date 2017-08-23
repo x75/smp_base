@@ -94,19 +94,19 @@ class smpSHL(smpModel):
         'idim': 6,
         'odim': 2,
         'memory': 1,
-        'tau': 0.1,
+        'tau': 1.0,
         'multitau': False,
-        'modelsize': 100,
+        'modelsize': 200,
         'density': 0.1,
-        'spectral_radius': 0.9,
-        'w_input': 1.0,
+        'spectral_radius': 0.1,
+        'w_input': 0.5,
         'w_feedback': 0.0,
         'w_bias': 0.5,
         'nonlin_func': np.tanh,
         'sparse': True,
         'ip': False,
         'theta': 0.01,
-        'theta_state': 0.05,
+        'theta_state': 0.01,
         'coeff_a': 0.2,
         'visualize': False,
         'alpha': 1.0,
@@ -166,7 +166,7 @@ class smpSHL(smpModel):
             # inputs: perf, meas, pre_l0
             # outputs: perf_hat
             conf_fwd_perf = smpSHL.conf_fwd_perf
-            conf_fwd_perf.update({'idim': 2 + 2 + 2 + 2, 'odim': 2})
+            conf_fwd_perf.update({'idim': 2 + 2 + 2 + 0, 'odim': 2})
             self.perf_model_fancy = smpSHL(conf = smpSHL.conf_fwd_perf)
 
             # output variables
@@ -377,7 +377,17 @@ class smpSHL(smpModel):
                 #     eta = self.eta,
                 #     )
                 # apply dw
-                self.model.wo += dw
+                if self.cnt_step >= 100:
+                    # if np.all(self.perf_lp <= 0.05) and np.all(self.perf <= 0.05):
+                    self.model.wo += dw
+
+                    if np.linalg.norm(self.model.wo, 2) > 0.1:
+                        # self.model.wo *= 0.95
+                        self.model.wo /= np.linalg.norm(self.model.wo, 2)
+                        self.model.wo *= 0.1
+                    # else:
+                    #     print "setting theta low"
+                    #     # self.theta = 1e-3
                 self.model.perf = self.lr.perf # hm?
                 # self.model.perf_lp = ((1 - self.model.coeff_a) * self.model.perf_lp) + (self.model.coeff_a * self.model.perf)
 
