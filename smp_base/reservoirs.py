@@ -211,7 +211,7 @@ class LearningRules(object):
 
         Perform the covariance update for the FORCE learning rule
         """
-        if hasattr(self, P):
+        if hasattr(self, 'P'):
            P = self.P
             
         k = np.dot(P, r)

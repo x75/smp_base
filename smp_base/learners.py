@@ -90,6 +90,33 @@ class smpSHL(smpModel):
         'input_coupling': 'normal',
         }
 
+    conf_fwd_perf = {
+        'idim': 6,
+        'odim': 2,
+        'memory': 1,
+        'tau': 0.1,
+        'multitau': False,
+        'modelsize': 100,
+        'density': 0.1,
+        'spectral_radius': 0.9,
+        'w_input': 1.0,
+        'w_feedback': 0.0,
+        'w_bias': 0.5,
+        'nonlin_func': np.tanh,
+        'sparse': True,
+        'ip': False,
+        'theta': 0.01,
+        'theta_state': 0.05,
+        'coeff_a': 0.2,
+        'visualize': False,
+        'alpha': 1.0,
+        'lrname': 'FORCE',
+        'mixcomps': 3,
+        'eta_init': 1e-4,
+        'oversampling': 1,
+        'input_coupling': 'normal',
+        }
+        
     @smpModelInit()
     def __init__(self, conf):
         """smpSHL.init
@@ -133,6 +160,14 @@ class smpSHL(smpModel):
             
             self.y_model = iir_fo(a = 0.2, dim = self.odim_real)    # output model
             self.perf_model = iir_fo(a = 0.2, dim = self.odim_real) # performance model (reward prediction)
+
+            # fancy predictors
+            # models: soesgp, resrls, resforce, knn, i/gmm, hebbsom
+            # inputs: perf, meas, pre_l0
+            # outputs: perf_hat
+            conf_fwd_perf = smpSHL.conf_fwd_perf
+            conf_fwd_perf.update({'idim': 2 + 2 + 2 + 2, 'odim': 2})
+            self.perf_model_fancy = smpSHL(conf = smpSHL.conf_fwd_perf)
 
             # output variables
             # self.y     = np.zeros((self.odim_real, 1))   # output
