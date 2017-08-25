@@ -585,7 +585,10 @@ class LearningRules(object):
         en = e / np.sum(e, axis=0, keepdims=True)
         return en
 
-    def learnEH(self, target, r, pred, pred_lp, perf = None, perf_lp = 0.0, eta = 1e-4):
+    def learnEH(
+            self, target, r, pred, pred_lp, perf = None,
+            perf_lp = 0.0, eta = 1e-4, mdltr_type = 'bin_elem',
+            mdltr_thr = 0.0):
         """LearningRules.learnEH
 
         Exploratory Hebbian learning rule. This function computes the
@@ -604,6 +607,7 @@ class LearningRules(object):
         """
         # # debugging
         # print "%s.learnEH args target = %s, r = %s, pred = %s, pred_lp = %s, perf = %s, perf_lp = %s, eta = %s" % (self.__class__.__name__, target.shape, r.shape, pred.shape, pred_lp.shape, perf.shape, perf_lp.shape, eta)
+        # print "learnEH", mdltr_type, mdltr_thr
 
         # if no performance perf is supplied as an argument, the default neg squared error is used
         # FIXME: clean up because it implies the same to be used for perf_lp to be computed somewhere
@@ -614,40 +618,39 @@ class LearningRules(object):
         else:
             self.perf = perf
 
-        # print "perf", self.perf
-        # print "perf_lp", perf_lp
-        
-        # # binary clipped modulator with error threshold
-        # mdltr = (np.clip(self.perf - perf_lp, 0, 1) > 0) * 1.0
-        # # print "mdltr", mdltr
-        # mdltr *= perf_lp <= -0.025
+        # print "reservoirs.learnEH perf", self.perf.shape
+        # print "reservoirs.learnEH perf_lp", perf_lp.shape
 
-        # binary modulator with error threshold
-        # mdltr = np.any((self.perf - perf_lp) > 0) * 1.0
-        mdltr = np.all((self.perf - perf_lp) > 0) * 1.0
-        # print "mdltr any", mdltr
-        mdltr *= perf_lp <= -0.001 # -0.025
-        # print "mdltr thr", mdltr
-        
-        # print "mdltr", mdltr
-        # continuous modulator
-        # vmdltr = (self.perf - self.perf_lp)
-        # vmdltr /= np.sum(np.abs(vmdltr))
-        # OR  modulator
-        # mdltr = np.ones_like(pred) * np.clip(np.sum(mdltr), 0, 1)
-        # AND modulator
-        # mdltr = np.ones_like(pred) * (np.sum(mdltr) >= 1) # FIXME: >=, ?
-        # print "Reservoir.learnEH perf = %s, modulator = %s" % (self.perf, mdltr)
+        if mdltr_type == 'bin_elem':
+            # binary clipped modulator element-wise
+            mdltr = (np.clip(self.perf - perf_lp, 0, 1) > 0) * 1.0
+            # print "mdltr", mdltr
+        elif mdltr_type == 'bin_joint_any':
+            # binary modulator with error threshold, update all output when at least one element improved
+            mdltr = np.any((self.perf - perf_lp) > 0) * 1.0
+        elif mdltr_type == 'bin_joint_all':
+            # binary modulator with error threshold, update all output when at all elements improved
+            mdltr = np.all((self.perf - perf_lp) > 0) * 1.0
+        elif mdltr_type == 'cont_elem':
+            # continuous modulator element-wise
+            mdltr = (self.perf - perf_lp)
+            mdltr /= np.sum(np.abs(mdltr))
+            # print "reservoirs.learnEH cont_elem", self.perf.shape, perf_lp.shape, mdltr.shape
+            
+        # dont learn when performance is good enough
+        if mdltr_thr > 0.0:
+            # print "mdltr_thr kicking"
+            # mdltr *= perf_lp <= -0.001 # -0.025
+            # mdltr *= perf_lp <= -0.025
+            mdltr *= perf_lp <= -mdltr_thr
+
+        # print "reservoirs.learnEH mdltr = %s, pred = %s, pred_lp = %s" % (mdltr.shape, pred.shape, pred_lp.shape)
 
         # compute dw
         dw = eta * np.dot(r, np.transpose((pred - pred_lp) * mdltr))
 
+        # return, end learnEH
         return dw
-        # # update weights
-        # self.wo += dw
-        # # update performance prediction
-        # self.perf_lp = ((1 - self.coeff_a) * self.perf_lp) + (self.coeff_a * self.perf)
-
     
 ################################################################################
 ## Leaky integrator reservoir class

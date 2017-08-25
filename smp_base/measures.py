@@ -19,6 +19,10 @@ class meas(object):
         pass
 
     @staticmethod
+    def identity(x):
+        return -x
+    
+    @staticmethod
     def square(x):
         return np.square(x)
 

@@ -157,17 +157,20 @@ class smpSHL(smpModel):
             self.odim_single = self.odim_real / self.laglen_future
             # adjust eta for multiple updates
             self.eta = self.eta / float(self.laglen_past)
-            
-            self.y_model = iir_fo(a = 0.2, dim = self.odim_real)    # output model
-            self.perf_model = iir_fo(a = 0.2, dim = self.odim_real) # performance model (reward prediction)
 
-            # fancy predictors
-            # models: soesgp, resrls, resforce, knn, i/gmm, hebbsom
-            # inputs: perf, meas, pre_l0
-            # outputs: perf_hat
-            conf_fwd_perf = smpSHL.conf_fwd_perf
-            conf_fwd_perf.update({'idim': 2 + 2 + 2 + 0, 'odim': 2})
-            self.perf_model_fancy = smpSHL(conf = smpSHL.conf_fwd_perf)
+            # forward models: output
+            self.y_model = iir_fo(a = self.coeff_a, dim = self.odim_real)
+            # forward models: performance (reward prediction)
+            if self.perf_model_type == 'lowpass':
+                self.perf_model = iir_fo(a = self.coeff_a, dim = self.odim_real)
+            else:
+                # fancy predictors
+                # models: soesgp, resrls, resforce, knn, i/gmm, hebbsom
+                # inputs: perf, meas, pre_l0
+                # outputs: perf_hat
+                conf_fwd_perf = smpSHL.conf_fwd_perf
+                conf_fwd_perf.update({'idim': 2 + 2 + 2 + 0, 'odim': 2})
+                self.perf_model = smpSHL(conf = smpSHL.conf_fwd_perf)
 
             # output variables
             # self.y     = np.zeros((self.odim_real, 1))   # output
@@ -365,6 +368,8 @@ class smpSHL(smpModel):
                         perf = self.perf,
                         perf_lp = self.perf_lp,
                         eta = self.eta,
+                        mdltr_type = self.mdltr_type,
+                        mdltr_thr = self.mdltr_thr,
                     )
                         
                 # dw = self.lr.learnEH(
@@ -381,7 +386,7 @@ class smpSHL(smpModel):
                     # if np.all(self.perf_lp <= 0.05) and np.all(self.perf <= 0.05):
                     self.model.wo += dw
 
-                    thr = 0.3
+                    thr = 0.8
                     if np.linalg.norm(self.model.wo, 2) > thr:
                         # self.model.wo *= 0.95
                         self.model.wo /= np.linalg.norm(self.model.wo, 2)
@@ -421,9 +426,13 @@ class smpSHL(smpModel):
             self.y_[...,[-1]] = self.y.copy()
             self.y_lp_[...,[-1]] = self.y_lp.copy()
 
-            # update output and perf prediction
+            # update output and performance prediction
             self.y_lp = self.y_model.predict(self.y)
-            self.perf_lp = self.perf_model.predict(self.perf)
+            if self.perf_model_type == 'lowpass':
+                self.perf_lp = self.perf_model.predict(self.perf)
+            elif self.perf_model_type in ['resforce', 'resrls']:
+                # FIXME clean up .Ts?
+                self.perf_lp = self.perf_model.step(X = X, Y = self.perf.T).T
             
         elif self.lrname == 'FORCEmdn':
             if self.odim < 2:
