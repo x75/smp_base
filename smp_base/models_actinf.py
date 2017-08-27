@@ -137,8 +137,11 @@ class smpKNN(smpModel):
                 self.X_.append(np.ones((self.idim, )) * i * 0.1)
                 self.y_.append(np.ones((self.odim, )) * i * 0.1)
             else:
-                self.X_.append(np.random.uniform(-0.1, 0.1, (self.idim,)))
-                self.y_.append(np.random.uniform(-0.1, 0.1, (self.odim,)))
+                noise_amp = 0.01
+                self.X_.append(np.random.uniform(
+                    -noise_amp, noise_amp, (self.idim,)))
+                self.y_.append(np.random.uniform(
+                    -noise_amp, noise_amp, (self.odim,)))
         # print(self.X_, self.y_)
         self.fwd.fit(self.X_, self.y_)
 
@@ -199,6 +202,8 @@ class smpOTLModel(smpModel):
 
         # self.otlmodel_type = "soesgp"
         # self.otlmodel = None
+        self.pred = np.zeros((self.odim, 1))
+        self.var = np.zeros((self.odim, 1))
 
     def predict(self, X):
         if X.shape[0] > 1: # batch input
@@ -216,7 +221,9 @@ class smpOTLModel(smpModel):
         var  = []
         self.otlmodel.predict(pred, var)
         # return np.zeros((1, self.odim))
-        return np.array(pred).reshape((1, self.odim))
+        self.pred = np.array(pred)
+        self.var = np.abs(np.array(var))
+        return self.pred.reshape((1, self.odim))
         
     def fit(self, X, y, update = True):
         """smpOTLModel.fit
@@ -296,19 +303,20 @@ class smpSOESGP(smpOTLModel):
         'input_weight': 1.0,
         'output_feedback_weight': 0.0,
         'activation_function': 1,
-        'leak_rate': 0.96,
+        'leak_rate': 0.9,
         'connectivity': 0.1,
-        'spectral_radius': 0.99,
-        'kernel_params': [2.0, 2.0],
-        'noise': 0.05,
+        'spectral_radius': 0.999,
+        'kernel_params': [1.0, 1.0], # [2.0, 2.0],
+        'noise': 0.01,
         'epsilon': 1e-3,
         'capacity': 100,
         'random_seed': 100,
+        'visualize': False,
     }
     
     @smpModelInit()
     def __init__(self, conf):
-        smpOTLModel.__init__(self, conf)
+        smpOTLModel.__init__(self, conf = conf)
         
         # self.otlmodel_type = "soesgp"
         self.otlmodel = OESGP()
@@ -339,12 +347,12 @@ class smpSOESGP(smpOTLModel):
     
     def bootstrap(self):
         from reservoirs import res_input_matrix_random_sparse
-        self.otlmodel.init(self.idim, self.odim, self.res_size, self.input_weight,
+        self.otlmodel.init(self.idim, self.odim, self.modelsize, self.input_weight,
                     self.output_feedback_weight, self.activation_function,
                     self.leak_rate, self.connectivity, self.spectral_radius,
                     False, self.kernel_params, self.noise, self.epsilon,
                     self.capacity, self.random_seed)
-        im = res_input_matrix_random_sparse(self.idim, self.res_size, 0.2)
+        im = res_input_matrix_random_sparse(self.idim, self.modelsize, 0.2)
         # print("im", type(im))
         self.otlmodel.setInputWeights(im.tolist())
 
@@ -615,7 +623,7 @@ class smpIGMM(smpModel):
 
     Gaussian mixture model based on PyPR's gmm
     """
-    defaults = {'idim': 1, 'odim': 1, 'K': 10, 'numepisodes': 10}
+    defaults = {'idim': 1, 'odim': 1, 'K': 10, 'numepisodes': 10, 'visualize': False}
     
     @smpModelInit()
     def __init__(self, conf):
@@ -644,7 +652,6 @@ class smpIGMM(smpModel):
         # fitting configuration
         self.fit_interval = 100
         self.fitted =  False
-
 
         self.model = IGMM_COND(min_components=3, forgetting_factor=0.5)
         

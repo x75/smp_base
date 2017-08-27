@@ -83,7 +83,7 @@ class smpSHL(smpModel):
         'coeff_a': 0.2,
         'visualize': True,
         'alpha': 10.0,
-        'lrname': 'FORCEmdn',
+        'lrname': 'FORCE',
         'mixcomps': 3,
         'eta_init': 1e-4,
         'oversampling': 1,
@@ -303,7 +303,10 @@ class smpSHL(smpModel):
             if self.lrname == 'FORCE':
                 # modular learning rule (ugly call)
                 (self.model.P, k, c) = self.lr.learnFORCE_update_P(self.model.P, self.model.r)
-                dw = self.lr.learnFORCE(Y.T, self.model.P, k, c, self.model.r, self.model.z, 0)
+                # dw = self.lr.learnFORCE(Y.T, self.model.P, k, c, self.model.r, self.model.z, 0)
+                dw = self.lr.learnFORCE(
+                    target = Y.T, P = self.model.P,
+                    k = k, c = c, r = self.model.r, z = self.model.zn, channel = 0)
                 self.model.wo += dw
                 # for k in range(outsize_):
                 #     dw_t_norm[k,j] = LA.norm(dw[:,k])
@@ -386,7 +389,7 @@ class smpSHL(smpModel):
                     # if np.all(self.perf_lp <= 0.05) and np.all(self.perf <= 0.05):
                     self.model.wo += dw
 
-                    thr = 0.8
+                    thr = self.wgt_thr # 0.8
                     if np.linalg.norm(self.model.wo, 2) > thr:
                         # self.model.wo *= 0.95
                         self.model.wo /= np.linalg.norm(self.model.wo, 2)

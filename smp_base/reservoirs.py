@@ -218,15 +218,20 @@ class LearningRules(object):
         rPr = np.dot(r.T, k)
         c = 1.0/(1.0 + rPr)
         P = P - np.dot(k, (k.T*c))
+        # if hasattr(self, 'P'):
+        #     self.P = self.P
         return (P, k, c)
 
-    def learnFORCE(self, target, P, k, c, r, z, channel):
+    def learnFORCE(self, target, P, k, c, r, z, channel, error = None):
         """LearningRules.learnFORCE
 
         The FORCE learning rule for reservoir online supervised learning
         """
         # compute error
-        self.e = z - target
+        if error is not None:
+            self.e = z - target
+        else:
+            self.e = error
         # compute weight update from error times k
         dw = -self.e.T * k * c
         return dw
