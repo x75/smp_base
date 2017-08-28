@@ -710,9 +710,12 @@ class Reservoir(object):
         self.mtau = mtau
         if self.mtau:
             # self.tau = np.exp(np.random.uniform(-10, -2, (self.N, 1)))
-            self.tau = np.exp(np.random.uniform(-8, -0.5, (self.N, 1)))
+            # self.tau = np.exp(np.random.uniform(-8, -0.5, (self.N, 1)))
+            self.tau = np.exp(np.random.uniform(-5, -0.5, (self.N, 1)))
+            print "self.tau", self.tau
         else:
             self.tau = tau
+        self.multiactivation = True
         self.alpha = alpha
         # scale gain to spectral radius lambda
         self.scale = 1.0/np.sqrt(self.p*self.N)
@@ -744,12 +747,19 @@ class Reservoir(object):
         self.u = np.zeros(shape=(self.input_num, 1))
         self.x = np.zeros(shape=(self.N, 1))
         self.r = np.zeros(shape=(self.N, 1))
+        self.r_idx = range(self.N)
+        np.random.shuffle(self.r_idx)
+        # np.array([]).T
+        self.r_nl = np.zeros(shape=(self.N, 1))
+        self.r_rbf = np.zeros(shape=(self.N, 1))
+        self.r_rbf_base = np.random.uniform(-1, 1, size = (self.N, 1))
+        self.r_rbf_scale = np.exp(np.random.uniform(-1, 1, size = (self.N, 1)))
         self.z = np.zeros(shape=(self.output_num, 1))
         self.zn = np.zeros((self.output_num, 1))
         # initialize states randomly
         # self.init_states_random()
         # bias
-        self.bias = np.random.uniform(-1., 1., size=self.x.shape)
+        self.bias = np.random.uniform(-2., 2., size=self.x.shape)
         self.bias_scale = bias_scale
 
         # rewards
@@ -799,6 +809,10 @@ class Reservoir(object):
         self.u_mean = np.random.uniform(-0.1, 0.1, self.u.shape)
         self.u_var  = np.random.uniform(-0.1, 0.1, self.u.shape)
 
+    def rbf(self, x):
+        return np.exp(-(x / 1.0)**2)
+
+        
     # setters
     def set_theta(self, theta):
         """Set exploration noise amplitude (theta) and theta_amps"""
@@ -962,10 +976,23 @@ class Reservoir(object):
         self.x = x_tp1 + self.tau * (r_tp1 + f_tp1 + u_tp1 + b_tp1)
         # self.r = self.tau * np.tanh(r_tp1 + f_tp1 + u_tp1 + b_tp1)
         # self.x = x_tp1 + self.r
-        # self.r = np.tanh(self.x) + zeta_state
-        self.r = self.nonlin_func(self.x) + zeta_state
+
+        if self.multiactivation:
+            self.r_nl = self.nonlin_func(self.x) # + zeta_state        
+            self.r_rbf = self.rbf((self.x - self.r_rbf_base) * self.r_rbf_scale)
+            self.r_rbf = self.rbf((self.x - self.r_rbf_base) * self.r_rbf_scale)
+            self.r = np.vstack((
+                self.r_nl[self.r_idx[:self.N/2]],
+                self.r_rbf[self.r_idx[self.N/2:]],
+            ))
+        else:
+            self.r = self.nonlin_func(self.x) + zeta_state
+        
+        self.r += zeta_state
+        
         # print "self.x", self.x.shape
         # print "self.r", self.r, self.r.shape
+        # print "self.r_rbf", self.r_rbf, self.r_rbf.shape
 
         # print "shapes", self.wo.shape, self.r.shape
         self.z = np.dot(self.wo.T, self.r)

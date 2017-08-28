@@ -200,6 +200,7 @@ class smpSHL(smpModel):
             output_num = self.odim_real,
             g = self.spectral_radius,
             tau = self.tau,
+            mtau = self.multitau,
             eta_init = self.eta_init,
             feedback_scale = self.w_feedback,
             input_scale = self.w_input,
