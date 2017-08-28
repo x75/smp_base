@@ -205,17 +205,23 @@ class smpOTLModel(smpModel):
         self.pred = np.zeros((self.odim, 1))
         self.var = np.zeros((self.odim, 1))
 
-    def predict(self, X):
+    def predict(self, X,rollback = False):
         if X.shape[0] > 1: # batch input
             ret = np.zeros((X.shape[0], self.odim))
             for i in range(X.shape[0]):
-                ret[i] = self.predict_step(X[i].flatten().tolist())
+                ret[i] = self.predict_step(X[i].flatten().tolist(), rollback = rollback)
             return ret
         else:
             X_ = X.flatten().tolist()
-            return self.predict_step(X_)
+            return self.predict_step(X_, rollback = rollback)
 
-    def predict_step(self, X_):
+    def predict_step(self, X_, rollback = False):
+        if rollback:
+            r = []
+            self.otlmodel.getState(r)
+            # print("smpOTLModel.predict_step state", r)
+
+        # update state
         self.otlmodel.update(X_)
         pred = []
         var  = []
@@ -223,6 +229,10 @@ class smpOTLModel(smpModel):
         # return np.zeros((1, self.odim))
         self.pred = np.array(pred)
         self.var = np.abs(np.array(var))
+
+        if rollback:
+            self.otlmodel.setState(r)
+        
         return self.pred.reshape((1, self.odim))
         
     def fit(self, X, y, update = True):
@@ -294,30 +304,60 @@ class smpSOESGP(smpOTLModel):
     Sparse online echo state gaussian process function approximator
     for active inference
     """
+    # # for input modulation style
+    # defaults = {
+    #     'idim': 1,
+    #     'odim': 1,
+    #     'otlmodel_type': 'soesgp',
+    #     'otlmodel': None,
+    #     'modelsize': 300,
+    #     'input_weight': 2.0,
+    #     'output_feedback_weight': 0.0,
+    #     'activation_function': 1,
+    #     'leak_rate': 0.8, # 0.9,
+    #     'connectivity': 0.1,
+    #     'spectral_radius': 0.99, # 0.999,
+    #     # 'kernel_params': [10.0, 10.0], # [2.0, 2.0],
+    #     # 'noise': 0.01,
+    #     # 'kernel_params': [10.0, 10.0], # [2.0, 2.0],
+    #     # 'noise': 1.0, # 0.01,
+    #     'kernel_params': [2.0, 2.0], # [2.0, 2.0],
+    #     'noise': 5e-2, # 0.01,
+    #     'epsilon': 1e-3,
+    #     'capacity': 100,  # 10
+    #     'random_seed': 101,
+    #     'visualize': False,
+    # }
+
+    # for self-sampling style
     defaults = {
         'idim': 1,
         'odim': 1,
         'otlmodel_type': 'soesgp',
         'otlmodel': None,
-        'modelsize': 100,
-        'input_weight': 1.0,
+        'modelsize': 200,
+        'input_weight': 2.0,
         'output_feedback_weight': 0.0,
         'activation_function': 1,
-        'leak_rate': 0.8, # 0.9,
+        'leak_rate': 0.9, # 0.9,
         'connectivity': 0.1,
-        'spectral_radius': 0.9, # 0.999,
-        'kernel_params': [10.0, 10.0], # [2.0, 2.0],
-        'noise': 0.01,
+        'spectral_radius': 0.99, # 0.999,
+        # 'kernel_params': [10.0, 10.0], # [2.0, 2.0],
+        # 'noise': 0.01,
+        # 'kernel_params': [10.0, 10.0], # [2.0, 2.0],
+        # 'noise': 1.0, # 0.01,
+        'kernel_params': [6.0, 6.0], # [2.0, 2.0],
+        'noise': 5e-2, # 5e-2, # 0.01,
         'epsilon': 1e-3,
-        'capacity': 10, # 100,
-        'random_seed': 100,
+        'capacity': 100,  # 10
+        'random_seed': 102,
         'visualize': False,
     }
-    
+        
     @smpModelInit()
     def __init__(self, conf):
         smpOTLModel.__init__(self, conf = conf)
-        
+
         # self.otlmodel_type = "soesgp"
         self.otlmodel = OESGP()
 
@@ -498,14 +538,14 @@ class smpGMM(smpModel):
         self.fitted =  True
         print("%s.fit_batch Log likelihood (how well the data fits the model) = %f" % (self.__class__.__name__, self.logL))
 
-    def predict(self, X):
+    def predict(self, X, rollback = False):
         """smpGMM.predict
 
         Predict Y from X by forwarding to default sample call
         """
-        return self.sample(X)
+        return self.sample(X, rollback = rollback)
 
-    def sample(self, X):
+    def sample(self, X, rollback = False):
         """smpGMM.sample
 
         Default sample function

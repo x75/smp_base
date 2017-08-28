@@ -228,7 +228,7 @@ class LearningRules(object):
         The FORCE learning rule for reservoir online supervised learning
         """
         # compute error
-        if error is not None:
+        if error is None:
             self.e = z - target
         else:
             self.e = error
@@ -251,6 +251,7 @@ class LearningRules(object):
 
         Setup MDN variables before applying FORCEmdn learning rule
         """
+        # print "ndim_out", self.ndim_out
         self.loss = 10.0
         self.e = np.zeros((self.ndim_out, 1))
         self.mixcomps = mixcomps
@@ -477,8 +478,12 @@ class LearningRules(object):
             # S_ = sig.reshape((mixcomps, d, d)) ** 2
             S_ *= S_
             # print "S_", S_, "sig", sig.shape, "x", x.shape, "mu_", mu_[i].shape
+
+            # print "mu", mu_[[i]].shape
+            # print "y",y.shape
             
-            norm1 = x - mu_[[i]].T
+            # norm1 = x - mu_[[i]].T
+            norm1 = y - mu_[[i]].T
             S__ = np.linalg.pinv(S_)
             S___ = sp.linalg.pinv(S_)
             # print "    S__", S__
