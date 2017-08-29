@@ -711,8 +711,8 @@ class Reservoir(object):
         if self.mtau:
             # self.tau = np.exp(np.random.uniform(-10, -2, (self.N, 1)))
             # self.tau = np.exp(np.random.uniform(-8, -0.5, (self.N, 1)))
-            # self.tau = np.exp(np.random.uniform(-5, -0.5, (self.N, 1)))
-            self.tau = np.exp(np.random.uniform(-5., -0.2, (self.N, 1)))
+            self.tau = np.exp(np.random.uniform(-5, -0.5, (self.N, 1)))
+            # self.tau = np.exp(np.random.uniform(-5., -0.2, (self.N, 1)))
             print "self.tau", self.tau.T
         else:
             self.tau = tau

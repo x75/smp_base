@@ -336,19 +336,21 @@ class smpSOESGP(smpOTLModel):
         'otlmodel_type': 'soesgp',
         'otlmodel': None,
         'modelsize': 200,
-        'input_weight': 2.0,
+        'input_weight': 1.0,
         'output_feedback_weight': 0.0,
         'activation_function': 1,
-        'leak_rate': 0.8, # 0.9,
+        'leak_rate': 0.7, # 0.9,
         'connectivity': 0.1,
         'spectral_radius': 0.99, # 0.999,
         # 'kernel_params': [10.0, 10.0], # [2.0, 2.0],
         # 'noise': 0.01,
         # 'kernel_params': [10.0, 10.0], # [2.0, 2.0],
         # 'noise': 1.0, # 0.01,
-        # 'kernel_params': [6.0, 6.0], # [2.0, 2.0],
-        'kernel_params': [2.0, 2.0], # [2.0, 2.0],
-        'noise': 5e-2, # 5e-2, # 0.01,
+        'kernel_params': [6.0, 6.0], # [2.0, 2.0],
+        'noise': 5e-2, # 0.01,
+        # barrel
+        # 'kernel_params': [2.0, 2.0], # [2.0, 2.0],
+        # 'noise': 1e-1,
         'epsilon': 1e-3,
         'capacity': 100,  # 10
         'random_seed': 102,
@@ -831,6 +833,13 @@ class smpIGMM(smpModel):
 ################################################################################
 # Hebbian SOM model: connect to SOMs with hebbian links
 class smpHebbianSOM(smpModel):
+    """smpHebbianSOM class
+
+    Hebbian SOM model
+
+    FIXME: kohonen/map.Map init distribution and scaling
+    FIXME: fit_hebb delay
+    """
     defaults = {
         'idim': 1, 'odim': 1, 'numepisodes': 100, 'visualize': False, 'mapsize_e': 10, 'mapsize_p': 10, 'som_lr': 1e-0,
         'som_nhs': 3, 'init_range': (-1.0, 1.0)}
@@ -881,10 +890,10 @@ class smpHebbianSOM(smpModel):
             else:
                 mapshape_e = (self.mapsize_e, self.mapsize_e)
             # 1D better?
-            mapshape_e = (self.mapsize_e, )
+            # mapshape_e = (self.mapsize_e, )
             self.kw_e = self.kwargs(
                 shape = mapshape_e, dimension = self.idim, lr_init = self.som_lr,
-                neighborhood_size = self.som_nhs) #, z = 0.001)
+                neighborhood_size = self.som_nhs, init_variance = 1.0) #, z = 0.001)
             # self.kw_e = self.kwargs(shape = (self.mapsize_e, self.mapsize_e), dimension = self.idim, lr_init = 0.5, neighborhood_size = 0.6)
             self.som_e = Map(Parameters(**self.kw_e))
         elif maptype == "gas":
@@ -900,13 +909,15 @@ class smpHebbianSOM(smpModel):
             # 1D better?
             mapshape_p = (self.mapsize_p, )
             self.kw_p = self.kwargs(shape = mapshape_p, dimension = self.odim, lr_init = self.som_lr,
-                                    neighborhood_size = self.som_nhs) #, z = 0.001)
+                                    neighborhood_size = self.som_nhs, init_variance = 0.2) #, z = 0.001)
             # self.kw_p = self.kwargs(shape = (int(self.mapsize_p * 1.5), int(self.mapsize_p * 1.5)), dimension = self.odim, lr_init = 0.5, neighborhood_size = 0.7)
             self.som_p = Map(Parameters(**self.kw_p))
         elif maptype == "gas":
             self.kw_p = self.kwargs_gas(shape = (self.mapsize_p ** 2, ), dimension = self.odim, lr_init = self.som_lr, neighborhood_size = 0.5)
             self.som_p = Gas(Parameters(**self.kw_p))
 
+        print("HebbianSOM mapsize_e,p", self.mapsize_e, self.mapsize_p)
+            
         # FIXME: there was a nice trick for node distribution init in _some_ recently added paper
 
         # create "filter" using existing SOM_e, filter computes activation on distance
@@ -950,7 +961,7 @@ class smpHebbianSOM(smpModel):
             self.figs.append(plot_nodes_over_data_1d_components_fig(title = self.__class__.__name__, numplots = self.idim + self.odim))
             
     # SOM argument dict
-    def kwargs(self, shape=(10, 10), z=0.001, dimension=2, lr_init = 1.0, neighborhood_size = 1):
+    def kwargs(self, shape=(10, 10), z=0.001, dimension=2, lr_init = 1.0, neighborhood_size = 1, init_variance = 1.0):
         """smpHebbianSOM params function for Map"""
         return dict(
             dimension = dimension,
@@ -958,7 +969,8 @@ class smpHebbianSOM(smpModel):
             neighborhood_size = self.ET(self.decay_const, neighborhood_size, 0.1), # 1.0),
             learning_rate=self.ET(self.decay_const, lr_init, 0.0),
             # learning_rate=self.CT(lr_init),
-            noise_variance=z)
+            noise_variance=z,
+            init_variance = init_variance)
 
     def kwargs_gas(self, shape=(100,), z=0.001, dimension=3, lr_init = 1.0, neighborhood_size = 1):
         """smpHebbianSOM params function for Gas"""
@@ -1065,7 +1077,7 @@ class smpHebbianSOM(smpModel):
             # print("%s.fit_soms batch p |dW| = %f, %f, %f" % (self.__class__.__name__, dWnorm_p, dWnorm_p_, dWnorm_p__))
             j += 1
 
-        if False and self.soms_cnt_fit % 100 == 0:
+        if True and self.soms_cnt_fit % 100 == 0:
             print("%s.fit_soms batch e mean error = %f, min = %f, max = %f" % (
                 self.__class__.__name__,
                 np.asarray(self.filter_e.distances_).mean(),
@@ -1083,7 +1095,7 @@ class smpHebbianSOM(smpModel):
     def fit_hebb(self, X, y):
         """smpHebbianSOM"""
         # print("%s.fit_hebb fitting X = %s, y = %s" % (self.__class__.__name__, X.shape, y.shape))
-        if X.shape[0] == 1 and self.soms_cnt_fit < 200: # 1500:
+        if X.shape[0] == 1 and self.soms_cnt_fit < 200: # 200: # 1500:
             return
         # numepisodes_hebb = 1
         if X.shape[0] > 100:
@@ -1361,9 +1373,10 @@ class smpHebbianSOM(smpModel):
         # e2p_w_p_weights = self.filter_p.neuron(self.filter_p.flat_to_coords(np.argmax(self.filter_p.activity)))
         
         # ret = np.random.normal(e2p_w_p_weights, self.filter_p.sigmas[sidx], (1, self.odim))
+        ret = np.random.normal(e2p_w_p_weights, np.sqrt(self.filter_p.sigmas[sidx]), (1, self.odim))
         # ret = np.random.normal(e2p_w_p_weights, 0.01, (1, self.odim))
-        # print("hebbsom sample", e2p_w_p_weights, self.filter_p.sigmas[sidx])
-        ret = e2p_w_p_weights.reshape((1, self.odim))
+        # print("hebbsom sample", sidx, e2p_w_p_weights) # , sidxs) # , self.filter_p.sigmas[sidx])
+        # ret = e2p_w_p_weights.reshape((1, self.odim))
         return ret
 
     def sample_prior(self):
