@@ -336,11 +336,11 @@ class smpSOESGP(smpOTLModel):
         'otlmodel_type': 'soesgp',
         'otlmodel': None,
         'modelsize': 200,
-        'input_weight': 1.0,
+        'input_weight': 2.0,
         'output_feedback_weight': 0.0,
         'activation_function': 1,
         'connectivity': 0.1,
-        'spectral_radius': 0.99, # 0.999,
+        'spectral_radius': 0.999, # 0.999,
         # 'kernel_params': [10.0, 10.0], # [2.0, 2.0],
         # 'noise': 0.01,
         # 'kernel_params': [10.0, 10.0], # [2.0, 2.0],
@@ -350,11 +350,11 @@ class smpSOESGP(smpOTLModel):
         # 'noise': 5e-2, # 0.01,
         # 'leak_rate': 0.7, # 0.9,
         # barrel
-        'kernel_params': [2.0, 2.0], # [2.0, 2.0],
-        'noise': 5e-1,
-        'leak_rate': 0.8, # 0.9,
+        'kernel_params': [2.0, 1.0], # [2.0, 2.0],
+        'noise': 1e-2,
+        'leak_rate': 0.9, # 0.9,
         'epsilon': 1e-3,
-        'capacity': 100,  # 10
+        'capacity': 50,  # 10
         'random_seed': 102,
         'visualize': False,
     }
