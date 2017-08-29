@@ -339,18 +339,20 @@ class smpSOESGP(smpOTLModel):
         'input_weight': 1.0,
         'output_feedback_weight': 0.0,
         'activation_function': 1,
-        'leak_rate': 0.7, # 0.9,
         'connectivity': 0.1,
         'spectral_radius': 0.99, # 0.999,
         # 'kernel_params': [10.0, 10.0], # [2.0, 2.0],
         # 'noise': 0.01,
         # 'kernel_params': [10.0, 10.0], # [2.0, 2.0],
         # 'noise': 1.0, # 0.01,
-        'kernel_params': [6.0, 6.0], # [2.0, 2.0],
-        'noise': 5e-2, # 0.01,
+        # # pointmass
+        # 'kernel_params': [6.0, 6.0], # [2.0, 2.0],
+        # 'noise': 5e-2, # 0.01,
+        # 'leak_rate': 0.7, # 0.9,
         # barrel
-        # 'kernel_params': [2.0, 2.0], # [2.0, 2.0],
-        # 'noise': 1e-1,
+        'kernel_params': [2.0, 2.0], # [2.0, 2.0],
+        'noise': 5e-1,
+        'leak_rate': 0.8, # 0.9,
         'epsilon': 1e-3,
         'capacity': 100,  # 10
         'random_seed': 102,
@@ -837,8 +839,9 @@ class smpHebbianSOM(smpModel):
 
     Hebbian SOM model
 
-    FIXME: kohonen/map.Map init distribution and scaling
-    FIXME: fit_hebb delay
+    FIXME: conf: kohonen/map.Map init distribution and scaling
+    FIXME: conf: fit_hebb onset delay
+    FIXME: conf: sampling mode (weights, gaussian(wgts, sigmas), ...
     """
     defaults = {
         'idim': 1, 'odim': 1, 'numepisodes': 100, 'visualize': False, 'mapsize_e': 10, 'mapsize_p': 10, 'som_lr': 1e-0,
