@@ -192,6 +192,8 @@ class smpOTLModel(smpModel):
         'odim': 1,
         'otlmodel_type': 'soesgp',
         'otlmodel': None,
+        'memory': 1,
+        'lag_off': 1,
         }
         
     @smpModelInit()
@@ -202,8 +204,30 @@ class smpOTLModel(smpModel):
 
         # self.otlmodel_type = "soesgp"
         # self.otlmodel = None
+        # introspection
+        self.cnt = 0
+        
+        # explicit short term memory needed for tapping across lag gaps
+        self.r_l = []
+        self.r_ = np.zeros((self.modelsize, self.memory))
+        # self.r_ = np.random.uniform(-1, 1, (self.modelsize, self.memory)) * 1.0
+        
+        # output variables arrays
         self.pred = np.zeros((self.odim, 1))
         self.var = np.zeros((self.odim, 1))
+        # output variables lists
+        self.pred_l = []
+        self.var_l  = []
+
+    def update(self, X_):
+        # update state
+        self.otlmodel.update(X_)
+        # store state
+        self.r_ = np.roll(self.r_, shift = -1, axis = -1)
+        self.otlmodel.getState(self.r_l)
+        tmp = np.array([self.r_l]).T
+        # print("soesgp r_", self.r_.shape, self.r_[...,[-1]].shape, tmp.shape)
+        self.r_[...,[-1]] = tmp # convert to array?
 
     def predict(self, X,rollback = False):
         if X.shape[0] > 1: # batch input
@@ -216,23 +240,18 @@ class smpOTLModel(smpModel):
             return self.predict_step(X_, rollback = rollback)
 
     def predict_step(self, X_, rollback = False):
-        if rollback:
-            r = []
-            self.otlmodel.getState(r)
-            # print("smpOTLModel.predict_step state", r)
-
-        # update state
-        self.otlmodel.update(X_)
-        pred = []
-        var  = []
-        self.otlmodel.predict(pred, var)
+        # update state and store it
+        self.update(X_)
+        # predict output variables from state
+        self.otlmodel.predict(self.pred_l, self.var_l)
         # return np.zeros((1, self.odim))
-        self.pred = np.array(pred)
-        self.var = np.abs(np.array(var))
+        self.pred = np.array(self.pred_l)
+        self.var = np.abs(np.array(self.var_l))
 
         if rollback:
-            self.otlmodel.setState(r)
-        
+            self.otlmodel.setState(self.r_l)
+
+        self.cnt += 1
         return self.pred.reshape((1, self.odim))
         
     def fit(self, X, y, update = True):
@@ -240,28 +259,33 @@ class smpOTLModel(smpModel):
 
         Fit model to data X, y
         """
+        if self.cnt < self.memory: return
         
         if X.shape[0] > 1: # batch of data
             return self.fit_batch(X, y)
 
         if update:
             X_ = X.flatten().tolist()
+            self.update(X_)
             # print("X.shape", X.shape, len(X_), X_)
-            self.otlmodel.update(X_)
+            # self.otlmodel.update(X_)
             # copy state into predefined structure
             # self.otlmodel.getState(self.r)
 
-        # pred = []
-        # var  = []
-        # self.otlmodel.predict(pred, var)
-
+        # consider lag and restore respective state
+        r_lagged = self.r_[...,[-self.lag_off]]
+        # print ("r_lagged", r_lagged.shape)
+        self.otlmodel.setState(r_lagged.flatten().tolist())
+            
+        # prepare target and fit
+        # print("soesgp.fit y", type(y))
         y_ = y.flatten().tolist()
         self.otlmodel.train(y_)
-        
-        # self.otlmodel.predict(pred, var)
-        # print(pred, var)
-        # return np.array(pred).reshape((1, self.odim))
 
+        # restore chronologically most recent state
+        r_lagged = self.r_[...,[-1]]
+        self.otlmodel.setState(r_lagged.flatten().tolist())
+        
     def fit_batch(self, X, y):
         for i in range(X.shape[0]):
             self.fit(X[[i]], y[[i]])
@@ -335,9 +359,12 @@ class smpSOESGP(smpOTLModel):
         'odim': 1,
         'otlmodel_type': 'soesgp',
         'otlmodel': None,
+        'memory': 1,
+        'lag_off': 1,
         'modelsize': 200,
-        'input_weight': 2.0,
+        'input_weight': 1.0,
         'output_feedback_weight': 0.0,
+        'use_inputs_in_state': True,
         'activation_function': 1,
         'connectivity': 0.1,
         'spectral_radius': 0.999, # 0.999,
@@ -350,12 +377,12 @@ class smpSOESGP(smpOTLModel):
         # 'noise': 5e-2, # 0.01,
         # 'leak_rate': 0.7, # 0.9,
         # barrel
-        'kernel_params': [2.0, 1.0], # [2.0, 2.0],
+        'kernel_params': [1.2, 1.2], # [2.0, 2.0],
         'noise': 1e-2,
         'leak_rate': 0.9, # 0.9,
         'epsilon': 1e-3,
-        'capacity': 50,  # 10
-        'random_seed': 102,
+        'capacity': 100,  # 10
+        'random_seed': 103,
         'visualize': False,
     }
         
@@ -397,9 +424,9 @@ class smpSOESGP(smpOTLModel):
                     self.leak_rate, self.connectivity, self.spectral_radius,
                     False, self.kernel_params, self.noise, self.epsilon,
                     self.capacity, self.random_seed)
-        im = res_input_matrix_random_sparse(self.idim, self.modelsize, 0.2)
+        # im = res_input_matrix_random_sparse(self.idim, self.modelsize, 0.2)
         # print("im", type(im))
-        self.otlmodel.setInputWeights(im.tolist())
+        # self.otlmodel.setInputWeights(im.tolist())
 
 ################################################################################
 # StorkGP OTL based model

@@ -182,8 +182,6 @@ class smpSHL(smpModel):
             self.perf_lp = np.zeros((self.odim_real, 1)) # performance prediction
         
             # explicit short term memory needed for tapping, lambda and gamma
-            self.r_ = np.zeros((self.modelsize, self.memory))
-            self.y_ = np.zeros((self.odim_real, self.memory))
             self.y_lp_ = np.zeros((self.odim_real, self.memory))
             self.perf_ = np.zeros((self.odim_real, self.memory))
             self.perf_lp_ = np.zeros((self.odim_real, self.memory))
@@ -214,6 +212,10 @@ class smpSHL(smpModel):
             input_coupling = self.input_coupling,
         )
 
+        # memory
+        self.r_ = np.zeros((self.modelsize, self.memory))
+        self.y_ = np.zeros((self.odim_real, self.memory))
+            
         # learning rule specific initializations
         if self.lrname == 'FORCEmdn':
             sigmas = [self.sigma_mu] * self.num_mu + [self.sigma_sig] * self.num_sig + [self.sigma_pi] * self.num_pi
@@ -306,21 +308,38 @@ class smpSHL(smpModel):
         if Y is not None:
             
             # handle different learning rules
-            if self.lrname == 'FORCE':
-                # modular learning rule (ugly call)
-                (self.model.P, k, c) = self.lr.learnFORCE_update_P(self.model.P, self.model.r)
-                # dw = self.lr.learnFORCE(Y.T, self.model.P, k, c, self.model.r, self.model.z, 0)
-                dw = self.lr.learnFORCE(
-                    target = Y.T, P = self.model.P,
-                    k = k, c = c, r = self.model.r, z = self.model.zn, channel = 0)
+            if self.lrname in ['FORCE']:
+                dw = np.zeros_like(self.model.wo)
+                
+                for i in range(self.lag_past[0], self.lag_past[1]):
+                    r = self.r_[...,[i]]
+                    # print "r", r.T
+                    pred = self.y_[...,[i]] # Y,
+                    # modular learning rule (ugly call)
+                    # (self.model.P, k, c) = self.lr.learnFORCE_update_P(self.model.P, self.model.r)
+                    (self.model.P, k, c) = self.lr.learnFORCE_update_P(self.model.P, r)
+                    # print "self.model.P, k, c", self.model.P, k, c
+                    # dw = self.lr.learnFORCE(Y.T, self.model.P, k, c, self.model.r, self.model.z, 0)
+                    # dw += self.lr.learnFORCE(
+                    #     target = Y.T, P = self.model.P,
+                    #     k = k, c = c, r = self.model.r, z = self.model.z, channel = 0)
+                    dw += self.lr.learnFORCE(
+                        target = Y.T, P = self.model.P,
+                        k = k, c = c, r = r, z = pred, channel = 0)
+                # print "|dw|", np.linalg.norm(dw, 2)
                 self.model.wo += dw
-                # for k in range(outsize_):
-                #     dw_t_norm[k,j] = LA.norm(dw[:,k])
+                # dw_t_norm[k,j] = LA.norm(dw[:,k])
                 self.model.perf = self.lr.e # mdn_loss_val
                 # y_ = self.model.z # self.model.zn.T
             elif self.lrname == 'RLS':
-                print "RLS", self.cnt_step
-                dw = self.lr.learnRLS(target = Y.T, r = self.model.r)
+                # print "RLS", self.cnt_step
+                dw = np.zeros_like(self.model.wo)
+                for i in range(self.lag_past[0], self.lag_past[1]):
+                    r = self.r_[...,[i]]
+                    # print "r", r.T
+                    pred = self.y_[...,[i]] # Y,
+                    # dw = self.lr.learnRLS(target = Y.T, r = self.model.r)
+                    dw = self.lr.learnRLS(target = Y.T, r = r, noise = 1e-1)
                 self.model.wo += dw
                 self.model.perf = self.lr.rls_estimator.y
                 # for k in range(outsize_):
@@ -395,16 +414,17 @@ class smpSHL(smpModel):
                     # if np.all(self.perf_lp <= 0.05) and np.all(self.perf <= 0.05):
                     self.model.wo += dw
 
-                    thr = self.wgt_thr # 0.8
-                    if np.linalg.norm(self.model.wo, 2) > thr:
-                        # self.model.wo *= 0.95
-                        self.model.wo /= np.linalg.norm(self.model.wo, 2)
-                        self.model.wo *= thr
-                    # else:
-                    #     print "setting theta low"
-                    #     # self.theta = 1e-3
-                self.model.perf = self.lr.perf # hm?
-                # self.model.perf_lp = ((1 - self.model.coeff_a) * self.model.perf_lp) + (self.model.coeff_a * self.model.perf)
+            # weight decay
+            thr = self.wgt_thr # 0.8
+            if np.linalg.norm(self.model.wo, 2) > thr:
+                # self.model.wo *= 0.95
+                self.model.wo /= np.linalg.norm(self.model.wo, 2)
+                self.model.wo *= thr
+                # else:
+                #     print "setting theta low"
+                #     # self.theta = 1e-3
+            self.model.perf = self.lr.perf # hm?
+            # self.model.perf_lp = ((1 - self.model.coeff_a) * self.model.perf_lp) + (self.model.coeff_a * self.model.perf)
 
         if not update:
             # print "returning", self.cnt_step
@@ -422,6 +442,13 @@ class smpSHL(smpModel):
         for i in range(self.oversampling):
             _ = self.model.execute(X.T)
 
+        # roll memory buffer
+        for mem in ['r_', 'y_']:
+            # print "smpSHL.step %s pre roll = %s" % (mem, getattr(self, mem))
+            setattr(self, mem, np.roll(getattr(self, mem), shift = -1, axis = 1))
+            # print "smpSHL.step %s post roll = %s" % (mem, getattr(self, mem))
+
+            
         # prepare output
         if self.lrname in ['RLS', 'FORCE']:
             self.y = self.model.z
@@ -429,14 +456,12 @@ class smpSHL(smpModel):
             self.y = self.model.zn
             
             # roll memory buffer
-            for mem in ['r_', 'y_', 'y_lp_']:
+            for mem in ['y_lp_']:
                 # print "smpSHL.step %s pre roll = %s" % (mem, getattr(self, mem))
                 setattr(self, mem, np.roll(getattr(self, mem), shift = -1, axis = 1))
                 # print "smpSHL.step %s post roll = %s" % (mem, getattr(self, mem))
-            
+
             # commit to memory
-            self.r_[...,[-1]] = self.model.r.copy()
-            self.y_[...,[-1]] = self.y.copy()
             self.y_lp_[...,[-1]] = self.y_lp.copy()
 
             # update output and performance prediction
@@ -472,6 +497,10 @@ class smpSHL(smpModel):
         if rollback:
             self.model.r = self.r_current.copy()
             self.model.x = self.x_current.copy()
+            
+        # commit to memory
+        self.r_[...,[-1]] = self.model.r.copy()
+        self.y_[...,[-1]] = self.y.copy()
             
         # keep counting, it's important
         self.cnt_step += 1
