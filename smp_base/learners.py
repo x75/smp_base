@@ -312,9 +312,10 @@ class smpSHL(smpModel):
                 dw = np.zeros_like(self.model.wo)
                 
                 for i in range(self.lag_past[0], self.lag_past[1]):
-                    r = self.r_[...,[i]]
+                    # print "fetching i = %d from r_" % (i,)
+                    r = self.r_[...,[i+1]]
                     # print "r", r.T
-                    pred = self.y_[...,[i]] # Y,
+                    pred = self.y_[...,[i+1]] # Y,
                     # modular learning rule (ugly call)
                     # (self.model.P, k, c) = self.lr.learnFORCE_update_P(self.model.P, self.model.r)
                     (self.model.P, k, c) = self.lr.learnFORCE_update_P(self.model.P, r)
@@ -339,7 +340,8 @@ class smpSHL(smpModel):
                     # print "r", r.T
                     pred = self.y_[...,[i]] # Y,
                     # dw = self.lr.learnRLS(target = Y.T, r = self.model.r)
-                    dw = self.lr.learnRLS(target = Y.T, r = r, noise = 1e-1)
+                    # dw = self.lr.learnRLS(target = Y.T, r = r, noise = 1e-1)
+                    dw = self.lr.learnRLS(target = Y.T, r = r, noise = 1e-2)
                 self.model.wo += dw
                 self.model.perf = self.lr.rls_estimator.y
                 # for k in range(outsize_):

@@ -249,7 +249,8 @@ class smpOTLModel(smpModel):
         self.var = np.abs(np.array(self.var_l))
 
         if rollback:
-            self.otlmodel.setState(self.r_l)
+            self.r_ = np.roll(self.r_, shift = 1, axis = -1)
+            self.otlmodel.setState(self.r_[...,[-1]].flatten().tolist())
 
         self.cnt += 1
         return self.pred.reshape((1, self.odim))
@@ -273,6 +274,7 @@ class smpOTLModel(smpModel):
             # self.otlmodel.getState(self.r)
 
         # consider lag and restore respective state
+        # print("lag_off", self.lag_off)
         r_lagged = self.r_[...,[-self.lag_off]]
         # print ("r_lagged", r_lagged.shape)
         self.otlmodel.setState(r_lagged.flatten().tolist())
@@ -362,27 +364,29 @@ class smpSOESGP(smpOTLModel):
         'memory': 1,
         'lag_off': 1,
         'modelsize': 200,
-        'input_weight': 1.0,
         'output_feedback_weight': 0.0,
-        'use_inputs_in_state': True,
-        'activation_function': 1,
+        'use_inputs_in_state': False,
+        'activation_function': 0,
         'connectivity': 0.1,
-        'spectral_radius': 0.999, # 0.999,
         # 'kernel_params': [10.0, 10.0], # [2.0, 2.0],
         # 'noise': 0.01,
         # 'kernel_params': [10.0, 10.0], # [2.0, 2.0],
         # 'noise': 1.0, # 0.01,
-        # # pointmass
-        # 'kernel_params': [6.0, 6.0], # [2.0, 2.0],
-        # 'noise': 5e-2, # 0.01,
-        # 'leak_rate': 0.7, # 0.9,
-        # barrel
-        'kernel_params': [1.2, 1.2], # [2.0, 2.0],
-        'noise': 1e-2,
-        'leak_rate': 0.9, # 0.9,
-        'epsilon': 1e-3,
+        # pointmass
+        'input_weight': 1.0,
+        'kernel_params': [1.0, 2.0],
+        'noise': 1e-2, #8e-2, # 0.01,
+        'leak_rate': 0.3, # 0.9,
+        'spectral_radius': 0.99,
+        # # barrel
+        # 'input_weight': 1.0,
+        # 'kernel_params': [1.2, 1.2], # [2.0, 2.0],
+        # 'noise': 1e-2,
+        # 'leak_rate': 0.9, # 0.9,
+        # 'spectral_radius': 0.99, # 0.999,
+        'epsilon': 1e-4,
         'capacity': 100,  # 10
-        'random_seed': 103,
+        'random_seed': 104,
         'visualize': False,
     }
         
@@ -424,9 +428,9 @@ class smpSOESGP(smpOTLModel):
                     self.leak_rate, self.connectivity, self.spectral_radius,
                     False, self.kernel_params, self.noise, self.epsilon,
                     self.capacity, self.random_seed)
-        # im = res_input_matrix_random_sparse(self.idim, self.modelsize, 0.2)
+        im = res_input_matrix_random_sparse(self.idim, self.modelsize, 0.2) * self.input_weight
         # print("im", type(im))
-        # self.otlmodel.setInputWeights(im.tolist())
+        self.otlmodel.setInputWeights(im.tolist())
 
 ################################################################################
 # StorkGP OTL based model
