@@ -209,6 +209,7 @@ class smpOTLModel(smpModel):
         
         # explicit short term memory needed for tapping across lag gaps
         self.r_l = []
+        print( "otlmodel.memory", self.memory)
         self.r_ = np.zeros((self.modelsize, self.memory))
         # self.r_ = np.random.uniform(-1, 1, (self.modelsize, self.memory)) * 1.0
         
@@ -227,9 +228,10 @@ class smpOTLModel(smpModel):
         self.otlmodel.getState(self.r_l)
         tmp = np.array([self.r_l]).T
         # print("soesgp r_", self.r_.shape, self.r_[...,[-1]].shape, tmp.shape)
-        self.r_[...,[-1]] = tmp # convert to array?
+        self.r_[...,[-1]] = tmp.copy()
 
     def predict(self, X,rollback = False):
+        # row vector input
         if X.shape[0] > 1: # batch input
             ret = np.zeros((X.shape[0], self.odim))
             for i in range(X.shape[0]):
@@ -245,12 +247,14 @@ class smpOTLModel(smpModel):
         # predict output variables from state
         self.otlmodel.predict(self.pred_l, self.var_l)
         # return np.zeros((1, self.odim))
+        # set prediction variables
         self.pred = np.array(self.pred_l)
         self.var = np.abs(np.array(self.var_l))
 
+        # roll back the reservoir state if rollback on
         if rollback:
             self.r_ = np.roll(self.r_, shift = 1, axis = -1)
-            self.otlmodel.setState(self.r_[...,[-1]].flatten().tolist())
+            self.otlmodel.setState(self.r_[...,[-1]].copy().flatten().tolist())
 
         self.cnt += 1
         return self.pred.reshape((1, self.odim))
@@ -274,7 +278,7 @@ class smpOTLModel(smpModel):
             # self.otlmodel.getState(self.r)
 
         # consider lag and restore respective state
-        # print("lag_off", self.lag_off)
+        # print("otlmodel.fit lag_off", self.lag_off)
         r_lagged = self.r_[...,[-self.lag_off]]
         # print ("r_lagged", r_lagged.shape)
         self.otlmodel.setState(r_lagged.flatten().tolist())
@@ -374,10 +378,10 @@ class smpSOESGP(smpOTLModel):
         # 'noise': 1.0, # 0.01,
         # pointmass
         'input_weight': 1.0,
-        'kernel_params': [1.0, 2.0],
-        'noise': 1e-2, #8e-2, # 0.01,
-        'leak_rate': 0.3, # 0.9,
-        'spectral_radius': 0.99,
+        'kernel_params': [10.0, 1.5],
+        'noise': 5e-3, #8e-2, # 0.01,
+        'leak_rate': 0.1, # 0.9,
+        'spectral_radius': 0.9,
         # # barrel
         # 'input_weight': 1.0,
         # 'kernel_params': [1.2, 1.2], # [2.0, 2.0],
@@ -385,8 +389,8 @@ class smpSOESGP(smpOTLModel):
         # 'leak_rate': 0.9, # 0.9,
         # 'spectral_radius': 0.99, # 0.999,
         'epsilon': 1e-4,
-        'capacity': 100,  # 10
-        'random_seed': 104,
+        'capacity': 200,  # 10
+        'random_seed': 106,
         'visualize': False,
     }
         
@@ -446,6 +450,8 @@ class smpSTORKGP(smpOTLModel):
         'otlmodel_type': 'storkgp',
         'otlmodel': None,
         'modelsize': 100,
+        'memory': 1,
+        'lag_off': 1,
         'input_weight': 1.0,
         'output_feedback_weight': 0.0,
         'activation_function': 1,
@@ -457,11 +463,12 @@ class smpSTORKGP(smpOTLModel):
         'epsilon': 1e-3,
         'capacity': 100,
         'random_seed': 100,
+        'visualize': False,
     }
         
     @smpModelInit()
     def __init__(self, conf):
-        smpModel.__init__(self, conf)
+        smpOTLModel.__init__(self, conf = conf)
         
         # self.otlmodel_type = "storkgp"
         self.otlmodel = STORKGP()

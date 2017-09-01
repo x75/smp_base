@@ -336,9 +336,9 @@ class smpSHL(smpModel):
                 # print "RLS", self.cnt_step
                 dw = np.zeros_like(self.model.wo)
                 for i in range(self.lag_past[0], self.lag_past[1]):
-                    r = self.r_[...,[i]]
+                    r = self.r_[...,[i+1]]
                     # print "r", r.T
-                    pred = self.y_[...,[i]] # Y,
+                    pred = self.y_[...,[i+1]] # Y,
                     # dw = self.lr.learnRLS(target = Y.T, r = self.model.r)
                     # dw = self.lr.learnRLS(target = Y.T, r = r, noise = 1e-1)
                     dw = self.lr.learnRLS(target = Y.T, r = r, noise = 1e-2)
@@ -388,7 +388,8 @@ class smpSHL(smpModel):
                     # for j in range(self.lag_future[0], self.lag_future[1]):
                     # print "            lag_future = %d, " % (j, )
 
-                    lag_past = i
+                    # FORCE says i+1
+                    lag_past = i+1
                     # lag_future = j
                     dw += self.lr.learnEH(
                         target = None,
