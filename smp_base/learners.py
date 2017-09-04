@@ -91,20 +91,23 @@ class smpSHL(smpModel):
         'eta_init': 1e-4,
         'oversampling': 1,
         'input_coupling': 'normal',
+        'wgt_thr': 1.0,
+        'lag_past': (-2, -1),
+        'lag_future': (-1, -0),
         }
 
     conf_fwd_perf = {
         'idim': 6,
         'odim': 2,
         'memory': 1,
-        'tau': 1.0,
+        'tau': 0.1, # 1.0,
         'multitau': False,
         'modelsize': 200,
         'density': 0.1,
-        'spectral_radius': 0.1,
-        'w_input': 0.5,
+        'spectral_radius': 0.99,
+        'w_input': 1.0,
         'w_feedback': 0.0,
-        'w_bias': 0.5,
+        'w_bias': 0.1,
         'nonlin_func': np.tanh,
         'sparse': True,
         'ip': False,
@@ -112,12 +115,12 @@ class smpSHL(smpModel):
         'theta_state': 0.01,
         'coeff_a': 0.2,
         'visualize': False,
-        'alpha': 1.0,
+        'alpha': 0.5,
         'lrname': 'FORCE',
         'mixcomps': 3,
         'eta_init': 1e-4,
         'oversampling': 1,
-        'input_coupling': 'normal',
+        'input_coupling': 'sparse_normal',
         }
         
     @smpModelInit()
@@ -160,12 +163,13 @@ class smpSHL(smpModel):
             self.odim_single = self.odim_real / self.laglen_future
             # adjust eta for multiple updates
             self.eta = self.eta / float(self.laglen_past)
+            self.eta2 = self.eta
 
             # forward models: output
             self.y_model = iir_fo(a = self.coeff_a, dim = self.odim_real)
             # forward models: performance (reward prediction)
             if self.perf_model_type == 'lowpass':
-                self.perf_model = iir_fo(a = self.coeff_a, dim = self.odim_real)
+                self.perf_model = iir_fo(a = self.coeff_a, dim = self.odim_real, y_init = -4.)
             else:
                 # fancy predictors
                 # models: soesgp, resrls, resforce, knn, i/gmm, hebbsom
@@ -173,13 +177,17 @@ class smpSHL(smpModel):
                 # outputs: perf_hat
                 conf_fwd_perf = smpSHL.conf_fwd_perf
                 conf_fwd_perf.update({'idim': 2 + 2 + 2 + 0, 'odim': 2})
+                # conf_fwd_perf.update({'lag_past': self.lag_past, 'lag_future': self.lag_future})
+                conf_fwd_perf.update({'memory': self.memory})
                 self.perf_model = smpSHL(conf = smpSHL.conf_fwd_perf)
 
             # output variables
             # self.y     = np.zeros((self.odim_real, 1))   # output
             self.y_lp  = np.zeros((self.odim_real, 1))   # output prediction
-            self.perf    = np.zeros((self.odim_real, 1)) # performance (-|error|)
-            self.perf_lp = np.zeros((self.odim_real, 1)) # performance prediction
+            # self.perf    = np.zeros((self.odim_real, 1)) # performance (-|error|)
+            # self.perf_lp = np.zeros((self.odim_real, 1)) # performance prediction
+            self.perf    = np.ones((self.odim_real, 1)) * -4 # performance (-|error|)
+            self.perf_lp = np.ones((self.odim_real, 1)) * -4 # performance prediction
         
             # explicit short term memory needed for tapping, lambda and gamma
             self.y_lp_ = np.zeros((self.odim_real, self.memory))

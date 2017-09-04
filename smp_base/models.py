@@ -201,14 +201,15 @@ def iir_firstorder_coef_to_freq(b = 0.8, a = 0.2):
 
 class iir_fo(object):
     # FIXME: make it smpModel
-    def __init__(self, b = None, a = 0.2, dim = 1):
+    def __init__(self, b = None, a = 0.2, dim = 1, y_init = 0):
         self.a = a
+        self.y_init = y_init
         if b is None:
             self.b = 1 - self.a
         else:
             self.b = b
         self.dim = dim
-        self.y = np.zeros((self.dim, 1))
+        self.y = np.ones((self.dim, 1)) * self.y_init
 
     def predict(self, x):
         self.y = self.b * self.y + self.a * x
