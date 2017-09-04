@@ -143,6 +143,14 @@ class smpModel(object):
         if self.model is None:
             print("%s.fit: implement me" % (self.__class__.__name__))
 
+    def step(self, X, Y):
+        """smpModel.fit
+
+        Step the model (fit, predict)
+        """
+        if self.model is None:
+            print("%s.fit: implement me" % (self.__class__.__name__))
+
     def visualize_model_init(self):
         return
         
