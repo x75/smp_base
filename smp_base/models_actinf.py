@@ -106,6 +106,8 @@ class smpKNN(smpModel):
         'idim': 1,
         'odim': 1,
         'n_neighbors': 5,
+        'prior': 'random', # ['random', 'linear']
+        'prior_width': 0.01,
         }
     @smpModelInit()
     def __init__(self, conf):
@@ -131,20 +133,30 @@ class smpKNN(smpModel):
         Bootstrap the model with some initial dummy samples to prepare it for inference after init
         """
         # bootstrap model
-        print("%s.bootstrap'ping" % (self.__class__.__name__))
-        for i in range(10):
-            if self.idim == self.odim:
-                self.X_.append(np.ones((self.idim, )) * i * 0.1)
-                self.y_.append(np.ones((self.odim, )) * i * 0.1)
-            else:
-                noise_amp = 0.01
-                self.X_.append(np.random.uniform(
-                    -noise_amp, noise_amp, (self.idim,)))
-                self.y_.append(np.random.uniform(
-                    -noise_amp, noise_amp, (self.odim,)))
+        print("%s.bootstrapping with %s prior" % (self.__class__.__name__, self.prior))
+        if self.prior == 'random':
+            for i in range(10):
+                if self.idim == self.odim:
+                    self.X_.append(np.ones((self.idim, )) * i * 0.1)
+                    self.y_.append(np.ones((self.odim, )) * i * 0.1)
+                else:
+                    noise_amp = self.prior_width
+                    self.X_.append(np.random.uniform(
+                        -noise_amp, noise_amp, (self.idim,)))
+                    self.y_.append(np.random.uniform(
+                        -noise_amp, noise_amp, (self.odim,)))
+
+        elif self.prior == 'linear':
+            for i in range(10):
+                p_ = -self.prior_width/2.0 + float(i)/10.0
+                X = np.ones((self.idim, )) * p_ + np.random.uniform(-0.01, 0.01)
+                y = np.ones((self.odim, )) * p_ + np.random.uniform(-0.01, 0.01)
+                self.X_.append(X)
+                self.y_.append(y)
+
         # print(self.X_, self.y_)
         self.fwd.fit(self.X_, self.y_)
-
+            
     def predict(self, X):
         """smpKNN.predict
 
@@ -500,25 +512,14 @@ class smpGMM(smpModel):
     Gaussian mixture model based on PyPR's gmm
     """
     defaults = {
-        'idim': 1, 'odim': 1, 'K': 10, 'numepisodes': 10,
-        'visualize': False}
+        'idim': 1, 'odim': 1, 'K': 10, 'fit_interval': 100,
+        'numepisodes': 10, 'visualize': False, 'em_max_iter': 1000}
     
     @smpModelInit()
     def __init__(self, conf):
         """smpGMM.__init__
         """
         smpModel.__init__(self, conf)
-
-        # number of mixture components
-        # self.K = K
-        # list of K component idim x 1    centroid vectors
-        self.cen_lst = []
-        # list of K component idim x idim covariances
-        self.cov_lst = []
-        # K mixture coeffs
-        self.p_k = None
-        # log loss after training
-        self.logL = 0
 
         self.cdim = self.idim + self.odim
 
@@ -528,9 +529,22 @@ class smpGMM(smpModel):
         self.y_  = []
         self.Xy = np.zeros((1, self.cdim))
         # fitting configuration
-        self.fit_interval = 100
+        # self.fit_interval = 100
         self.fitted =  False
 
+        # number of mixture components
+        # self.K = K
+        # list of K component idim x 1    centroid vectors
+        # self.cen_lst = []
+        self.cen_lst = [] # np.random.uniform(-1, 1, (self.K,)).tolist()
+        # list of K component idim x idim covariances
+        self.cov_lst = [] # [np.eye(self.cdim) * 0.1 for _ in range(self.K)]
+        # K mixture coeffs
+        # self.p_k = None
+        self.p_k = None # [1.0/self.K for _ in range(self.K)]
+        # log loss after training
+        self.logL = 0
+        
         print("%s.__init__, idim = %d, odim = %d" % (self.__class__.__name__, self.idim, self.odim))
 
     def fit(self, X, y):
@@ -576,9 +590,15 @@ class smpGMM(smpModel):
         # self.Xy  = np.asarray(self.Xy_)
         print("%s.fit_batch self.Xy.shape = %s" % (self.__class__.__name__, self.Xy.shape))
         # fit gmm
-        self.cen_lst, self.cov_lst, self.p_k, self.logL = gmm.em_gm(self.Xy, K = self.K, max_iter = 1000,
-                                                                    verbose = False, iter_call = None)
-        self.fitted =  True
+        # max_iter = 10
+        try:
+            self.cen_lst, self.cov_lst, self.p_k, self.logL = gmm.em_gm(
+                self.Xy, K = self.K, max_iter = self.em_max_iter,
+                verbose = False, iter_call = None)
+            self.fitted =  True
+        except Exception, e:
+            print( "%s.fit_batch fit failed with %s" % (self.__class__.__name__,  e.args ,))
+            # sys.exit()
         print("%s.fit_batch Log likelihood (how well the data fits the model) = %f" % (self.__class__.__name__, self.logL))
 
     def predict(self, X, rollback = False):
@@ -622,10 +642,6 @@ class smpGMM(smpModel):
         TODO: function conditional_dist, make predict/sample comply with sklearn and use the lowlevel
               cond_dist for advanced uses like dynamic conditioning
         """
-        if not self.fitted:
-            # return np.zeros((3,1))
-            # model has not been bootstrapped, return random goal
-            return np.random.uniform(-0.1, 0.1, (1, self.odim)) # FIXME hardcoded shape
     
         # gmm.cond_dist want's a (n, ) shape, not (1, n)
         if len(X.shape) > 1:
@@ -634,8 +650,17 @@ class smpGMM(smpModel):
             cond = X
 
         # print("%s.sample_cond: cond.shape = %s" % (self.__class__.__name__, cond.shape))
-        (cen_con, cov_con, new_p_k) = gmm.cond_dist(cond, self.cen_lst, self.cov_lst, self.p_k)
-        cond_sample = gmm.sample_gaussian_mixture(cen_con, cov_con, new_p_k, samples = 1)
+        if not self.fitted:
+            # return np.zeros((3,1))
+            # model has not been bootstrapped, return random goal
+            cond_sample = np.random.uniform(-1.0, 1.0, (1, self.odim)) # FIXME hardcoded shape
+            # cen_con = self.cen_lst
+            # cov_con = self.cov_lst
+            # new_p_k = self.p_k
+        else:
+            (cen_con, cov_con, new_p_k) = gmm.cond_dist(cond, self.cen_lst, self.cov_lst, self.p_k)
+            # print( "cen_con", cen_con, "cov_con", cov_con, "p_k", new_p_k)
+            cond_sample = gmm.sample_gaussian_mixture(cen_con, cov_con, new_p_k, samples = 1)
         # print("%s.sample_cond: cond_sample.shape = %s" % (self.__class__.__name__, cond_sample.shape))
         return cond_sample
 
