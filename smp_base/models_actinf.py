@@ -739,18 +739,27 @@ class smpIGMM(smpModel):
         """
         smpModel.__init__(self, conf)
 
+        self.cdim = self.idim + self.odim
+
         # number of mixture components
         # self.K = K
+        
         # list of K component idim x 1    centroid vectors
         self.cen_lst = []
         # list of K component idim x idim covariances
         self.cov_lst = []
         # K mixture coeffs
         self.p_k = None
+
+        self.cen_lst = np.random.uniform(-1, 1, (self.K,)).tolist()
+        # list of K component idim x idim covariances
+        self.cov_lst = [np.eye(self.cdim) * 0.1 for _ in range(self.K)]
+        # K mixture coeffs
+        # self.p_k = None
+        self.p_k = [1.0/self.K for _ in range(self.K)]
+        
         # log loss after training
         self.logL = 0
-
-        self.cdim = self.idim + self.odim
 
         # data
         self.Xy_ = []

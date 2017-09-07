@@ -183,7 +183,7 @@ class LearningRules(object):
         self.ndim_out = ndim_out
         self.dim = dim
         self.loss = 0
-        self.loss_ = np.zeros((1, 100))
+        self.loss_ = np.zeros((1, 1000))
         self.e = np.zeros((self.ndim_out, 1))
         self.perf = self.e # pointer
         self.e_lp = np.zeros_like(self.e)
@@ -242,8 +242,12 @@ class LearningRules(object):
 
         Quick hack delta rule for testing MDN learning
         """
+        eta = 5e-5
+        # eta = 1e-4
+        # eta = 5e-4
         self.e = self.mdn_loss(x, r, z, target)
-        dw = np.dot(-self.e, r.T).T
+        dw = eta * np.dot(-self.e, r.T).T
+        self.cnt += 1
         return dw
 
     # learning rule: FORCEmdn
@@ -300,18 +304,23 @@ class LearningRules(object):
         #self.wo = np.random.uniform(-1e-3,1e-3, size=(self.N, self.output_num))
         #self.wo = np.random.uniform(0,1, size=(self.N, self.output_num))
 
-    def learnRLS(self, target, r, noise = None):
+    def learnRLS(self, target, r, noise = None, z = None, x = None):
         """LearningRules.learnRLS
 
         The RLS error-based supervised learning rule
         """
         if noise is not None:
             self.noise = noise
+
+        if x is not None and z is not None:
+            e = self.mdn_loss(x, r, z, target)
+            target = z - e
             
         # print "%s.learnRLS, target.shape = %s" % (self.__class__.__name__, target.shape)
         # self.rls_estimator.update(self.r.T, target.T, self.theta_state)
         self.rls_estimator.single_update(r.T, target.T, self.noise)
         # self.wo = self.rls_E.x
+        self.cnt += 1
         return self.rls_estimator.dx
     
     # mixture density stuff
@@ -370,7 +379,7 @@ class LearningRules(object):
         """
         # compidx = np.where(np.random.multinomial(1, ps) == 1.0)[0][0]
         compidx = self.mixture_sample_prior(ps)
-        # print "compidx", compidx, mu[compidx], "sig", sig[compidx] # .shape
+        # print "compidx", compidx, mu[compidx], "sig", sig[compidx], "p", ps[compidx] # .shape
         # y = np.random.normal(mu[compidx], np.abs(sig[compidx]) + np.random.uniform(0, 1e-3, size=sig[[compidx]].shape))
         y = np.random.normal(mu[compidx], sig[compidx], size = mu[[compidx]].shape)
         return y
@@ -380,10 +389,12 @@ class LearningRules(object):
         if len(ps.shape) > 1:
             ps = ps[:,0]
         multinom_sample = np.random.multinomial(1, ps)
+        # print "multinom_sample", multinom_sample
         multinom_sample_idx = np.where(multinom_sample == 1.0)
         # print "multinom_sample_idx", ps, multinom_sample_idx
         compidx = multinom_sample_idx[0][0]
         compidx = np.argmax(ps)
+        # print "compidx", compidx
         return compidx
     
     def mdn_loss(self, x, r, z, y, loss_only = False):
@@ -1090,6 +1101,7 @@ class Reservoir(object):
         """
         # print "%s.learnRLS, target.shape = %s" % (self.__class__.__name__, target.shape)
         self.rls_E.update(self.r.T, target.T, self.theta_state)
+        self.cnt += 1
         self.wo = self.rls_E.x
 
     def learnEH(self, target):
@@ -1434,7 +1446,8 @@ def get_data(elen, outdim, mode="MSO_s1"):
     elif mode == "reg_multimodal_1":
         # build a sinewave with superimposed 1/4 duty cycle pulse
         f_numcomp = 2
-        freqs = np.array([0.001])
+        # freqs = np.array([0.001])
+        freqs = np.array([0.01])
         phases = np.random.uniform(0, 1, size=(f_numcomp, ))
         amps = np.random.uniform(0, 1, size=(f_numcomp, ))
         # amp normalization to sum 1
@@ -1609,11 +1622,11 @@ class ReservoirPlot(object):
             self.axs[1].axvspan(testing, episode_len, alpha=0.1)
 
         # axs[0].plot(pdata, "k-", lw=2.0, label="%d-dim tgt" % ds_real.shape[0])
-        self.axs[0].plot(pdata, "g-", lw=3.0, label="tgt", alpha=0.5)
+        self.axs[0].plot(pdata, "g-", lw=2.0, label="tgt", alpha=0.5)
         self.axs[0].plot([0, pdata.shape[0]], [0, 0], "k-", lw=0.2)
         self.axs[0].legend(ncol=2, fontsize=8)
 
-        self.axs[1].plot(pdata, "g-", lw=3.0, label="tgt", alpha=0.5)
+        self.axs[1].plot(pdata, "g-", lw=2.0, label="tgt", alpha=0.3)
         self.axs[1].plot([0, pdata.shape[0]], [0, 0], "k-", lw=0.2)
 
         if args.mode.endswith("mdn"):
@@ -1621,6 +1634,7 @@ class ReservoirPlot(object):
             self.axs[1].plot(pdata_mdn, "c-", lw=0.5, label="out_", alpha=0.5)
             for k in range(3):
                 pdata = pdata_out[:,(k*args.mixcomps):((k+1)*args.mixcomps)] + (k*2)
+                pdata = np.clip(pdata, -10, 10)
                 # pdata =     out_t[(k*mixcomps):((k+1)*mixcomps),:] + (k*2)
                 # print "pdata[%d].shape = %s, %s" % (k, pdata.shape, out_t.shape)
                 if k == 1:
@@ -1628,33 +1642,37 @@ class ReservoirPlot(object):
                 if k == 2:
                     # FIXME: fix this, softmax seems to be zero?
                     pdata = pdata # lr.softmax(pdata)
-                self.axs[1].plot(pdata, "%s-" % (cols[k]), lw=0.5, label="out%d"%k, alpha=0.5)
+                self.axs[1].plot(pdata, "%s-" % (cols[k]), lw=0.25, label="out%d"%k, alpha=0.5)
         else:
-            self.axs[1].plot(pdata_out, lw=0.5, label="out")
+            self.axs[1].plot(pdata_out, lw=0.25, label="out")
 
         self.axs[1].legend(ncol=2, fontsize=8)
 
         self.axs[2].set_title("reservoir traces")
-        self.axs[2].plot(r_t.T[:,self.rindex], label="r")
+        self.axs[2].plot(r_t.T[:,self.rindex], label="r", lw = 0.25, alpha = 0.5)
 
         self.axs[3].set_title("weight norm |W|")
         if args.mode.endswith("mdn"):
             for k in range(3):
-                self.axs[3].plot(wo_t_norm[(k*args.mixcomps):((k+1)*args.mixcomps),:].T, "%s-" % cols[k], label="|W|")
-                self.axs[3].plot(dw_t_norm[(k*args.mixcomps):((k+1)*args.mixcomps),:].T, "%s." % cols[k], label="|dW|")
+                self.axs[3].plot(wo_t_norm[(k*args.mixcomps):((k+1)*args.mixcomps),:].T, "%s-" % cols[k], label="|W|", lw = 0.25, alpha = 0.5)
+                self.axs[3].plot(dw_t_norm[(k*args.mixcomps):((k+1)*args.mixcomps),:].T - 1.0, "%s," % cols[k], label="|dW|", lw = 0.25, alpha = 0.5)
         else:
-            self.axs[3].plot(wo_t_norm.T, label="|W|")
-            self.axs[3].plot(dw_t_norm.T, label="|dW|")
+            self.axs[3].plot(wo_t_norm.T, label="|W|", lw = 0.25, alpha = 0.5)
+            self.axs[3].plot(dw_t_norm.T, label="|dW|", lw = 0.25, alpha = 0.5)
         self.axs[3].legend(ncol=2, fontsize=8)
 
         self.axs[4].set_title("perf (-loss)")
         # if args.mode.endswith("mdn"):
         if args.mode.endswith("mdn"):
-            self.axs[4].plot(loss_t.T, "g-", lw=2.0, label="loss", alpha = 0.75)
+            self.axs[4].plot(loss_t.T, "g-", lw=0.5, label="loss", alpha = 0.5)
             for k in range(3):
-                self.axs[4].plot(perf_t[(k*args.mixcomps):((k+1)*args.mixcomps),:].T, "%s-" % (cols[k]), label="perf", alpha=0.5)
+                self.axs[4].plot(
+                    np.clip(
+                        perf_t[(k*args.mixcomps):((k+1)*args.mixcomps),:].T,
+                        -1, 1),
+                    "%s-" % (cols[k]), label="perf", alpha=0.5, lw = 0.25)
         else:
-            self.axs[4].plot(perf_t.T, label="perf", alpha=0.5)
+            self.axs[4].plot(perf_t.T, label="perf", alpha=0.5, lw = 0.25)
         self.axs[4].legend(ncol=2, fontsize=8)
 
         plt.draw()
@@ -1756,6 +1774,7 @@ def main(args):
     alpha = 1.0
     input_scale = 1.2 # 2.0
     feedback_scale = args.scale_feedback
+    w_bias = 0.5
     g = 1.5
     # tau = 0.1
     # tau = 0.075
@@ -1771,11 +1790,20 @@ def main(args):
         # g = 0.01
         # tau = 1.0
 
-        alpha = 100.0
+        # alpha = 200.0
+        # alpha = 100.0
+        # alpha = 50.0
+        alpha = 10.0
+        # alpha = 4.0
+        # alpha = 1.0
+        # alpha = 0.2
         input_scale = 1.0
+        w_bias = 0.0
         g = 1.5
-        # tau = 0.05
-        tau = 0.025
+        # tau = 0.2
+        # tau = 0.1
+        tau = 0.05
+        # tau = 0.025
         # tau = 0.01
     # eta_init_ = 1e-4
     eta_init_ = 5e-4
@@ -1813,7 +1841,7 @@ def main(args):
         res = Reservoir(
             N = i, input_num = insize, output_num = outsize_, g = g, tau = tau,
             alpha = alpha, feedback_scale = feedback_scale, input_scale = input_scale,
-            bias_scale = 0.8, eta_init = eta_init_, theta = 2.5e-1, theta_state = 1e-3,
+            bias_scale = w_bias, eta_init = eta_init_, theta = 2.5e-1, theta_state = 1e-3,
             coeff_a = 0.2, mtau=args.multitau
         )
 
@@ -1839,7 +1867,13 @@ def main(args):
         # output weight init
         if args.mode.endswith("mdn"):
             # res.init_wo_random(0, 1e-1)
-            sigmas = [1e-3] * mixcomps + [1e-3] * mixcomps + [1e-3] * mixcomps
+            # sigmas = [1e-6] * mixcomps + [1e-6] * mixcomps + [1e-6] * mixcomps
+            # good with deltamdn mixcomps 6 and teacherforcing and eta ~ 1e-4
+            # sigmas = [1e-4] * mixcomps + [1e-4] * mixcomps + [1e-4] * mixcomps
+            # sigmas = [1e-3] * mixcomps + [1e-3] * mixcomps + [1e-3] * mixcomps
+            # good with rlsmdn mixcomps 3 and teacherforcing and alpha = 10
+            sigmas = [1e-2] * mixcomps + [1e-2] * mixcomps + [1e-2] * mixcomps
+            # sigmas = [1e-1] * mixcomps + [1e-1] * mixcomps + [1e-1] * mixcomps
             # print "sigmas xxx", sigmas
             res.init_wo_random(np.zeros((1, outsize_)), np.array(sigmas))
 
@@ -1857,6 +1891,9 @@ def main(args):
         if args.mode == "ol_force_mdn":
             # initialize FORCEmdn
             lr.learnFORCEmdn_setup(mixcomps = mixcomps)
+            
+            lr.learnRLSsetup(x0 = res.wo, P0 = np.eye(res.N))
+            
         elif ReservoirTest.modes[args.mode] == ReservoirTest.modes["ol_pi"]:
             print "ol_pi in progress, exiting"
             sys.exit(1)
@@ -1920,8 +1957,13 @@ def main(args):
 
 
                     # modular learning rule (ugly call)
-                    (res.P, k, c) = lr.learnFORCE_update_P(res.P, res.r)
-                    dw = lr.learnFORCEmdn(target, res.P, k, c, res.r, res.z, 0, inputs)
+                    # (res.P, k, c) = lr.learnFORCE_update_P(res.P, res.r)
+                    # dw = lr.learnFORCEmdn(target, res.P, k, c, res.r, res.z, 0, inputs)
+                    
+                    dw = lr.learnRLS(target = target, r = res.r, noise = 5e-1, z = res.z, x = inputs)
+                    # dw = lr.learnDeltamdn(
+                    #     target = target, P = res.P, k = None, c = None,
+                    #     r = res.r, z = res.z, channel = 0, x = inputs)
                     # res.wo += (1e-1 * dw)
                     # print "dw.shape", dw
                     # when using delta rule
@@ -1981,7 +2023,7 @@ def main(args):
                 sys.stdout.write( '\r[{0}] {1}%'.format('#'*int(progress), progress))
                 sys.stdout.flush()
 
-            if j > washout and (j+1) % args.plot_interval == 0:
+            if j > washout and j < (args.length - 1) and (j+1) % args.plot_interval == 0:
                 rpdata = (ds_real, out_t, out_t_mdn_sample, r_t, perf_t, loss_t, wo_t_norm, dw_t_norm)
                 rp.plot_data(args = args, data = rpdata, incr = j, lr = lr, testing = testing)
 
@@ -1995,7 +2037,7 @@ def main(args):
     rp.plot_data(args = args, data = rpdata, incr = j, lr = lr, testing = testing)
 
     timestr = time.strftime("%Y%m%d_%H%M%S")
-    rp.fig.savefig("../data/res_plot_%s.pdf" % (timestr), dpi=300, bbox_inches="tight")
+    # rp.fig.savefig("../data/res_plot_%s.pdf" % (timestr), dpi=300, bbox_inches="tight")
     plt.show()
 
     if args.mode.endswith("mdn"):
@@ -2017,7 +2059,7 @@ if __name__ == "__main__":
     parser.add_argument("-pi", "--plot_interval",  help="Time step interval at which to update plot [1000]",  default=1000, type=int)
     parser.add_argument("-rs", "--ressize", help="Reservoir (hidden layer) size [300]", default=300, type=int)
     parser.add_argument("-s", "--seed", help="RNG seed [101]", default=101, type=int)
-    parser.add_argument("-sf", "--scale_feedback", help="Global feedback strength (auto-regressive) [2.0]", default=2.0, type=float)
+    parser.add_argument("-sf", "--scale_feedback", help="Global feedback strength (auto-regressive) [0.0]", default=0.0, type=float)
     parser.add_argument("-t", "--target", help="Target [MSO_s1], one of " + str(ReservoirTest.targets.keys()), default = "MSO_s1")
     parser.add_argument("-f", "--file", help="File to use as data input", dest="file", default="data/notype_mono_short.wav")
     parser.add_argument("-tf", "--teacher_forcing", dest="teacher_forcing", action="store_true",
