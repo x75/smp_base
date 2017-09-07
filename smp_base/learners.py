@@ -85,9 +85,9 @@ class smpSHL(smpModel):
         'alpha': 10.0,
         'lrname': 'FORCE',
         'mixcomps': 6,
-        'sigma_mu': 1e-4,
-        'sigma_sig': 1e-4,
-        'sigma_pi': 1e-4,
+        'sigma_mu': 5e-2,
+        'sigma_sig': 5e-2,
+        'sigma_pi': 5e-2,
         'eta_init': 1e-4,
         'oversampling': 1,
         'input_coupling': 'normal',
@@ -141,6 +141,7 @@ class smpSHL(smpModel):
         # representation specific pre config
         if self.lrname == 'FORCEmdn':
             # self.odim_real = self.odim * self.mixcomps * 3
+            # wo initialization
             self.num_mu = self.odim * self.mixcomps
             # self.num_sig = self.odim ** 2 * self.mixcomps
             self.num_sig = ((self.odim ** 2 - self.odim)/2 + self.odim) * self.mixcomps
@@ -246,6 +247,10 @@ class smpSHL(smpModel):
         self.cnt_step = 0
         
     def visualize_model_init(self):
+        """smpSHL.visualize_model_init
+
+        Init model visualization
+        """
 
         self.Ridx  = np.random.choice(self.modelsize, min(30, int(self.modelsize * 0.1)))
         self.Rhist = []
@@ -260,7 +265,10 @@ class smpSHL(smpModel):
             self.figs[0].add_subplot(subplot)
         
     def visualize_model(self):
+        """smpSHL.visualize_model
 
+        Visualize model state
+        """
         plotdata = []
 
         # print "Yhist", self.Yhist
@@ -307,7 +315,10 @@ class smpSHL(smpModel):
         
     @smpModelStep()
     def step(self, X, Y, update = True, rollback = False, *args, **kwargs):
+        """smpSHL.step
 
+        Step the model: fit (to most recent state or specified as lag), predict
+        """
         # # oversample reservoir: clamp inputs and step the network
         # for i in range(self.oversampling):
         #     _ = self.model.execute(X.T)
@@ -371,7 +382,8 @@ class smpSHL(smpModel):
                 #     dw_t_norm[k,j] = LA.norm(dw[:,k])
 
                 # loss_t[0,j] = self.lr.loss
-                print "mdn_loss = %s" % np.linalg.norm(dw) # mdn_loss_val
+                if self.cnt_step % 100 == 0:
+                    print "|wo| = %s" % np.linalg.norm(self.model.wo) # mdn_loss_val
                 self.model.perf = self.lr.e # mdn_loss_val
             elif self.lrname in ['EH', 'eh']:
                 """exploratory hebbian rule"""
@@ -521,6 +533,10 @@ class smpSHL(smpModel):
         return self.y.T
         
     def predict(self, X, rollback = False):
+        """smpSHL.predict
+
+        Predict from input and state
+        """
         if X.shape[0] > 1: # batch input
             ret = np.zeros((X.shape[0], self.odim))
             for i in range(X.shape[0]):
@@ -530,9 +546,16 @@ class smpSHL(smpModel):
         else:
             # X_ = X.flatten().tolist()
             # return self.predict_step(X_)
-            return self.step(X, None, update = True, rollback = rollback)
+            return self.step(X, Y = None, update = True, rollback = rollback)
         
-    def fit(self, X, Y, update = True):
+    def fit(self, X, Y = None, y = None, update = False):
+        """smpSHL.fit
+
+        Fit current or lagged state to target
+        """
+        if Y is None and y is not None:
+            Y = y
+            
         if X.shape[0] > 1: # batch input
             ret = np.zeros((X.shape[0], self.odim))
             for i in range(X.shape[0]):

@@ -183,6 +183,7 @@ class LearningRules(object):
         self.ndim_out = ndim_out
         self.dim = dim
         self.loss = 0
+        self.loss_ = np.zeros((1, 100))
         self.e = np.zeros((self.ndim_out, 1))
         self.perf = self.e # pointer
         self.e_lp = np.zeros_like(self.e)
@@ -369,7 +370,7 @@ class LearningRules(object):
         """
         # compidx = np.where(np.random.multinomial(1, ps) == 1.0)[0][0]
         compidx = self.mixture_sample_prior(ps)
-        # print "compidx", compidx, "sig", sig[compidx].shape
+        # print "compidx", compidx, mu[compidx], "sig", sig[compidx] # .shape
         # y = np.random.normal(mu[compidx], np.abs(sig[compidx]) + np.random.uniform(0, 1e-3, size=sig[[compidx]].shape))
         y = np.random.normal(mu[compidx], sig[compidx], size = mu[[compidx]].shape)
         return y
@@ -380,7 +381,9 @@ class LearningRules(object):
             ps = ps[:,0]
         multinom_sample = np.random.multinomial(1, ps)
         multinom_sample_idx = np.where(multinom_sample == 1.0)
+        # print "multinom_sample_idx", ps, multinom_sample_idx
         compidx = multinom_sample_idx[0][0]
+        compidx = np.argmax(ps)
         return compidx
     
     def mdn_loss(self, x, r, z, y, loss_only = False):
@@ -400,24 +403,38 @@ class LearningRules(object):
         # softmax them
         pi = self.softmax(piu)
         # compute the loss: mean negative data log likelihood
-        k,n = mu.shape # number of mixture components
+        n,k = mu.shape # number of mixture components
         n = float(n)
         # component likelihood
         ps = np.exp(-((y - mu)**2)/(2*sig**2))/(sig*np.sqrt(2*np.pi))
         # mixture likelihood
         pin = ps * pi
+        # print "pin", pin.T
         # negloglikelihood, compare with batch estimate
         lp = -np.log(np.sum(pin, axis=0, keepdims=True))
         loss = np.sum(lp) / n
         self.loss = loss
+        self.loss_ = np.roll(self.loss_, shift = -1, axis = 1)
+        self.loss_[[-1]] = loss
 
+        # print "n", n
         # # compute component errors
         # gammas are pi_i's in bishop94
+        # print "pin", pin.shape
         gammas = pin / np.sum(pin, axis=0, keepdims = True)
+        # print "gammas", gammas.T, mu - y
         dmu = gammas * ((mu - y)/sig**2) / n
         dlogsig = gammas * (1.0 - (y-mu)**2/(sig**2)) / n
         dpiu = (pi - gammas) / n
         # print "|dmu| = %f" % (np.linalg.norm(dmu))
+        
+        if self.cnt % 100 == 0:
+            print "count[%d]" % self.cnt
+            # print "    loss = %f / %f / %d" % (self.loss/self.cnt, self.loss, self.cnt)
+            print "    loss = %f / %d" % (np.mean(self.loss_), self.cnt)
+            print "    dmu", np.linalg.norm(np.array(dmu).flatten())
+            print "    dlogisig", np.linalg.norm(dlogsig)
+            print "    dpiu", np.linalg.norm(dpiu.flatten())
 
         return np.vstack((dmu, dlogsig, dpiu))
 
@@ -1692,7 +1709,12 @@ def test_mixtureMV(args):
 class ReservoirTest(object):
 
     modes = {"ol_rls": 0, "ol_force": 1, "ol_eh": 2, "ip": 3, "fwd": 4, "ol_pi": 5, "ol_force_mdn": 6, 'mixtureMV': 7}
-    targets = {"MSO_s1": 0, "MSO_s2": 1, "MSO_s3": 2, "MSO_c1": 3, "MSO_c2": 4, "MG": 5, "wav": 6, "reg3t1": 7, "reg_multimodal_1": 8}
+    targets = {
+        "MSO_s1": 0, "MSO_s2": 1, "MSO_s3": 2,
+        "MSO_c1": 3, "MSO_c2": 4,
+        "MG": 5,
+        "wav": 6,
+        "reg3t1": 7, "reg_multimodal_1": 8}
 
 def save_wavfile(out_t, timestr):
     try:
@@ -1750,7 +1772,7 @@ def main(args):
         # tau = 1.0
 
         alpha = 100.0
-        input_scale = 2.0
+        input_scale = 1.0
         g = 1.5
         # tau = 0.05
         tau = 0.025
@@ -1818,7 +1840,7 @@ def main(args):
         if args.mode.endswith("mdn"):
             # res.init_wo_random(0, 1e-1)
             sigmas = [1e-3] * mixcomps + [1e-3] * mixcomps + [1e-3] * mixcomps
-            print "sigmas", sigmas
+            # print "sigmas xxx", sigmas
             res.init_wo_random(np.zeros((1, outsize_)), np.array(sigmas))
 
         # learning rule module
