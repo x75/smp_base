@@ -242,8 +242,8 @@ class LearningRules(object):
 
         Quick hack delta rule for testing MDN learning
         """
-        eta = 5e-5
-        # eta = 1e-4
+        # eta = 5e-5
+        eta = 1e-4
         # eta = 5e-4
         self.e = self.mdn_loss(x, r, z, target)
         dw = eta * np.dot(-self.e, r.T).T
@@ -1869,10 +1869,10 @@ def main(args):
             # res.init_wo_random(0, 1e-1)
             # sigmas = [1e-6] * mixcomps + [1e-6] * mixcomps + [1e-6] * mixcomps
             # good with deltamdn mixcomps 6 and teacherforcing and eta ~ 1e-4
-            # sigmas = [1e-4] * mixcomps + [1e-4] * mixcomps + [1e-4] * mixcomps
+            sigmas = [1e-4] * mixcomps + [1e-4] * mixcomps + [1e-4] * mixcomps
             # sigmas = [1e-3] * mixcomps + [1e-3] * mixcomps + [1e-3] * mixcomps
             # good with rlsmdn mixcomps 3 and teacherforcing and alpha = 10
-            sigmas = [1e-2] * mixcomps + [1e-2] * mixcomps + [1e-2] * mixcomps
+            # sigmas = [1e-2] * mixcomps + [1e-2] * mixcomps + [1e-2] * mixcomps
             # sigmas = [1e-1] * mixcomps + [1e-1] * mixcomps + [1e-1] * mixcomps
             # print "sigmas xxx", sigmas
             res.init_wo_random(np.zeros((1, outsize_)), np.array(sigmas))
@@ -1959,11 +1959,11 @@ def main(args):
                     # modular learning rule (ugly call)
                     # (res.P, k, c) = lr.learnFORCE_update_P(res.P, res.r)
                     # dw = lr.learnFORCEmdn(target, res.P, k, c, res.r, res.z, 0, inputs)
-                    
-                    dw = lr.learnRLS(target = target, r = res.r, noise = 5e-1, z = res.z, x = inputs)
-                    # dw = lr.learnDeltamdn(
-                    #     target = target, P = res.P, k = None, c = None,
-                    #     r = res.r, z = res.z, channel = 0, x = inputs)
+                    # noise for reg_multimodal_tp1 5e-1
+                    # dw = lr.learnRLS(target = target, r = res.r, noise = args.eta, z = res.z, x = inputs)
+                    dw = lr.learnDeltamdn(
+                        target = target, P = res.P, k = None, c = None,
+                        r = res.r, z = res.z, channel = 0, x = inputs)
                     # res.wo += (1e-1 * dw)
                     # print "dw.shape", dw
                     # when using delta rule
@@ -2050,6 +2050,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Reservoir library, call main for testing: python reservoirs.py -t MSO_s1 -m ol_eh -rs 500 -l 100000")
     parser.add_argument("-l", "--length", help="Episode length [30000]", default=30000, type=int)
     parser.add_argument("-lr", "--learning_ratio", help="Ratio of learning to episode len [0.8]", default=0.8, type=float)
+    parser.add_argument("-e", "--eta", help="Learning rate eta [1e-3]", default=1e-3, type=float)
     parser.add_argument("-m", "--mode", help="Mode [ol_rls], one of " + str(ReservoirTest.modes.keys()), default = "ol_rls")
     parser.add_argument("-mt", "--multitau", dest="multitau", action="store_true",
                         help="Use multiple random time constants in reservoir, doesn't seem to work so well with EH [False]")
