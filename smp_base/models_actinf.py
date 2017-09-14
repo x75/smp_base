@@ -860,7 +860,7 @@ class smpIGMM(smpModel):
         if X.shape[0] > 1: # batch
             return self.sample_batch(cond)
         sample = self.sample_cond(cond)
-        print("%s.sample sample = %s, X = %s" % (self.__class__.__name__, sample.shape, X.shape))
+        # print("%s.sample sample = %s, X = %s" % (self.__class__.__name__, sample.shape, X.shape))
         # FIXME: fix that inference configuration
         if sample.shape[1] == self.odim:
             return sample
