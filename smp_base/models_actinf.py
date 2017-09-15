@@ -239,7 +239,7 @@ class smpOTLModel(smpModel):
         self.r_ = np.roll(self.r_, shift = -1, axis = -1)
         self.otlmodel.getState(self.r_l)
         tmp = np.array([self.r_l]).T
-        # print("soesgp r_", self.r_.shape, self.r_[...,[-1]].shape, tmp.shape)
+        # print("%s r_ = %s, r[...,[-1] = %s, tmp = %s" % (self.__class__.__name__, self.r_.shape, self.r_[...,[-1]].shape, tmp.shape))
         self.r_[...,[-1]] = tmp.copy()
 
     def predict(self, X,rollback = False):
@@ -461,7 +461,7 @@ class smpSTORKGP(smpOTLModel):
         'odim': 1,
         'otlmodel_type': 'storkgp',
         'otlmodel': None,
-        'modelsize': 100,
+        'modelsize': 50,
         'memory': 1,
         'lag_off': 1,
         'input_weight': 1.0,
@@ -490,14 +490,20 @@ class smpSTORKGP(smpOTLModel):
         self.bootstrap()
     
     def bootstrap(self):
-        self.otlmodel.init(self.idim, self.odim,
-                          self.modelsize, # window size
-                          0, # kernel type
-                          [0.5, 0.99, 1.0, self.idim],
-                          1e-4,
-                          1e-4,
-                          100
-                          )
+
+        self.otlmodel.init(
+            self.idim, self.odim,
+            self.modelsize, # window size
+            0, # kernel type
+            [0.5, 0.99, 1.0, self.idim],
+            1e-4,
+            1e-4,
+            100 # seed
+        )
+        
+        self.otlmodel.getState(self.r_l)
+        # print("|self.r_l| = ", len(self.r_l))
+        self.r_ = np.zeros((len(self.r_l), self.memory))
 
 ################################################################################
 # inference type multivalued models: GMM, SOMHebb, MDN
