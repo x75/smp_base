@@ -108,6 +108,12 @@ def timeseries(ax, data, **kwargs):
     else:
         linestyle = 'solid'
 
+    # linewidth
+    if kwargs.has_key('linewidth'):
+        linewidth = kwargs['linewidth']
+    else:
+        linewidth = 2.0
+        
     # labels
     if kwargs.has_key('label'):
         label = kwargs['label']
@@ -120,9 +126,13 @@ def timeseries(ax, data, **kwargs):
     else:
         title = 'timeseries of %s-shaped data' % data.shape
         
+    # x-axis shift / bus delay compensation
+    if kwargs.has_key('delay'):
+        data = np.roll(data, kwargs['delay'], axis = 1)
+        
     # explicit xaxis
     if kwargs.has_key('ordinate'):
-        ax.plot(kwargs['ordinate'], data, alpha = 0.5, marker = marker, linestyle = linestyle, label = label)
+        ax.plot(kwargs['ordinate'], data, alpha = 0.5, marker = marker, linestyle = linestyle, linewidth = linewidth, label = label)
     else:
         ax.plot(data, alpha = 0.5, marker = marker, linestyle = linestyle, label = label)
 
