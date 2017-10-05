@@ -58,3 +58,9 @@ class meas(object):
         # self.perf = np.sign(err) * np.sign(acc) * acc**2
 
     
+def meas_mse(x = None, x_ = None):
+    """smp_base.measures.meas_mse
+
+    Compute mean squared error mse = 1/N \sum (x - x_)^2
+    """
+    return np.mean(np.power(x - x_, 2), axis = 0, keepdims = True)
