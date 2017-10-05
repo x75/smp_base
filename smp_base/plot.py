@@ -120,6 +120,26 @@ def timeseries(ax, data, **kwargs):
     else:
         label = None
 
+    if kwargs.has_key('xscale'):
+        xscale = kwargs['xscale']
+    else:
+        xscale = 'linear'
+        
+    if kwargs.has_key('yscale'):
+        yscale = kwargs['yscale']
+    else:
+        yscale = 'linear'
+
+    if kwargs.has_key('xlim'):
+        xlim = kwargs['xlim']
+    else:
+        xlim = None
+        
+    if kwargs.has_key('ylim'):
+        ylim = kwargs['ylim']
+    else:
+        ylim = None
+        
     # axis title
     if kwargs.has_key('title'):
         title = kwargs['title']
@@ -132,11 +152,24 @@ def timeseries(ax, data, **kwargs):
         
     # explicit xaxis
     if kwargs.has_key('ordinate'):
-        ax.plot(kwargs['ordinate'], data, alpha = 0.5, marker = marker, linestyle = linestyle, linewidth = linewidth, label = label)
+        ax.plot(
+            kwargs['ordinate'], data, alpha = 0.5,
+            marker = marker, linestyle = linestyle, linewidth = linewidth,
+            label = label)
     else:
-        ax.plot(data, alpha = 0.5, marker = marker, linestyle = linestyle, label = label)
+        ax.plot(
+            data, alpha = 0.5, marker = marker,
+            linestyle = linestyle, label = label)
 
     ax.legend(fontsize = 6)
+    
+    ax.set_xscale(xscale)
+    ax.set_yscale(yscale)
+    if xlim is not None:
+        ax.set_xlim(xlim)
+    if ylim is not None:
+        ax.set_ylim(ylim)
+        
     ax.title.set_text(title)
     ax.title.set_fontsize(8.0)
 
@@ -150,9 +183,42 @@ def histogram(ax, data, **kwargs):
         title = kwargs['title']
     else:
         title = 'histogram of %s-shaped data, log-scale' % data.shape
+        
+    if kwargs.has_key('orientation'):
+        orientation = kwargs['orientation']
+    else:
+        orientation = 'vertical'
+        
+    if kwargs.has_key('xscale'):
+        xscale = kwargs['xscale']
+    else:
+        xscale = 'linear'
+        
+    if kwargs.has_key('yscale'):
+        yscale = kwargs['yscale']
+    else:
+        yscale = 'linear'
 
-    ax.hist(data, bins = int(np.log(max(3, data.shape[0]/2))), alpha = 0.5)
-    ax.set_yscale('log')
+    if kwargs.has_key('xlim'):
+        xlim = kwargs['xlim']
+    else:
+        xlim = None
+        
+    if kwargs.has_key('ylim'):
+        ylim = kwargs['ylim']
+    else:
+        ylim = None
+        
+    ax.hist(
+        # data, bins = int(np.log(max(3, data.shape[0]/2))),
+        data,
+        alpha = 0.5, orientation = orientation)
+    ax.set_xscale(xscale)
+    ax.set_yscale(yscale)
+    if xlim is not None:
+        ax.set_xlim(xlim)
+    if ylim is not None:
+        ax.set_ylim(ylim)
     ax.title.set_text(title)
     ax.title.set_fontsize(8.0)
 
