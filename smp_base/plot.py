@@ -529,7 +529,15 @@ def custom_colorbar():
     
     plt.show()
 
-    
+# plotting funcs for callback
+plotfuncs = {
+    'timeseries': timeseries,
+    'histogram': histogram,
+    'histogramnd': histogramnd,
+    'plot_scattermatrix': plot_scattermatrix,
+    'plot_img': plot_img,
+    }
+
 if __name__ == "__main__":
     import argparse, sys
     parser = argparse.ArgumentParser()
