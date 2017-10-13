@@ -8,6 +8,7 @@ plotting
 import matplotlib.pyplot as plt
 
 import matplotlib.gridspec as gridspec
+import matplotlib.colors as colors
 
 import numpy as np
 
@@ -27,6 +28,10 @@ except ImportError, e:
 
 import pandas as pd
 from pandas.tools.plotting import scatter_matrix
+
+# all predefined matplotlib colors
+plot_colors = colors.get_named_colors_mapping()
+plot_colors_idx = 0
 
 def make_axes_from_grid(fig, gs):
     axes = []
