@@ -4,6 +4,7 @@ plotting
 
 2017 Oswald Berthold
 """
+from functools import partial
 
 import matplotlib.pyplot as plt
 
@@ -534,6 +535,56 @@ def custom_colorbar():
     
     plt.show()
 
+
+# class uniform_divergence():
+#     def __call__(self, f):
+#         def wrap(_self, *args, **kwargs):
+#             print "f", f
+#             print "args", args
+#             print "kwargs", kwargs
+#             # return args[0]
+#         return wrap
+
+def uniform_divergence(*args, **kwargs):
+    # print "f", f
+    # print "args", len(args),
+    for arg in args:
+        print "arg %s %s" % (type(arg), len(arg))
+    print "kwargs", kwargs.keys()
+    f = kwargs['f']
+    del kwargs['f']
+    color = kwargs['color']
+    del kwargs['color']
+    print "f", f
+    # return partial(f, args, kwargs) # (args[0], args[1], kwargs)
+    # ax = f(args[0].values, args[1].values, kwargs) # (args[0], args[1], kwargs)
+    h, xe, ye = np.histogram2d(args[0], args[1], normed = True)
+
+    
+    h_unif, xe_unif, ye_unif = np.histogram2d(
+        np.random.uniform(xe[0], xe[-1], len(args[0])),
+        np.random.uniform(ye[0], ye[-1], len(args[1])),
+        bins = (xe, ye),
+        normed = True        
+    )
+    
+    print "h", h, "xe", xe, "ye", ye
+    print "h_unif", h_unif, "xe_unif", xe_unif, "ye_unif", ye_unif
+    # ax = f(*args, **kwargs)
+    plt.grid(0)
+    X, Y = np.meshgrid(xe, ye)
+    # ax = plt.imshow(h - h_unif, origin = 'lower', interpolation = 'none', )
+    h_= (h - h_unif)
+    ax = plt.pcolormesh(X, Y, h_, cmap = plt.get_cmap('coolwarm'), norm = colors.Normalize(vmin=-2, vmax=2))
+    # plt.xlim((xe[0], xe[-1]))
+    # plt.ylim((ye[0], ye[-1]))
+    plt.colorbar()
+
+    # ax_unif = f( bins = ax[1])
+    print "ax", ax
+    return ax
+    
+    
 # plotting funcs for callback
 plotfuncs = {
     'timeseries': timeseries,
@@ -541,6 +592,12 @@ plotfuncs = {
     'histogramnd': histogramnd,
     'plot_scattermatrix': plot_scattermatrix,
     'plot_img': plot_img,
+    'hexbin': plt.hexbin,
+    'hexbin': plt.hexbin,
+    'hist2d': plt.hist2d,
+    'kdeplot': sns.kdeplot,
+    'scatter': plt.scatter,
+    'uniform_divergence': uniform_divergence,
     }
 
 if __name__ == "__main__":
