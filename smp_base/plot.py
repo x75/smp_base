@@ -9,14 +9,16 @@ Includes:
  - utility functions for creating figures and subplot grids and for computing and setting of plot parameters, custom_colorbar
  - low-level kwargs-configurable plotting funcs: timeseries, histogram, histogramnd, rp_timeseries_embedding, plot_scattermatrix, plot_img, ...
  - TODO: plotting style configuration: fonts, colors, sizes, formats
- - TODO: clean this up and merge with class's individual plots: models, systems, ...
+ - TODO: sift existing plotting funcs from smp* models, systems, ...
+ - TODO: clean up and merge with sift results
 """
 from functools import partial
 
 import matplotlib.pyplot as plt
 
 import matplotlib.gridspec as gridspec
-import matplotlib.colors as colors
+import matplotlib.colors as mplcolors
+import matplotlib.patches as mplpatches
 
 import numpy as np
 
@@ -38,8 +40,96 @@ import pandas as pd
 from pandas.tools.plotting import scatter_matrix
 
 # all predefined matplotlib colors
-plot_colors = colors.get_named_colors_mapping()
+plot_colors = mplcolors.get_named_colors_mapping()
 plot_colors_idx = 0
+
+def find_smallest_rectangle(l = 1):
+    l_sqrt = int(np.floor(np.sqrt(l)))
+    print "sq(l) = %d" % l_sqrt
+    # for i in range(1, l/l_sqrt):
+    w = l_sqrt
+    h = l/w
+    while w * h < l:
+        w += 1
+        # h = l/w
+        # print "rect", w*h, l, w, h
+    # print "l = %f" % (l_sqrt, )
+    return w, h
+
+def test_plot_colors():
+    # fig = makefig(rows = 1, cols = 1, title = "Show all colors in smp_base.plot.plot_colors")
+    print "plot_colors type = %s, len = %d" % (type(plot_colors), len(plot_colors))
+    ncols,nrows = find_smallest_rectangle(len(plot_colors))
+    # print "plot_colors dir = %s" % (dir(plot_colors), )
+    # print "plot_colors keys = %s" % (plot_colors.keys(), )
+
+    colors = plot_colors
+    plot_colors_img = np.zeros((ncols, nrows))
+    
+    # Sort colors by hue, saturation, value and name.
+    by_hsv = sorted((tuple(mplcolors.rgb_to_hsv(mplcolors.to_rgba(color)[:3])), name)
+                for name, color in colors.items())
+    sorted_names = [name for hsv, name in by_hsv]
+
+    
+    n = len(sorted_names)
+    # ncols = 4
+    # nrows = n // ncols + 1
+    
+
+    print "sorted_names", sorted_names, "n", n
+    
+    fig, ax = plt.subplots(figsize=(8, 5))
+
+    # Get height and width
+    X, Y = fig.get_dpi() * fig.get_size_inches()
+    ywidth = Y / (nrows + 1)
+    xwidth = X / ncols
+    h = ywidth
+    w = xwidth
+
+    for i, name in enumerate(sorted_names):
+        col = i % ncols
+        row = i // ncols
+        
+        y = Y - (row * h) - h
+
+        xi_line = w * (col + 0.05)
+        xf_line = w * (col + 0.25)
+        xi_text = w * (col + 0.3)
+
+        ax.text(xi_text, (nrows * h) - y, name, fontsize=(h * 0.4),
+                horizontalalignment='left',
+                verticalalignment='center')
+
+        # ax.hlines(y + h * 0.1, xi_line, xf_line,
+        #         color=colors[name], linewidth=(h * 0.6))
+
+        xpos = col
+        ypos = row
+        
+        # elementary shape without buffersize
+        ax.add_patch(
+            mplpatches.Rectangle(
+                # (30, ypos - (v.shape[0]/2.0) - (yspacing / 3.0)),   # (x,y)
+                (xpos * xwidth, ypos * ywidth),   # (x,y)
+                xwidth,          # width
+                ywidth,          # height
+                fill = True,
+                color = colors[name],
+                # hatch = "|",
+                hatch = "-",
+            )
+        )
+
+    ax.set_xlim(0, X)
+    ax.set_ylim(0, Y)
+    ax.set_axis_off()
+
+    fig.subplots_adjust(left=0, right=1,
+                        top=1, bottom=0,
+                        hspace=0, wspace=0)
+    plt.show()  
 
 def make_axes_from_grid(fig, gs):
     """Generate 2D array of subplot axes from a gridspec
@@ -411,7 +501,7 @@ def plot_img(ax, data, **kwargs):
     # mpl = ax.imshow(data, interpolation = "none")
     # mpl = ax.pcolormesh(
     #     data,
-    #     norm = colors.LogNorm(vmin=data.min(), vmax=data.max())
+    #     norm = mplcolors.LogNorm(vmin=data.min(), vmax=data.max())
     
     ax.grid(0)
     if kwargs.has_key('aspect'):
@@ -638,14 +728,14 @@ def uniform_divergence(*args, **kwargs):
     """
     # print "f", f
     # print "args", len(args),
-    for arg in args:
-        print "arg %s %s" % (type(arg), len(arg))
-    print "kwargs", kwargs.keys()
+    # for arg in args:
+    #     print "arg %s %s" % (type(arg), len(arg))
+    # print "kwargs", kwargs.keys()
     f = kwargs['f']
     del kwargs['f']
     color = kwargs['color']
     del kwargs['color']
-    print "f", f
+    # print "f", f
     # return partial(f, args, kwargs) # (args[0], args[1], kwargs)
     # ax = f(args[0].values, args[1].values, kwargs) # (args[0], args[1], kwargs)
     h, xe, ye = np.histogram2d(args[0], args[1], normed = True)
@@ -658,20 +748,20 @@ def uniform_divergence(*args, **kwargs):
         normed = True        
     )
     
-    print "h", h, "xe", xe, "ye", ye
-    print "h_unif", h_unif, "xe_unif", xe_unif, "ye_unif", ye_unif
+    # print "h", h, "xe", xe, "ye", ye
+    # print "h_unif", h_unif, "xe_unif", xe_unif, "ye_unif", ye_unif
     # ax = f(*args, **kwargs)
     plt.grid(0)
     X, Y = np.meshgrid(xe, ye)
     # ax = plt.imshow(h - h_unif, origin = 'lower', interpolation = 'none', )
     h_= (h - h_unif)
-    ax = plt.pcolormesh(X, Y, h_, cmap = plt.get_cmap('coolwarm'), norm = colors.Normalize(vmin=-2, vmax=2))
+    ax = plt.pcolormesh(X, Y, h_, cmap = plt.get_cmap('coolwarm'), norm = mplcolors.Normalize(vmin=-2, vmax=2))
     # plt.xlim((xe[0], xe[-1]))
     # plt.ylim((ye[0], ye[-1]))
     plt.colorbar()
 
     # ax_unif = f( bins = ax[1])
-    print "ax", ax
+    # print "ax", ax
     return ax
     
     
@@ -694,7 +784,7 @@ if __name__ == "__main__":
     import argparse, sys
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-m", "--mode", type=str, default = "custom_colorbar", help = "testing mode: [custom_colorbar], interactive")
+    parser.add_argument("-m", "--mode", type=str, default = "custom_colorbar", help = "testing mode: [custom_colorbar], interactive, plot_colors")
 
     args = parser.parse_args()
     # fig = makefig(2, 3)
@@ -703,6 +793,8 @@ if __name__ == "__main__":
         custom_colorbar()
     elif args.mode == "interactive":
         interactive()
+    elif args.mode == "plot_colors":
+        test_plot_colors()
     else:
         print "Unknown mode %s, exiting" % (args.mode)
         sys.exit(1)
