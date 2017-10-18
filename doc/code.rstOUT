@@ -1,0 +1,25 @@
+Documentation for the Code
+**************************
+
+.. automodule:: smp_base
+
+
+useful #1 -- auto members
+=========================
+
+This is something I want to say that is not in the docstring.
+
+.. automodule:: smp_base.plot
+   :members:
+
+useful #2 -- explicit members
+=============================
+
+This is something I want to say that is not in the docstring.
+
+.. automodule:: smp_base.dimstack
+   :members: dimensional_stacking, digitize_pointcloud
+
+.. autoclass:: smpModel
+   :members: fit, predict
+	  

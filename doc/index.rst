@@ -14,7 +14,6 @@ smp_base documentation
 
    apidoc/modules
 
-
 ..
    apidoc
 

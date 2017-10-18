@@ -1,8 +1,15 @@
-"""smp_base - smp sensorimotor experiments base functions
+"""smp_base.plot - plotting functions
 
-plotting
+.. moduleauthor:: Oswald Berthold, 2017
 
-2017 Oswald Berthold
+Depends: numpy, matplotlib, pyunicorn, seaborn, pandas
+
+Includes:
+ - config variables: plot_colors, ...
+ - utility functions for creating figures and subplot grids and for computing and setting of plot parameters, custom_colorbar
+ - low-level kwargs-configurable plotting funcs: timeseries, histogram, histogramnd, rp_timeseries_embedding, plot_scattermatrix, plot_img, ...
+ - TODO: plotting style configuration: fonts, colors, sizes, formats
+ - TODO: clean this up and merge with class's individual plots: models, systems, ...
 """
 from functools import partial
 
@@ -35,6 +42,15 @@ plot_colors = colors.get_named_colors_mapping()
 plot_colors_idx = 0
 
 def make_axes_from_grid(fig, gs):
+    """Generate 2D array of subplot axes from a gridspec
+
+    Args:
+     - fig(matplotlib.figure.Figure): a matplotlib figure handle
+     - gs(matplotlib.gridspec.GridSpec): the gridspec
+
+    Returns:
+     - list of lists (2D array) of subplot axes
+    """
     axes = []
     (rows, cols) = gs.get_geometry()
     for row in range(rows):
@@ -44,6 +60,16 @@ def make_axes_from_grid(fig, gs):
     return axes
 
 def make_axes_from_spec(fig, gs, axesspec):
+    """Generate 2D array of subplot axes from an irregular axes specification
+
+    Args:
+     - fig(matplotlib.figure.Figure): a matplotlib figure handle
+     - gs(matplotlib.gridspec.GridSpec): the gridspec
+     - axesspec(list): list of gridspec slices
+
+    Returns:
+     - list of lists (2D array) of subplot axes
+    """
     axes = []
     # (rows, cols) = gs.get_geometry()
     for axspec in axesspec:
@@ -53,18 +79,25 @@ def make_axes_from_spec(fig, gs, axesspec):
     return axes
 
 def makefig(rows = 1, cols = 1, wspace = 0.0, hspace = 0.0, axesspec = None, title = None):
-    """makefig
+    """Create a matplotlib figure using the args as spec
 
-    alias for make_fig, see make_fig?
+    Alias for :func:`make_fig`
     """
     return make_fig(rows = rows, cols = cols, wspace = wspace, hspace = hspace, axesspec = axesspec, title = title)
 
 def make_fig(rows = 1, cols = 1, wspace = 0.0, hspace = 0.0, axesspec = None, title = None):
-    """make_fig
+    """Create a matplotlib figure using the args as spec, create the figure, the subplot gridspec and the axes array
 
-    create figure, subplot gridspec and axes
-
-    return figure handle
+    Args:
+     - rows (int): number of rows
+     - cols (int):  number of cols
+     - wspace (float):  horizontal padding
+     - hspace (float):  vertical padding
+     - axesspec (list):  list of slices to create irregular grids by slicing the regular gridspec
+     - title (str):  the figure's super title (suptitle)
+       
+    Returns:
+     - fig (matplotlib.figure.Figure): the figure handle `fig`
     """
     # rows = len(plotitems[0])
     # cols = len(plotitems[0][0])
@@ -87,13 +120,41 @@ def make_fig(rows = 1, cols = 1, wspace = 0.0, hspace = 0.0, axesspec = None, ti
     return fig
 
 def set_interactive(interactive = False):
+    """This function does something.
+
+    Args:
+       name (str):  The name to use.
+
+    Kwargs:
+       state (bool): Current state to be in.
+
+    Returns:
+       int.  The return code::
+
+          0 -- Success!
+          1 -- No good.
+          2 -- Try again.
+
+    Raises:
+       AttributeError, KeyError
+     """
     if interactive:
         plt.ion()
     else:
         plt.ioff()
 
 def get_ax_size(fig, ax):
-    """from stackoverflow"""
+    """Get the size of an axis
+
+    Args:
+     - fig: figure handle
+     - ax: the axis handle
+
+    Returns:
+     - tuple: width, height
+
+    Scraped from stackoverflow, noref.
+    """
     bbox = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
     width, height = bbox.width, bbox.height
     width *= fig.dpi
@@ -101,7 +162,22 @@ def get_ax_size(fig, ax):
     return width, height
         
 def timeseries(ax, data, **kwargs):
-    """timeseries plot"""
+    """Plot data as timeseries
+
+    Args:
+     - ax: subplot axis
+     - data (numpy.ndarray): n x m ndarray with the data
+
+    Kwargs:
+     - marker: mpl marker style
+     - linestyle: mpl linestyle
+     - linewidth: mpl linewidth
+     - ...
+
+    Returns:
+     - None
+
+    """
     # marker style
     if kwargs.has_key('marker'):
         marker = kwargs['marker']
@@ -546,6 +622,20 @@ def custom_colorbar():
 #         return wrap
 
 def uniform_divergence(*args, **kwargs):
+    """Compute histogram based divergence of bivariate data distribution from prior distribution
+
+    Args:
+       args[0](numpy.ndarray, pandas.Series): timeseries X_1
+       args[1](numpy.ndarray, pandas.Series): timeseries X_2
+
+    Kwargs:
+       color: colors to use
+       f: plotting function (hist2d, hexbin, ...)
+       xxx: ?
+
+    Returns:
+       put image plotting primitve through
+    """
     # print "f", f
     # print "args", len(args),
     for arg in args:
