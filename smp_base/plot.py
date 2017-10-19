@@ -13,12 +13,17 @@ Includes:
  - TODO: clean up and merge with sift results
 """
 from functools import partial
+from cycler import cycler
 
 import matplotlib.pyplot as plt
 
 import matplotlib.gridspec as gridspec
 import matplotlib.colors as mplcolors
 import matplotlib.patches as mplpatches
+from  matplotlib import rc_params
+
+# perceptually uniform colormaps
+import colorcet as cc
 
 import numpy as np
 
@@ -268,6 +273,26 @@ def timeseries(ax, data, **kwargs):
      - None
 
     """
+    # colors
+    # cmap = plt.get_cmap("Oranges")
+    rc = rc_params()
+    # cmap = cc.cm['isolum'] # isoluminance
+    cmap = cc.cm['rainbow'] # rainbow
+    cmap_idx = np.linspace(0, 1000, 345, endpoint = False)
+    # print "cmap_idx", cmap_idx, cmap.N
+    cmap_idx = [int(i) % cmap.N for i in cmap_idx]
+    # print "cmap_idx", cmap_idx
+    colorcycler = cycler('color', [c for c in cmap(cmap_idx)])
+    # rc['axes.prop_cycle'] = colorcycler
+    
+    # print "cc", colorcycler
+    
+    # alpha style
+    if kwargs.has_key('alpha'):
+        alpha = kwargs['alpha']
+    else:
+        alpha = 0.5
+
     # marker style
     if kwargs.has_key('marker'):
         marker = kwargs['marker']
@@ -284,7 +309,7 @@ def timeseries(ax, data, **kwargs):
     if kwargs.has_key('linewidth'):
         linewidth = kwargs['linewidth']
     else:
-        linewidth = 2.0
+        linewidth = 1.0
         
     # labels
     if kwargs.has_key('label'):
@@ -325,15 +350,16 @@ def timeseries(ax, data, **kwargs):
     # explicit xaxis
     if kwargs.has_key('ordinate'):
         ax.plot(
-            kwargs['ordinate'], data, alpha = 0.5,
+            kwargs['ordinate'], data, alpha = alpha,
             marker = marker, linestyle = linestyle, linewidth = linewidth,
             label = label)
     else:
         ax.plot(
-            data, alpha = 0.5, marker = marker,
+            data, alpha = alpha, marker = marker,
             linestyle = linestyle, label = label)
 
     ax.legend(fontsize = 6)
+    ax.set_prop_cycle(colorcycler)
     
     ax.set_xscale(xscale)
     ax.set_yscale(yscale)
