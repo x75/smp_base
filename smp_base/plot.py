@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.colors as mplcolors
 import matplotlib.patches as mplpatches
-from  matplotlib import rc_params
+from  matplotlib import rcParams, rc_params
 
 # perceptually uniform colormaps
 import colorcet as cc
@@ -773,6 +773,10 @@ def uniform_divergence(*args, **kwargs):
         bins = (xe, ye),
         normed = True        
     )
+
+    # really normalize
+    h = h / np.sum(h)
+    h_unif = h_unif / np.sum(h_unif)
     
     # print "h", h, "xe", xe, "ye", ye
     # print "h_unif", h_unif, "xe_unif", xe_unif, "ye_unif", ye_unif
@@ -780,8 +784,30 @@ def uniform_divergence(*args, **kwargs):
     plt.grid(0)
     X, Y = np.meshgrid(xe, ye)
     # ax = plt.imshow(h - h_unif, origin = 'lower', interpolation = 'none', )
-    h_= (h - h_unif)
-    ax = plt.pcolormesh(X, Y, h_, cmap = plt.get_cmap('coolwarm'), norm = mplcolors.Normalize(vmin=-2, vmax=2))
+    # difference
+    # h_ = (h - h_unif)
+    # divergence
+    def div_kl(h1, h2):
+        # div = np.sum(h1 * np.log(h1/h2))
+        print "h1", h1
+        print "h2", h2
+        log_diff = np.clip(np.log(h1/h2), -20.0, 7.0)
+        print "log diff", log_diff
+        div = h1 * log_diff
+        print "div", div.shape, div
+        return div
+    h_ = div_kl(h, h_unif)
+
+    ud_cmap = cc.cm['diverging_cwm_80_100_c22'] # rainbow
+    # ud_cmap = cc.cm['coolwarm'] # rainbow
+    ud_vmin = -1
+    ud_vmax =  1
+    # ud_cmap = cc.cm['blues'] # rainbow
+    # ud_cmap = plt.get_cmap('coolwarm')
+
+    ud_norm = mplcolors.Normalize(vmin = ud_vmin, vmax = ud_vmax)
+    
+    ax = plt.pcolormesh(X, Y, h_, cmap = ud_cmap, norm = ud_norm)
     # plt.xlim((xe[0], xe[-1]))
     # plt.ylim((ye[0], ye[-1]))
     plt.colorbar()
