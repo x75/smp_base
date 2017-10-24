@@ -255,7 +255,23 @@ def get_ax_size(fig, ax):
     width *= fig.dpi
     height *= fig.dpi
     return width, height
+
+def get_colorcycler(cmap_str = None, cmap_idx = None):
+    """get a colorcycler for the cmap 'cmapstr'
+    """
+    if cmap_str is None:
+        cmap_str = 'hot'
+    cmap = cc.cm[cmap_str] # rainbow
+
+    if cmap_idx is None:
+        cmap_idx = np.linspace(0, 1000, 345, endpoint = False)
+        # print "cmap_idx", cmap_idx, cmap.N
+        cmap_idx = [int(i) % cmap.N for i in cmap_idx]
+        # print "cmap_idx", cmap_idx
         
+    colorcycler = cycler('color', [c for c in cmap(cmap_idx)])
+    return colorcycler
+
 def timeseries(ax, data, **kwargs):
     """Plot data as timeseries
 
@@ -275,14 +291,12 @@ def timeseries(ax, data, **kwargs):
     """
     # colors
     # cmap = plt.get_cmap("Oranges")
-    rc = rc_params()
     # cmap = cc.cm['isolum'] # isoluminance
-    cmap = cc.cm['rainbow'] # rainbow
-    cmap_idx = np.linspace(0, 1000, 345, endpoint = False)
-    # print "cmap_idx", cmap_idx, cmap.N
-    cmap_idx = [int(i) % cmap.N for i in cmap_idx]
-    # print "cmap_idx", cmap_idx
-    colorcycler = cycler('color', [c for c in cmap(cmap_idx)])
+    colorcycler = get_colorcycler('rainbow')
+    
+    rc = rc_params()
+
+    
     # rc['axes.prop_cycle'] = colorcycler
     
     # print "cc", colorcycler
@@ -643,7 +657,7 @@ def custom_colorbar():
     b = np.random.exponential(scale = 1.0)
     n = 32
     X = np.random.beta(a = a, b = b, size = (numplots, n, n))
-    print "a = %f, b = %f, X = %s" % (a, b, X)
+    # print "a = %f, b = %f, X = %s" % (a, b, X)
 
     fig = plt.figure()
 
@@ -764,12 +778,23 @@ def uniform_divergence(*args, **kwargs):
     # print "f", f
     # return partial(f, args, kwargs) # (args[0], args[1], kwargs)
     # ax = f(args[0].values, args[1].values, kwargs) # (args[0], args[1], kwargs)
+    prior = 'uniform'
+    if len(args) < 2:
+        args = (args[0], args[0])
+        prior = 'identity'
+    
     h, xe, ye = np.histogram2d(args[0], args[1], normed = True)
 
+    X1 = np.random.uniform(xe[0], xe[-1], len(args[0]))
+    if prior == 'identity':
+        X2 = X1.copy()
+    else:
+        X2 = np.random.uniform(ye[0], ye[-1], len(args[1]))
+    X2 = np.random.uniform(ye[0], ye[-1], len(args[1]))
     
     h_unif, xe_unif, ye_unif = np.histogram2d(
-        np.random.uniform(xe[0], xe[-1], len(args[0])),
-        np.random.uniform(ye[0], ye[-1], len(args[1])),
+        X1,
+        X2,
         bins = (xe, ye),
         normed = True        
     )
