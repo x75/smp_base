@@ -8,6 +8,7 @@ Includes:
  - config variables: plot_colors, ...
  - utility functions for creating figures and subplot grids and for computing and setting of plot parameters, custom_colorbar
  - low-level kwargs-configurable plotting funcs: timeseries, histogram, histogramnd, rp_timeseries_embedding, plot_scattermatrix, plot_img, ...
+ - TODO: custom_colorbar, custom_legend moving smartly out of the way
  - TODO: plotting style configuration: fonts, colors, sizes, formats
  - TODO: sift existing plotting funcs from smp* models, systems, ...
  - TODO: clean up and merge with sift results
@@ -20,7 +21,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.colors as mplcolors
 import matplotlib.patches as mplpatches
-from  matplotlib import rcParams, rc_params
+from  matplotlib import rc, rcParams, rc_params
 
 # perceptually uniform colormaps
 import colorcet as cc
@@ -264,7 +265,8 @@ def get_colorcycler(cmap_str = None, cmap_idx = None):
     cmap = cc.cm[cmap_str] # rainbow
 
     if cmap_idx is None:
-        cmap_idx = np.linspace(0, 1000, 345, endpoint = False)
+        # cmap_idx = np.linspace(0, 1000, 345, endpoint = False)
+        cmap_idx = np.linspace(0, 255, 20, endpoint = False)
         # print "cmap_idx", cmap_idx, cmap.N
         cmap_idx = [int(i) % cmap.N for i in cmap_idx]
         # print "cmap_idx", cmap_idx
@@ -272,6 +274,23 @@ def get_colorcycler(cmap_str = None, cmap_idx = None):
     colorcycler = cycler('color', [c for c in cmap(cmap_idx)])
     return colorcycler
 
+def configure_style():
+    # colors
+    # cmap = plt.get_cmap("Oranges")
+    # cmap = cc.cm['isolum'] # isoluminance
+    colorcycler = get_colorcycler('rainbow')
+    
+    # rc = rc_params()
+    rc('axes', prop_cycle = colorcycler)
+    
+    # print "cc", colorcycler
+
+def kwargs_plot_clean(**kwargs):
+    """create kwargs dict from scratch by copying fixed list of item from old kwargs
+    """
+    kwargs_ = dict([(k, kwargs[k]) for k in ['xticks', 'yticks', 'xticklabels', 'yticklabels'] if kwargs.has_key(k)])
+    return kwargs_
+    
 def timeseries(ax, data, **kwargs):
     """Plot data as timeseries
 
@@ -289,17 +308,6 @@ def timeseries(ax, data, **kwargs):
      - None
 
     """
-    # colors
-    # cmap = plt.get_cmap("Oranges")
-    # cmap = cc.cm['isolum'] # isoluminance
-    colorcycler = get_colorcycler('rainbow')
-    
-    rc = rc_params()
-
-    
-    # rc['axes.prop_cycle'] = colorcycler
-    
-    # print "cc", colorcycler
     
     # alpha style
     if kwargs.has_key('alpha'):
@@ -356,25 +364,33 @@ def timeseries(ax, data, **kwargs):
         title = kwargs['title']
     else:
         title = 'timeseries of %s-shaped data' % data.shape
-        
+
     # x-axis shift / bus delay compensation
     if kwargs.has_key('delay'):
         data = np.roll(data, kwargs['delay'], axis = 1)
+
+    # clean up kwargs to avoid unintended effects
+    kwargs_ = {} # kwargs_plot_clean(**kwargs)
         
     # explicit xaxis
     if kwargs.has_key('ordinate'):
         ax.plot(
             kwargs['ordinate'], data, alpha = alpha,
             marker = marker, linestyle = linestyle, linewidth = linewidth,
-            label = label)
+            label = label,
+            **kwargs_)
     else:
         ax.plot(
             data, alpha = alpha, marker = marker,
-            linestyle = linestyle, label = label)
+            linestyle = linestyle, label = label,
+            **kwargs_)
 
     ax.legend(fontsize = 6)
-    ax.set_prop_cycle(colorcycler)
-    
+    # ax.set_prop_cycle(colorcycler)
+
+    # configure axis ticks
+    ax_set_ticks(ax, **kwargs)
+            
     ax.set_xscale(xscale)
     ax.set_yscale(yscale)
     if xlim is not None:
@@ -385,10 +401,31 @@ def timeseries(ax, data, **kwargs):
     ax.title.set_text(title)
     ax.title.set_fontsize(8.0)
 
+    # ax.set_axis_bgcolor('white')
+    
+def ax_set_ticks(ax, **kwargs):
+    if kwargs.has_key('xticks'):
+        if not kwargs['xticks']:
+            ax.set_xticks([])
+            ax.set_xticklabels([])
+        else:
+            ax.set_xticks(kwargs['xticks'])
+            # ax.set_xticklabels(kwargs['xticks'])
+                
+    if kwargs.has_key('yticks'):
+        print "timeseries kwargs[yticks]", kwargs['yticks']
+        if not kwargs['yticks']:
+            ax.set_yticks([])
+            ax.set_yticklabels([])
+            print "timeseries disabling yticks"
+        else:
+            ax.set_yticks(kwargs['yticks'])
+            
 def histogram(ax, data, **kwargs):
     """histogram plot"""
     assert len(data.shape) > 0
-    # print "histo data", data
+    # print "histo kwargs", kwargs
+    kwargs_ = {}
     # style params
     # axis title
     if kwargs.has_key('title'):
@@ -420,11 +457,14 @@ def histogram(ax, data, **kwargs):
         ylim = kwargs['ylim']
     else:
         ylim = None
+
+    if kwargs.has_key('histtype'):
+        kwargs_['histtype'] = kwargs['histtype']
         
     ax.hist(
         # data, bins = int(np.log(max(3, data.shape[0]/2))),
         data,
-        alpha = 0.5, orientation = orientation)
+        alpha = 1.0, orientation = orientation, **kwargs_)
     ax.set_xscale(xscale)
     ax.set_yscale(yscale)
     if xlim is not None:
@@ -434,6 +474,8 @@ def histogram(ax, data, **kwargs):
     ax.title.set_text(title)
     ax.title.set_fontsize(8.0)
 
+    ax_set_ticks(ax, **kwargs)
+    
 if HAVE_PYUNICORN:
     def rp_timeseries_embedding(ax, data, **kwargs):
         """recurrence plot"""
@@ -857,6 +899,9 @@ plotfuncs = {
     'uniform_divergence': uniform_divergence,
     }
 
+# configure, ah, style
+configure_style()
+    
 if __name__ == "__main__":
     import argparse, sys
     parser = argparse.ArgumentParser()
