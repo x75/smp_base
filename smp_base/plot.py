@@ -28,6 +28,8 @@ import colorcet as cc
 
 import numpy as np
 
+from plot_utils import put_legend_out_right
+
 try:
     from pyunicorn.timeseries import RecurrencePlot
     HAVE_PYUNICORN = True
@@ -387,10 +389,8 @@ def timeseries(ax, data, **kwargs):
 
     ax.legend(fontsize = 6)
     # ax.set_prop_cycle(colorcycler)
+    put_legend_out_right(resize_by = 0.8, ax = ax)
 
-    # configure axis ticks
-    ax_set_ticks(ax, **kwargs)
-            
     ax.set_xscale(xscale)
     ax.set_yscale(yscale)
     if xlim is not None:
@@ -401,6 +401,9 @@ def timeseries(ax, data, **kwargs):
     ax.title.set_text(title)
     ax.title.set_fontsize(8.0)
 
+    # configure axis ticks
+    ax_set_ticks(ax, **kwargs)
+            
     # ax.set_axis_bgcolor('white')
     
 def ax_set_ticks(ax, **kwargs):
@@ -413,11 +416,11 @@ def ax_set_ticks(ax, **kwargs):
             # ax.set_xticklabels(kwargs['xticks'])
                 
     if kwargs.has_key('yticks'):
-        print "timeseries kwargs[yticks]", kwargs['yticks']
+        # print "timeseries kwargs[yticks]", kwargs['yticks']
         if not kwargs['yticks']:
             ax.set_yticks([])
             ax.set_yticklabels([])
-            print "timeseries disabling yticks"
+            # print "timeseries disabling yticks"
         else:
             ax.set_yticks(kwargs['yticks'])
             
@@ -475,6 +478,8 @@ def histogram(ax, data, **kwargs):
     ax.title.set_fontsize(8.0)
 
     ax_set_ticks(ax, **kwargs)
+    
+    put_legend_out_right(resize_by = 0.8, ax = ax)
     
 if HAVE_PYUNICORN:
     def rp_timeseries_embedding(ax, data, **kwargs):
