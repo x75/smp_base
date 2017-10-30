@@ -292,7 +292,13 @@ def kwargs_plot_clean(**kwargs):
     """
     kwargs_ = dict([(k, kwargs[k]) for k in ['xticks', 'yticks', 'xticklabels', 'yticklabels'] if kwargs.has_key(k)])
     return kwargs_
-    
+
+def kwargs_plot_clean_hist(**kwargs):
+    """create kwargs dict from scratch by copying fixed list of item from old kwargs
+    """
+    return dict([(k, kwargs[k]) for k in kwargs.keys() if k not in [
+        'xticks', 'yticks', 'xticklabels', 'yticklabels', 'xlim', 'ylim', 'ordinate', 'xscale', 'yscale', 'title']])
+
 def timeseries(ax, data, **kwargs):
     """Plot data as timeseries
 
@@ -387,9 +393,9 @@ def timeseries(ax, data, **kwargs):
             linestyle = linestyle, label = label,
             **kwargs_)
 
-    ax.legend(fontsize = 6)
+    # ax.legend(fontsize = 6)
     # ax.set_prop_cycle(colorcycler)
-    put_legend_out_right(resize_by = 0.8, ax = ax)
+    # put_legend_out_right(resize_by = 0.8, ax = ax)
 
     ax.set_xscale(xscale)
     ax.set_yscale(yscale)
@@ -411,9 +417,9 @@ def ax_set_ticks(ax, **kwargs):
         if not kwargs['xticks']:
             ax.set_xticks([])
             ax.set_xticklabels([])
-        else:
-            ax.set_xticks(kwargs['xticks'])
-            # ax.set_xticklabels(kwargs['xticks'])
+        # else:
+        #     ax.set_xticks(kwargs['xticks'])
+        #     ax.set_xticklabels(kwargs['xticks'])
                 
     if kwargs.has_key('yticks'):
         # print "timeseries kwargs[yticks]", kwargs['yticks']
@@ -421,65 +427,49 @@ def ax_set_ticks(ax, **kwargs):
             ax.set_yticks([])
             ax.set_yticklabels([])
             # print "timeseries disabling yticks"
-        else:
-            ax.set_yticks(kwargs['yticks'])
+        # else:
+        #     ax.set_yticks(kwargs['yticks'])
             
 def histogram(ax, data, **kwargs):
     """histogram plot"""
     assert len(data.shape) > 0
     # print "histo kwargs", kwargs
-    kwargs_ = {}
-    # style params
-    # axis title
-    if kwargs.has_key('title'):
-        title = kwargs['title']
-    else:
-        title = 'histogram of %s-shaped data, log-scale' % data.shape
-        
-    if kwargs.has_key('orientation'):
-        orientation = kwargs['orientation']
-    else:
-        orientation = 'vertical'
-        
-    if kwargs.has_key('xscale'):
-        xscale = kwargs['xscale']
-    else:
-        xscale = 'linear'
-        
-    if kwargs.has_key('yscale'):
-        yscale = kwargs['yscale']
-    else:
-        yscale = 'linear'
+    kwargs_ = {
+        # style params
+        # axis title
+        'title': 'histogram of %s-shaped data, log-scale' % (data.shape,),
+        'orientation': 'vertical',
+        'xscale': 'linear',
+        'yscale': 'linear',
+        'xlim': None,
+        'ylim': None,
+    }
 
-    if kwargs.has_key('xlim'):
-        xlim = kwargs['xlim']
-    else:
-        xlim = None
-        
-    if kwargs.has_key('ylim'):
-        ylim = kwargs['ylim']
-    else:
-        ylim = None
+    kwargs_.update(**kwargs)
 
-    if kwargs.has_key('histtype'):
-        kwargs_['histtype'] = kwargs['histtype']
+    kwargs = kwargs_plot_clean_hist(**kwargs_)
+    
+    # if not kwargs.has_key('histtype'):
+    #     kwargs_['histtype'] = kwargs['histtype']
+        
+    # print "histogram kwargs", kwargs.keys()
         
     ax.hist(
         # data, bins = int(np.log(max(3, data.shape[0]/2))),
-        data,
-        alpha = 1.0, orientation = orientation, **kwargs_)
-    ax.set_xscale(xscale)
-    ax.set_yscale(yscale)
-    if xlim is not None:
-        ax.set_xlim(xlim)
-    if ylim is not None:
-        ax.set_ylim(ylim)
-    ax.title.set_text(title)
-    ax.title.set_fontsize(8.0)
-
-    ax_set_ticks(ax, **kwargs)
+        data, alpha = 1.0, **kwargs)
     
-    put_legend_out_right(resize_by = 0.8, ax = ax)
+    ax.set_xscale(kwargs_['xscale'])
+    ax.set_yscale(kwargs_['yscale'])
+    if kwargs_['xlim'] is not None:
+        ax.set_xlim(kwargs_['xlim'])
+    if kwargs_['ylim'] is not None:
+        ax.set_ylim(kwargs_['ylim'])
+    ax.title.set_text(kwargs_['title'])
+    ax.title.set_fontsize(8.0) # kwargs_[
+
+    ax_set_ticks(ax, **kwargs_)
+    
+    # put_legend_out_right(resize_by = 0.8, ax = ax)
     
 if HAVE_PYUNICORN:
     def rp_timeseries_embedding(ax, data, **kwargs):
