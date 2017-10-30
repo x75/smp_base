@@ -317,100 +317,55 @@ def timeseries(ax, data, **kwargs):
 
     """
     
-    # alpha style
-    if kwargs.has_key('alpha'):
-        alpha = kwargs['alpha']
-    else:
-        alpha = 0.5
-
-    # marker style
-    if kwargs.has_key('marker'):
-        marker = kwargs['marker']
-    else:
-        marker = 'None'
+    kwargs_ = {
+        # style params
+        # axis title
         
-    # linestyle
-    if kwargs.has_key('linestyle'):
-        linestyle = kwargs['linestyle']
-    else:
-        linestyle = 'solid'
-
-    # linewidth
-    if kwargs.has_key('linewidth'):
-        linewidth = kwargs['linewidth']
-    else:
-        linewidth = 1.0
+        'title': 'timeseries of %s-shaped data' % (data.shape,),
+        'xscale': 'linear',
+        'yscale': 'linear',
+        'xlim': None,
+        'ylim': None,
+        'alpha': 0.5,
+        'marker': 'None',
+        'linestyle': 'solid',
+    }
         
-    # labels
-    if kwargs.has_key('label'):
-        label = kwargs['label']
-    else:
-        label = None
-
-    if kwargs.has_key('xscale'):
-        xscale = kwargs['xscale']
-    else:
-        xscale = 'linear'
-        
-    if kwargs.has_key('yscale'):
-        yscale = kwargs['yscale']
-    else:
-        yscale = 'linear'
-
-    if kwargs.has_key('xlim'):
-        xlim = kwargs['xlim']
-    else:
-        xlim = None
-        
-    if kwargs.has_key('ylim'):
-        ylim = kwargs['ylim']
-    else:
-        ylim = None
-        
-    # axis title
-    if kwargs.has_key('title'):
-        title = kwargs['title']
-    else:
-        title = 'timeseries of %s-shaped data' % data.shape
-
+    kwargs_.update(**kwargs)
+    kwargs = kwargs_plot_clean_hist(**kwargs_)
+    
     # x-axis shift / bus delay compensation
     if kwargs.has_key('delay'):
         data = np.roll(data, kwargs['delay'], axis = 1)
 
     # clean up kwargs to avoid unintended effects
-    kwargs_ = {} # kwargs_plot_clean(**kwargs)
+    # kwargs_ = {} # kwargs_plot_clean(**kwargs)
         
     # explicit xaxis
     if kwargs.has_key('ordinate'):
         ax.plot(
-            kwargs['ordinate'], data, alpha = alpha,
-            marker = marker, linestyle = linestyle, linewidth = linewidth,
-            label = label,
-            **kwargs_)
+            kwargs['ordinate'], data, **kwargs)
+        # alpha = alpha,
+        #     marker = marker, linestyle = linestyle, linewidth = linewidth,
+        #     label = label,
+        #     **kwargs_)
     else:
         ax.plot(
-            data, alpha = alpha, marker = marker,
-            linestyle = linestyle, label = label,
-            **kwargs_)
+            data, **kwargs)
+        # alpha = alpha, marker = marker,
+        #     linestyle = linestyle, label = label,
+        #     **kwargs_)
 
-    # ax.legend(fontsize = 6)
-    # ax.set_prop_cycle(colorcycler)
-    # put_legend_out_right(resize_by = 0.8, ax = ax)
+    ax.set_xscale(kwargs_['xscale'])
+    ax.set_yscale(kwargs_['yscale'])
+    if kwargs_['xlim'] is not None:
+        ax.set_xlim(kwargs_['xlim'])
+    if kwargs_['ylim'] is not None:
+        ax.set_ylim(kwargs_['ylim'])
+    ax.title.set_text(kwargs_['title'])
+    ax.title.set_fontsize(8.0) # kwargs_[
 
-    ax.set_xscale(xscale)
-    ax.set_yscale(yscale)
-    if xlim is not None:
-        ax.set_xlim(xlim)
-    if ylim is not None:
-        ax.set_ylim(ylim)
-        
-    ax.title.set_text(title)
-    ax.title.set_fontsize(8.0)
-
-    # configure axis ticks
-    ax_set_ticks(ax, **kwargs)
-            
-    # ax.set_axis_bgcolor('white')
+    ax_set_ticks(ax, **kwargs_)
     
 def ax_set_ticks(ax, **kwargs):
     if kwargs.has_key('xticks'):
@@ -437,16 +392,14 @@ def histogram(ax, data, **kwargs):
     kwargs_ = {
         # style params
         # axis title
-        'title': 'histogram of %s-shaped data, log-scale' % (data.shape,),
+        'title': 'histogram of %s-shaped data' % (data.shape,),
         'orientation': 'vertical',
         'xscale': 'linear',
         'yscale': 'linear',
         'xlim': None,
         'ylim': None,
     }
-
     kwargs_.update(**kwargs)
-
     kwargs = kwargs_plot_clean_hist(**kwargs_)
     
     # if not kwargs.has_key('histtype'):
@@ -456,7 +409,7 @@ def histogram(ax, data, **kwargs):
         
     ax.hist(
         # data, bins = int(np.log(max(3, data.shape[0]/2))),
-        data, alpha = 1.0, **kwargs)
+        data, **kwargs)
     
     ax.set_xscale(kwargs_['xscale'])
     ax.set_yscale(kwargs_['yscale'])
