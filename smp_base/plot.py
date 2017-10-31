@@ -280,7 +280,8 @@ def configure_style():
     # colors
     # cmap = plt.get_cmap("Oranges")
     # cmap = cc.cm['isolum'] # isoluminance
-    colorcycler = get_colorcycler('rainbow')
+    # colorcycler = get_colorcycler('rainbow')
+    colorcycler = get_colorcycler('cyclic_mrybm_35_75_c68')
     
     # rc = rc_params()
     rc('axes', prop_cycle = colorcycler)
@@ -404,7 +405,7 @@ def histogram(ax, data, **kwargs):
     
     # if not kwargs.has_key('histtype'):
     #     kwargs_['histtype'] = kwargs['histtype']
-        
+
     # print "histogram kwargs", kwargs.keys()
         
     ax.hist(
