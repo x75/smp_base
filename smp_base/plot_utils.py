@@ -39,7 +39,7 @@ def put_legend_out_right(labels = None, resize_by = 0.8, ax = None):
     ax = ax_check(ax)
     resize_panel_vert(resize_by = resize_by, ax = ax)
     loc = 'upper left'
-    bbox = (0.95, 1.0)
+    bbox = (1.0, 0.95)
     # loc = 'center left'
     # bbox = (1.0, 0.5)
     if labels is None:

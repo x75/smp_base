@@ -259,8 +259,17 @@ def get_ax_size(fig, ax):
     height *= fig.dpi
     return width, height
 
-def get_colorcycler(cmap_str = None, cmap_idx = None):
+def get_colorcycler(cmap_str = None, cmap_idx = None, c_s = 0, c_e = 255, c_n = 20):
     """get a colorcycler for the cmap 'cmapstr'
+
+    Arguments:
+     - cmap_str(str): colormap id string ['rainbow']
+     - cmap_idx(array): indices into 0 - 255 to directly select the
+       colors of the cycle [None]. If None, cmap_idx will be generated
+       with the c_\* parameters.
+     - c_s: cmap_idx start
+     - c_e: cmap_idx end
+     - c_n: cmap_idx numsteps
     """
     if cmap_str is None:
         cmap_str = 'hot'
@@ -268,7 +277,7 @@ def get_colorcycler(cmap_str = None, cmap_idx = None):
 
     if cmap_idx is None:
         # cmap_idx = np.linspace(0, 1000, 345, endpoint = False)
-        cmap_idx = np.linspace(0, 255, 20, endpoint = False)
+        cmap_idx = np.linspace(c_s, c_e, c_n, endpoint = False)
         # print "cmap_idx", cmap_idx, cmap.N
         cmap_idx = [int(i) % cmap.N for i in cmap_idx]
         # print "cmap_idx", cmap_idx
@@ -280,8 +289,8 @@ def configure_style():
     # colors
     # cmap = plt.get_cmap("Oranges")
     # cmap = cc.cm['isolum'] # isoluminance
-    # colorcycler = get_colorcycler('rainbow')
-    colorcycler = get_colorcycler('cyclic_mrybm_35_75_c68')
+    colorcycler = get_colorcycler('rainbow')
+    # colorcycler = get_colorcycler('cyclic_mrybm_35_75_c68')
     
     # rc = rc_params()
     rc('axes', prop_cycle = colorcycler)
@@ -298,7 +307,10 @@ def kwargs_plot_clean_hist(**kwargs):
     """create kwargs dict from scratch by copying fixed list of item from old kwargs
     """
     return dict([(k, kwargs[k]) for k in kwargs.keys() if k not in [
-        'xticks', 'yticks', 'xticklabels', 'yticklabels', 'xlim', 'ylim', 'ordinate', 'xscale', 'yscale', 'title']])
+        'ordinate', 'title',
+        'xticks', 'yticks', 'xticklabels', 'yticklabels',
+        'xlim', 'ylim', 'xscale', 'yscale', 'xlabel', 'ylabel',
+        ]])
 
 def timeseries(ax, data, **kwargs):
     """Plot data as timeseries
@@ -327,6 +339,8 @@ def timeseries(ax, data, **kwargs):
         'yscale': 'linear',
         'xlim': None,
         'ylim': None,
+        'xlabel': 'time steps [t]',
+        'ylabel': 'activity [unit-free]',
         'alpha': 0.5,
         'marker': 'None',
         'linestyle': 'solid',
@@ -357,17 +371,27 @@ def timeseries(ax, data, **kwargs):
         #     linestyle = linestyle, label = label,
         #     **kwargs_)
 
+    # axis labels
+    if kwargs_.has_key('xlabel'):
+        ax.set_xlabel('%s' % kwargs_['xlabel'])
+
+    if kwargs_.has_key('ylabel'):
+        ax.set_ylabel('%s' % kwargs_['ylabel'])
+    
+    # axis scale: linear / log
     ax.set_xscale(kwargs_['xscale'])
     ax.set_yscale(kwargs_['yscale'])
+    # axis limits: inferred / explicit
     if kwargs_['xlim'] is not None:
         ax.set_xlim(kwargs_['xlim'])
     if kwargs_['ylim'] is not None:
         ax.set_ylim(kwargs_['ylim'])
+    # axis ticks
+    ax_set_ticks(ax, **kwargs_)
+    # axis title and fontsize
     ax.title.set_text(kwargs_['title'])
     ax.title.set_fontsize(8.0) # kwargs_[
 
-    ax_set_ticks(ax, **kwargs_)
-    
 def ax_set_ticks(ax, **kwargs):
     if kwargs.has_key('xticks'):
         if not kwargs['xticks']:
