@@ -431,10 +431,18 @@ def histogram(ax, data, **kwargs):
     #     kwargs_['histtype'] = kwargs['histtype']
 
     # print "histogram kwargs", kwargs.keys()
-        
-    ax.hist(
+
+    if kwargs_['ylim'] is not None and kwargs_['orientation'] == 'horizontal':
+        bins = np.linspace(kwargs_['ylim'][0], kwargs_['ylim'][1], 21)
+    elif kwargs_['xlim'] is not None and kwargs_['orientation'] == 'vertical':
+        bins = np.linspace(kwargs_['xlim'][0], kwargs_['xlim'][1], 21)
+    else:
+        bins = 'auto'
+    (n, bins, patches) = ax.hist(
         # data, bins = int(np.log(max(3, data.shape[0]/2))),
-        data, **kwargs)
+        data, bins = bins, **kwargs)
+
+    # print "hist bins= %s", bins
     
     ax.set_xscale(kwargs_['xscale'])
     ax.set_yscale(kwargs_['yscale'])
