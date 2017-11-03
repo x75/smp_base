@@ -418,7 +418,7 @@ def histogram(ax, data, **kwargs):
         # style params
         # axis title
         'title': 'histogram of %s-shaped data' % (data.shape,),
-        'orientation': 'vertical',
+        'orientation': 'horizontal',
         'xscale': 'linear',
         'yscale': 'linear',
         'xlim': None,
