@@ -340,7 +340,7 @@ def timeseries(ax, data, **kwargs):
         'xlim': None,
         'ylim': None,
         'xlabel': 'time steps [t]',
-        'ylabel': 'activity [unit-free]',
+        'ylabel': 'activity [x]',
         'alpha': 0.5,
         'marker': 'None',
         'linestyle': 'solid',
@@ -372,10 +372,10 @@ def timeseries(ax, data, **kwargs):
         #     **kwargs_)
 
     # axis labels
-    if kwargs_.has_key('xlabel'):
+    if kwargs_.has_key('xlabel') and kwargs_['xlabel'] is not None:
         ax.set_xlabel('%s' % kwargs_['xlabel'])
 
-    if kwargs_.has_key('ylabel'):
+    if kwargs_.has_key('ylabel') and kwargs_['ylabel'] is not None:
         ax.set_ylabel('%s' % kwargs_['ylabel'])
     
     # axis scale: linear / log
@@ -390,7 +390,7 @@ def timeseries(ax, data, **kwargs):
     ax_set_ticks(ax, **kwargs_)
     # axis title and fontsize
     ax.title.set_text(kwargs_['title'])
-    ax.title.set_fontsize(8.0) # kwargs_[
+    # ax.title.set_fontsize(8.0) # kwargs_[
 
 def ax_set_ticks(ax, **kwargs):
     if kwargs.has_key('xticks'):
@@ -446,7 +446,22 @@ def histogram(ax, data, **kwargs):
         # data, bins = int(np.log(max(3, data.shape[0]/2))),
         data, bins = bins, **kwargs)
 
-    # print "hist bins= %s", bins
+    # print "hist n    = %s" % ( n.shape, )
+    # print "hist bins = %s, len(bins) = %d" % ( bins.shape, len(bins))
+
+    # # binshalf = int(len(bins)/2.0)
+    # # print "binshalf", binshalf
+    # binidx = np.random.choice(len(bins))
+    # # ax.text(0.2, bins[5], 'sum(n / binwidth) = %f' % (np.sum(n * np.diff(bins)), ), fontsize = 8)
+    # ax.text(0.2, (bins[binidx] + bins[binidx + 1])/2.0, 'sum(n / binwidth) = %f' % (np.sum(n * np.diff(bins)), ), fontsize = 8)
+    # # ax.text(0.2, bins[5], 'bla')
+        
+    # axis labels
+    if kwargs_.has_key('xlabel') and kwargs_['xlabel'] is not None:
+        ax.set_xlabel('%s' % kwargs_['xlabel'])
+
+    if kwargs_.has_key('ylabel') and kwargs_['ylabel'] is not None:
+        ax.set_ylabel('%s' % kwargs_['ylabel'])
     
     ax.set_xscale(kwargs_['xscale'])
     ax.set_yscale(kwargs_['yscale'])
@@ -455,7 +470,7 @@ def histogram(ax, data, **kwargs):
     if kwargs_['ylim'] is not None:
         ax.set_ylim(kwargs_['ylim'])
     ax.title.set_text(kwargs_['title'])
-    ax.title.set_fontsize(8.0) # kwargs_[
+    # ax.title.set_fontsize(8.0) # kwargs_[
 
     ax_set_ticks(ax, **kwargs_)
     
@@ -579,9 +594,9 @@ def plot_img(ax, data, **kwargs):
             plt.colorbar(mappable = mpl, ax = ax, orientation = "horizontal")
 
     if kwargs.has_key('title'):
-        ax.set_title(title, fontsize=8)
+        ax.set_title(title) # , fontsize=8)
     else:
-        ax.set_title("%s" % ('matrix'), fontsize=8)
+        ax.set_title("%s" % ('matrix')) # , fontsize=8)
         
     # if kwargs.has_key('xlabel'):
     ax.set_xlabel("")
