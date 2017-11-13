@@ -51,6 +51,40 @@ from pandas.tools.plotting import scatter_matrix
 plot_colors = mplcolors.get_named_colors_mapping()
 plot_colors_idx = 0
 
+# class dec_import_unicorn():
+#     """wrapper for failsafe import dependence
+
+#     check if the required import 'import_name' is satisfied by testing
+#     `eval(import_name)` and running fallback function substitute
+#     """
+#     # def __init__(self, **kwargs):
+#     #     self.import_name = 'True'
+#     #     if kwargs.has_key('import_name'):
+#     #         self.import_name = kwargs['import_name']
+            
+#     def __call__(self, f):
+#         # if lib is not None:
+            
+#         def wrap(ax, data, *args, **kwargs): # _self, 
+                
+#             # print "f", f
+#             # print "args", args
+#             # print "kwargs", kwargs
+#             # return args[0]
+#             # import_flag = eval(self.import_name)
+#             import_flag = HAVE_PYUNICORN
+            
+#             if import_flag:
+#                 f_ = f
+#             else:
+#                 # f_ = lambda f: print "Required import %s not satisfied, requested func %s not executed" % (import_name, f)
+#                 def f_(ax, data, *args, **kwargs):
+#                     print "Required import %s not satisfied, requested func %s not executed" % (import_name, f)
+#                 # return f_()
+                
+#             f_(ax, data, args, kwargs)
+#         return wrap
+
 def find_smallest_rectangle(l = 1):
     l_sqrt = int(np.floor(np.sqrt(l)))
     print "sq(l) = %d" % l_sqrt
@@ -477,10 +511,14 @@ def histogram(ax, data, **kwargs):
     # put_legend_out_right(resize_by = 0.8, ax = ax)
     
 if HAVE_PYUNICORN:
+    # dec_import_unicorn = partial(dec_import, import_name = 'HAVE_PYUNICORN')
+    # @dec_import_unicorn()
     def rp_timeseries_embedding(ax, data, **kwargs):
-        """recurrence plot"""
+        """recurrence plot using pyunicorn
+        """
         emb_del = 1
         emb_dim = 10
+        # print "rp_timeseries_embedding data", data
         # make data "strictly" one-dimensional
         data = data.reshape((-1, ))
         rp = RecurrencePlot(time_series = data, tau = emb_del, dim = emb_dim, threshold_std = 1.5)
@@ -782,16 +820,6 @@ def custom_colorbar():
     fig.show()
     
     plt.show()
-
-
-# class uniform_divergence():
-#     def __call__(self, f):
-#         def wrap(_self, *args, **kwargs):
-#             print "f", f
-#             print "args", args
-#             print "kwargs", kwargs
-#             # return args[0]
-#         return wrap
 
 def uniform_divergence(*args, **kwargs):
     """Compute histogram based divergence of bivariate data distribution from prior distribution
