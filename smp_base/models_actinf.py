@@ -624,7 +624,7 @@ class smpGMM(smpModel):
 
         This method constructs the corresponding conditioning input from the reduced input
         """
-        # print("%s.sample: X.shape = %s, idim = %d" % (self.__class__.__name__, X.shape, self.idim))
+        print("%s.sample: X.shape = %s, idim = %d" % (self.__class__.__name__, X.shape, self.idim))
         assert X.shape[1] == self.idim
 
         # cond = np.zeros((, self.cdim))
