@@ -28,6 +28,14 @@ smp\_base\.eligibility module
     :undoc-members:
     :show-inheritance:
 
+smp\_base\.funcs module
+-----------------------
+
+.. automodule:: smp_base.funcs
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 smp\_base\.gennoise module
 --------------------------
 
@@ -88,6 +96,14 @@ smp\_base\.plot module
 ----------------------
 
 .. automodule:: smp_base.plot
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+smp\_base\.plot\_utils module
+-----------------------------
+
+.. automodule:: smp_base.plot_utils
     :members:
     :undoc-members:
     :show-inheritance:

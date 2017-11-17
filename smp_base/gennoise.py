@@ -8,7 +8,7 @@ from __future__ import print_function
 
 import argparse
 import numpy as np
-import matplotlib.pylab as pl
+import matplotlib.pylab as plt
 from sklearn.preprocessing import normalize
 
 N = 8192
@@ -101,27 +101,34 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--seed", type=int, default=0)
     args = parser.parse_args()
 
-    print(args)
+    print("gennoise.main: args = %s" % (args, ))
     
     beta = args.beta
     N = args.len
     seed = args.seed
 
-    
     np.random.seed(seed)
 
     (compl, ts) = Noise.oneoverfnoise(N, beta)
+    print("gennoise.main: compl = %s, ts = %s" %(compl, ts))
 
     real = compl.real
     imag = compl.imag
     
-    print(real, imag)
-    pl.plot(real)
-    pl.plot(imag)
-    pl.show()
+    print("gennoise.main: real = %s, imag = %s" %(real, imag))
+
+    fig = plt.figure()
+    
+    ax1 = fig.add_subplot(2,1,1)
+    ax1.plot(real, label = "real")
+    ax1.plot(imag, label = "imag")
+    ax1.legend()
     # np.fft.ifft()
 
     # print(ts.real)
 
-    pl.plot(ts.real)
-    pl.show()
+    ax2 = fig.add_subplot(2,1,2)
+    ax2.plot(ts.real)
+
+    fig.show()
+    plt.show()

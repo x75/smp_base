@@ -269,9 +269,9 @@ def compute_mutual_information(src, dst, k = 0, tau = 1, delay = 0, norm_in = Tr
     numsrcvars, numdestvars = (src.shape[1], dst.shape[1])
 
     # miCalcClassC = JPackage("infodynamics.measures.continuous.kernel").MutualInfoCalculatorMultiVariateKernel
-    # miCalcClassC = JPackage("infodynamics.measures.continuous.kraskov").MutualInfoCalculatorMultiVariateKraskov1
+    miCalcClassC = JPackage("infodynamics.measures.continuous.kraskov").MutualInfoCalculatorMultiVariateKraskov1
     # miCalcClassC = JPackage("infodynamics.measures.continuous.kraskov").MutualInfoCalculatorMultiVariateKraskov2
-    miCalcClassC = JPackage("infodynamics.measures.continuous.kraskov").MutualInfoCalculatorMultiVariateKraskov2
+    # miCalcClassC = JPackage("infodynamics.measures.continuous.kraskov").MutualInfoCalculatorMultiVariateKraskov2
     # miCalcClassC = JPackage("infodynamics.measures.continuous.kraskov").MultiInfoCalculatorKraskov2
     miCalcC = miCalcClassC()
     miCalcC.setProperty("NORMALISE", str(norm_in).lower())
@@ -305,9 +305,11 @@ def compute_mutual_information(src, dst, k = 0, tau = 1, delay = 0, norm_in = Tr
 
 @dec_compute_infth()
 def compute_information_distance(src, dst, delay = 0, normalize = 1.0):
-    """check how 1 - mi = infodist via joint H"""
-    mi = compute_mutual_information(src, dst, delay = delay)
-    return 1 - (mi / normalize)
+    """check how 1 - mi = infodist via joint H
+    """
+    mi = compute_mutual_information(src, dst, delay = delay, norm_in = True)
+    # print "compute_information_distance mi  = %s" % (mi, )
+    return 1 - (mi * normalize)
 
 @dec_compute_infth()
 def compute_transfer_entropy(src, dst, delay = 0):

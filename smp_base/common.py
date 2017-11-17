@@ -17,7 +17,7 @@ def get_module_logger(modulename = 'experiment', loglevel = logging.INFO):
 
     # create formatter
     # formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    formatter = logging.Formatter('%(levelname)s: %(name)s: %(message)s')
+    formatter = logging.Formatter('%(levelname)8s: %(name)20s: %(message)s')
     # formatter = logging.Formatter('%(name)s: %(levelname)s: %(message)s')
 
     # add formatter to ch
