@@ -34,12 +34,21 @@ def resize_panel_horiz(resize_by = 0.8, ax = None):
     ax = ax_check(ax)
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width, box.height * resize_by])
-    
-def put_legend_out_right(labels = None, resize_by = 0.8, ax = None):
+
+def custom_legend(labels = None, resize_by = 0.8, ax = None, loc = 'right'):
+    if loc == 'right' or loc == 'left':
+        put_legend_out_right(labels = labels, resize_by = resize_by, ax = ax, right = loc)
+    elif loc == 'upper' or loc == 'lower':
+        put_legend_out_top(labels = labels, resize_by = resize_by, ax = ax, top = loc)
+
+def put_legend_out_right(labels = None, resize_by = 0.8, ax = None, right = 'left'):
     ax = ax_check(ax)
     resize_panel_vert(resize_by = resize_by, ax = ax)
-    loc = 'upper left'
-    bbox = (0.95, 0.95)
+    loc = 'upper %s' % (right, )
+    if right == 'left':
+        bbox = (0.95, 0.95)
+    elif right == 'right':
+        bbox = (-0.15, 0.95)
     # loc = 'center left'
     # bbox = (1.0, 0.5)
     if labels is None:
@@ -47,11 +56,14 @@ def put_legend_out_right(labels = None, resize_by = 0.8, ax = None):
     else:
         ax.legend(loc = loc, bbox_to_anchor = bbox, ncol=1, labels = labels)
 
-def put_legend_out_top(labels = None, resize_by = 0.8, ax = None):
+def put_legend_out_top(labels = None, resize_by = 0.8, ax = None, top = 'lower'):
     ax = ax_check(ax)
     resize_panel_horiz(resize_by = resize_by, ax = ax)
-    loc = 'lower center'
-    bbox = (0.5, 1.1) #
+    loc = '%s center' % (top, )
+    if top == 'upper':
+        bbox = (0.5, -0.1) #
+    elif top == 'lower':
+        bbox = (0.5, 1.1) #
     if labels is None:
         ax.legend(loc = loc, bbox_to_anchor = bbox, ncol=10)        
     else:

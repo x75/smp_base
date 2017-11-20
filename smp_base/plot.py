@@ -15,6 +15,7 @@ Includes:
 """
 from functools import partial
 from cycler import cycler
+import copy
 
 import matplotlib.pyplot as plt
 
@@ -331,18 +332,25 @@ def configure_style():
     
     # print "cc", colorcycler
 
-def kwargs_plot_clean(**kwargs):
+def kwargs_plot_clean_plot(**kwargs):
     """create kwargs dict from scratch by copying fixed list of item from old kwargs
     """
-    kwargs_ = dict([(k, kwargs[k]) for k in ['xticks', 'yticks', 'xticklabels', 'yticklabels'] if kwargs.has_key(k)])
-    return kwargs_
+    # kwargs_ = dict([(k, kwargs[k]) for k in ['xticks', 'yticks', 'xticklabels', 'yticklabels'] if kwargs.has_key(k)])
+    # return kwargs_
+    return dict([(k, kwargs[k]) for k in kwargs.keys() if k not in [
+        'delay', 'ordinate', 'orientation',
+        'title', 'aspect',
+        'xticks', 'yticks', 'xticklabels', 'yticklabels', 'xinvert', 'yinvert',
+        'xlim', 'ylim', 'xscale', 'yscale', 'xlabel', 'ylabel',
+        ]])
 
 def kwargs_plot_clean_hist(**kwargs):
     """create kwargs dict from scratch by copying fixed list of item from old kwargs
     """
     return dict([(k, kwargs[k]) for k in kwargs.keys() if k not in [
-        'ordinate', 'title',
-        'xticks', 'yticks', 'xticklabels', 'yticklabels',
+        'delay', 'ordinate',
+        'title', 'aspect',
+        'xticks', 'yticks', 'xticklabels', 'yticklabels', 'xinvert', 'yinvert',
         'xlim', 'ylim', 'xscale', 'yscale', 'xlabel', 'ylabel',
         ]])
 
@@ -368,42 +376,85 @@ def timeseries(ax, data, **kwargs):
         # style params
         # axis title
         
-        'title': 'timeseries of %s-shaped data' % (data.shape,),
-        'xscale': 'linear',
-        'yscale': 'linear',
-        'xlim': None,
-        'ylim': None,
-        'xlabel': 'time steps [t]',
-        'ylabel': 'activity [x]',
         'alpha': 0.5,
-        'marker': 'None',
         'linestyle': 'solid',
+        'marker': 'None',
+        'orientation': 'horizontal',
+        'title': 'timeseries of %s-shaped data' % (data.shape,),
+        'xlabel': 'time steps [t]',
+        'xlim': None,
+        'xscale': 'linear',
+        'xinvert': None,
+        'ylabel': 'activity [x]',
+        'ylim': None,
+        'yscale': 'linear',
+        'yinvert': None,
     }
         
     kwargs_.update(**kwargs)
-    kwargs = kwargs_plot_clean_hist(**kwargs_)
+    # kwargs = kwargs_plot_clean_plot(**kwargs_)
     
     # x-axis shift / bus delay compensation
-    if kwargs.has_key('delay'):
+    if kwargs_.has_key('delay'):
         data = np.roll(data, kwargs['delay'], axis = 1)
 
     # clean up kwargs to avoid unintended effects
     # kwargs_ = {} # kwargs_plot_clean(**kwargs)
-        
-    # explicit xaxis
-    if kwargs.has_key('ordinate'):
-        ax.plot(
-            kwargs['ordinate'], data, **kwargs)
-        # alpha = alpha,
-        #     marker = marker, linestyle = linestyle, linewidth = linewidth,
-        #     label = label,
-        #     **kwargs_)
+
+    # x axis (ordinate)
+    if kwargs_.has_key('ordinate'):
+        x = kwargs_['ordinate']
     else:
-        ax.plot(
-            data, **kwargs)
-        # alpha = alpha, marker = marker,
-        #     linestyle = linestyle, label = label,
-        #     **kwargs_)
+        x = np.arange(0, data.shape[0])
+    # y axis (abscissa)
+    y = data
+
+    # # explicit xaxis
+    # if kwargs_.has_key('ordinate'):
+    #     ax.plot(
+    #         kwargs_['ordinate'], data, **kwargs)
+    #     # alpha = alpha,
+    #     #     marker = marker, linestyle = linestyle, linewidth = linewidth,
+    #     #     label = label,
+    #     #     **kwargs_)
+    # else:
+    #     ax.plot(
+    #         data, **kwargs)
+    #     # alpha = alpha, marker = marker,
+    #     #     linestyle = linestyle, label = label,
+    #     #     **kwargs_)
+
+    if kwargs_.has_key('orientation') and kwargs_['orientation'] != 'horizontal':
+        # print "plot.timeseries kwargs orientation", x, y
+        x_ = x.copy()
+        x = y
+        y = x_
+        # print "plot.timeseries kwargs orientation", x, y
+        axis_keys = ['label', 'scale', 'lim', 'ticks', 'ticklabels']
+        for ax_key in axis_keys:
+            # for ax_name in ['x', 'y']:
+            ax_key_x = '%s%s' % ('x', ax_key)
+            ax_key_y = '%s%s' % ('y', ax_key)
+            if kwargs_.has_key(ax_key_x):
+                if kwargs_.has_key(ax_key_y):
+                    bla_ = copy.copy(kwargs_[ax_key_y])
+                    kwargs_[ax_key_y] = kwargs_[ax_key_x]
+                    kwargs_[ax_key_x] = bla_
+                else:
+                    kwargs_[ax_key_y] = copy.copy(kwargs_[ax_key_x])
+                    kwargs_.pop(ax_key_x)
+            elif kwargs_.has_key(ax_key_y):
+                kwargs_[ax_key_x] = copy.copy(kwargs_[ax_key_y])
+                kwargs_.pop(ax_key_y)
+
+    # axis title and fontsize
+    ax.title.set_text(kwargs_['title'])
+
+    # prepare timeseries kwargs
+    kwargs = kwargs_plot_clean_plot(**kwargs_)
+    
+    # plot
+    ax.plot(x, y, **kwargs)
 
     # axis labels
     if kwargs_.has_key('xlabel') and kwargs_['xlabel'] is not None:
@@ -420,29 +471,76 @@ def timeseries(ax, data, **kwargs):
         ax.set_xlim(kwargs_['xlim'])
     if kwargs_['ylim'] is not None:
         ax.set_ylim(kwargs_['ylim'])
+
+    # # axis aspect
+    # if kwargs_.has_key('aspect'):
+    #     ax.set_aspect(kwargs_['aspect'])
+
     # axis ticks
     ax_set_ticks(ax, **kwargs_)
-    # axis title and fontsize
-    ax.title.set_text(kwargs_['title'])
-    # ax.title.set_fontsize(8.0) # kwargs_[
+    
+def ax_invert(ax, **kwargs):
+    kwargs_ = kwargs
+    # print "    plot.ax_invert kwargs_ = %s" % (kwargs_, )
+    # axis invert?
+    if kwargs_.has_key('xinvert') and kwargs_['xinvert'] is not None:
+        print "    plot.ax_invert inverting xaxis with xinvert = %s" % (kwargs_['xinvert'], )
+        ax.invert_xaxis()
+    if kwargs_.has_key('yinvert') and kwargs_['yinvert'] is not None:
+        print "    plot.ax_invert inverting yaxis with yinvert = %s" % (kwargs_['yinvert'], )
+        ax.invert_yaxis()
 
 def ax_set_ticks(ax, **kwargs):
+    ax_xticks = ax.get_xticks()
+    ax_yticks = ax.get_yticks()
+    print "    plot.ax_set_ticks ax = %s, xticks = %s" % (ax.get_title(), ax_xticks,)
+    print "    plot.ax_set_ticks ax = %s, yticks = %s" % (ax.get_title(), ax_yticks,)
+
+    # print "ax_set_ticks kwargs = %s" % (kwargs.keys(),)
     if kwargs.has_key('xticks'):
-        if not kwargs['xticks']:
+        if kwargs['xticks'] is None:
+            pass
+        elif not kwargs['xticks']:
             ax.set_xticks([])
             ax.set_xticklabels([])
-        # else:
-        #     ax.set_xticks(kwargs['xticks'])
-        #     ax.set_xticklabels(kwargs['xticks'])
+        elif type(kwargs['xticks']) is list or type(kwargs['xticks']) is tuple:
+            ax.set_xticks(kwargs['xticks'])
+            ax.set_xticklabels(kwargs['xticks'])
+        else:
+            ax.set_xticks(ax_xticks)
+        print "    plot.ax_set_ticks     kwargs[xticks] = %s, xticks = %s" % (kwargs['xticks'], ax.get_xticks(),)
                 
+    if kwargs.has_key('xticklabels'):
+        if kwargs['xticklabels'] is None:
+            pass
+        elif not kwargs['xticklabels']:
+            ax.set_xticklabels([])
+        elif type(kwargs['xticklabels']) is list or type(kwargs['xticklabels']) is tuple:
+            ax.set_xticklabels(kwargs['xticklabels'])
+        print "    plot.ax_set_ticks     kwargs[xticklabels] = %s, xticklabels = %s" % (kwargs['xticklabels'], ax.get_xticklabels(),)
+        
     if kwargs.has_key('yticks'):
         # print "timeseries kwargs[yticks]", kwargs['yticks']
-        if not kwargs['yticks']:
+        if kwargs['yticks'] is None:
+            pass
+        elif not kwargs['yticks']:
             ax.set_yticks([])
             ax.set_yticklabels([])
-            # print "timeseries disabling yticks"
-        # else:
-        #     ax.set_yticks(kwargs['yticks'])
+        elif type(kwargs['yticks']) is list or type(kwargs['yticks']) is tuple:
+            ax.set_yticks(kwargs['yticks'])
+            ax.set_yticklabels(kwargs['yticks'])
+        else:
+            ax.set_yticks(ax_yticks)
+        print "    plot.ax_set_ticks     kwargs[yticks] = %s, yticks = %s" % (kwargs['yticks'], ax.get_yticks(),)
+        
+    if kwargs.has_key('yticklabels'):
+        if kwargs['yticklabels'] is None:
+            pass
+        elif not kwargs['yticklabels']:
+            ax.set_yticklabels([])
+        elif type(kwargs['yticklabels']) is list or type(kwargs['yticklabels']) is tuple:
+            ax.set_yticklabels(kwargs['yticklabels'])
+        print "    plot.ax_set_ticks     kwargs[yticklabels] = %s, yticklabels = %s" % (kwargs['yticklabels'], ax.get_yticklabels(),)
             
 def histogram(ax, data, **kwargs):
     """histogram plot"""
@@ -453,10 +551,13 @@ def histogram(ax, data, **kwargs):
         # axis title
         'title': 'histogram of %s-shaped data' % (data.shape,),
         'orientation': 'horizontal',
+        'alpha': 0.5,
         'xscale': 'linear',
         'yscale': 'linear',
         'xlim': None,
+        'xinvert': None,
         'ylim': None,
+        'yinvert': None,
     }
     kwargs_.update(**kwargs)
     kwargs = kwargs_plot_clean_hist(**kwargs_)
@@ -464,15 +565,21 @@ def histogram(ax, data, **kwargs):
     # if not kwargs.has_key('histtype'):
     #     kwargs_['histtype'] = kwargs['histtype']
 
-    # print "histogram kwargs", kwargs.keys()
-    # print "histogram kwargs_", kwargs_['ylim']
+    print "    plot.histogram kwargs.keys = %s" % (kwargs.keys())
+    print "    plot.histogram kwargs_.keys = %s" % (kwargs_.keys())
 
     if kwargs_['ylim'] is not None and kwargs_['orientation'] == 'horizontal':
         bins = np.linspace(kwargs_['ylim'][0], kwargs_['ylim'][1], 21)
+        print "    plot.histogram setting bins = %s for orientation = %s from ylim = %s" % (bins, kwargs_['orientation'], kwargs_['ylim'])
     elif kwargs_['xlim'] is not None and kwargs_['orientation'] == 'vertical':
         bins = np.linspace(kwargs_['xlim'][0], kwargs_['xlim'][1], 21)
+        print "    plot.histogram setting bins = %s for orientation = %s from xlim = %s" % (bins, kwargs_['orientation'], kwargs_['xlim'])
     else:
         bins = 'auto'
+        print "    plot.histogram setting bins = %s for orientation = %s from xlim = %s" % (bins, kwargs_['orientation'], kwargs_['xlim'])
+
+    # axis title
+    ax.title.set_text(kwargs_['title'])
 
     # print "plot.histogram bins = %s" % (bins, )
     # print "plot.histogram data = %s" % (data.T, )
@@ -496,19 +603,39 @@ def histogram(ax, data, **kwargs):
 
     if kwargs_.has_key('ylabel') and kwargs_['ylabel'] is not None:
         ax.set_ylabel('%s' % kwargs_['ylabel'])
-    
+
+    # axis scale and limits
     ax.set_xscale(kwargs_['xscale'])
     ax.set_yscale(kwargs_['yscale'])
     if kwargs_['xlim'] is not None:
         ax.set_xlim(kwargs_['xlim'])
     if kwargs_['ylim'] is not None:
         ax.set_ylim(kwargs_['ylim'])
-    ax.title.set_text(kwargs_['title'])
-    # ax.title.set_fontsize(8.0) # kwargs_[
 
-    ax_set_ticks(ax, **kwargs_)
+    # # ax is aspect
+    # ax_set_aspect(ax, **kwargs_)
     
-    # put_legend_out_right(resize_by = 0.8, ax = ax)
+    # axis ticks and ticklabels
+    ax_set_ticks(ax, **kwargs_)
+
+def ax_set_aspect(ax, **kwargs):
+    kwargs_ = kwargs
+    # axis aspect
+    if kwargs_.has_key('aspect'):
+        ax_aspect = ax.get_aspect()
+        ax_xlim = ax.get_xlim()
+        ax_ylim = ax.get_ylim()
+        print "   plot.ax_set_aspect ax = %s, aspect = %s, xlim = %s, ylim = %s" % (ax, ax_aspect, ax_xlim, ax_ylim)
+        if kwargs_['aspect'] == 'shared': # means square proportions
+            xlim_range = 2.2 #  FIXME: hardcoded constant, np.abs(ax_xlim[1] - ax_xlim[0])
+            ylim_range = np.abs(ax_ylim[1] - ax_ylim[0])
+            ax_aspect = xlim_range/ylim_range
+        else:
+            ax_aspect = kwargs_['aspect']
+            
+        print "   plot.histogram set axis aspect = %s" % (ax_aspect, )
+        ax.set_aspect(ax_aspect)
+    
     
 if HAVE_PYUNICORN:
     # dec_import_unicorn = partial(dec_import, import_name = 'HAVE_PYUNICORN')

@@ -40,10 +40,13 @@ class Noise(object):
     @classmethod
     def oneoverfnoise(self, N, beta):
         """oneover1noise(N, beta): generate 1/f noise
-        N: length
-        beta: 1/f**beta
 
-        returns: (freq, time)
+        Arguments:
+         - N(int): length
+         - beta(float): 1/f**beta
+
+        Returns:
+         - tuple(freq, time) aka complex spectrum 'compl' and timeseries 'ts'
         """
         real = np.zeros((N,))
         imag = np.zeros((N,))

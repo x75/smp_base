@@ -221,7 +221,11 @@ def infth_mi_multivariate(data = {}, estimator = "kraskov1", normalize = True, d
     mimvCalc.initialise(dim_src, dim_dst)
     mimvCalc.setObservations(src, dst)
     # the average global MI between all source channels and all destination channels
-    mimv_avg = mimvCalc.computeAverageLocalOfObservations()
+    try:
+        mimv_avg = mimvCalc.computeAverageLocalOfObservations()
+    except Exception, e:
+        mimv_avg = np.zeros((1,1))
+        logger.error("Error occured in mimv calc, %s. Setting default mimv_avg = %s" % (e, mimv_avg))
     return mimv_avg
 
 @dec_compute_infth()
