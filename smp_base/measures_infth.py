@@ -28,8 +28,12 @@ import numpy as np
 import config
 
 # from smp_base.measures import meas
-from .measures import meas
+from smp_base.measures import meas
 
+import logging
+from smp_base.common import get_module_logger
+
+logger = get_module_logger(modulename = 'measures_infth', loglevel = logging.DEBUG)
 
 try:
     from jpype import getDefaultJVMPath, isJVMStarted, startJVM, attachThreadToJVM, isThreadAttachedToJVM
@@ -224,7 +228,7 @@ def infth_mi_multivariate(data = {}, estimator = "kraskov1", normalize = True, d
     try:
         mimv_avg = mimvCalc.computeAverageLocalOfObservations()
     except Exception, e:
-        mimv_avg = np.zeros((1,1))
+        mimv_avg = np.random.uniform(0, 1e-5, (1,1)) # np.zeros((1,1))
         logger.error("Error occured in mimv calc, %s. Setting default mimv_avg = %s" % (e, mimv_avg))
     return mimv_avg
 
@@ -300,6 +304,8 @@ def compute_mutual_information(src, dst, k = 0, tau = 1, delay = 0, norm_in = Tr
             # print "measures_infth: compute_mutual_information: miCalcC.timeDiff = %d" % (miCalcC.timeDiff)
             # miCalcC.setObservations(src[:,s], dst[:,m])
             # print "compute_mutual_information src[%s] = %s, dst[%s] = %s" % (s, src[:,[s]].shape, m, dst[:,[m]].shape)
+            # logger.debug('isnan(src) = %s, isnan(dst) = %s' % (np.isnan(src[:,[s]]), np.isnan(dst[:,[m]])))
+            logger.debug('var(src) = %s, var(dst) = %s' % (np.var(src[:,[s]]), np.var(dst[:,[m]])))
             miCalcC.setObservations(src[:,[s]], dst[:,[m]])
             mi = miCalcC.computeAverageLocalOfObservations()
             # print "mi", mi

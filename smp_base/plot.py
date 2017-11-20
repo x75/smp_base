@@ -48,6 +48,12 @@ except ImportError, e:
 import pandas as pd
 from pandas.tools.plotting import scatter_matrix
 
+import logging
+from smp_base.common import get_module_logger
+
+loglevel_debug = logging.DEBUG - 1
+logger = get_module_logger(modulename = 'plot', loglevel = logging.DEBUG)
+
 # all predefined matplotlib colors
 plot_colors = mplcolors.get_named_colors_mapping()
 plot_colors_idx = 0
@@ -68,9 +74,9 @@ plot_colors_idx = 0
             
 #         def wrap(ax, data, *args, **kwargs): # _self, 
                 
-#             # print "f", f
-#             # print "args", args
-#             # print "kwargs", kwargs
+#             # logger.log(loglevel_debug, "f", f)
+#             # logger.log(loglevel_debug, "args", args)
+#             # logger.log(loglevel_debug, "kwargs", kwargs)
 #             # return args[0]
 #             # import_flag = eval(self.import_name)
 #             import_flag = HAVE_PYUNICORN
@@ -78,9 +84,9 @@ plot_colors_idx = 0
 #             if import_flag:
 #                 f_ = f
 #             else:
-#                 # f_ = lambda f: print "Required import %s not satisfied, requested func %s not executed" % (import_name, f)
+#                 # f_ = lambda f: logger.log(loglevel_debug, "Required import %s not satisfied, requested func %s not executed" % (import_name, f))
 #                 def f_(ax, data, *args, **kwargs):
-#                     print "Required import %s not satisfied, requested func %s not executed" % (import_name, f)
+#                     logger.log(loglevel_debug, "Required import %s not satisfied, requested func %s not executed" % (import_name, f))
 #                 # return f_()
                 
 #             f_(ax, data, args, kwargs)
@@ -88,23 +94,23 @@ plot_colors_idx = 0
 
 def find_smallest_rectangle(l = 1):
     l_sqrt = int(np.floor(np.sqrt(l)))
-    print "sq(l) = %d" % l_sqrt
+    logger.log(loglevel_debug, "sq(l) = %d" % l_sqrt)
     # for i in range(1, l/l_sqrt):
     w = l_sqrt
     h = l/w
     while w * h < l:
         w += 1
         # h = l/w
-        # print "rect", w*h, l, w, h
-    # print "l = %f" % (l_sqrt, )
+        # logger.log(loglevel_debug, "rect", w*h, l, w, h)
+    # logger.log(loglevel_debug, "l = %f" % (l_sqrt, ))
     return w, h
 
 def test_plot_colors():
     # fig = makefig(rows = 1, cols = 1, title = "Show all colors in smp_base.plot.plot_colors")
-    print "plot_colors type = %s, len = %d" % (type(plot_colors), len(plot_colors))
+    logger.log(loglevel_debug, "plot_colors type = %s, len = %d" % (type(plot_colors), len(plot_colors)))
     ncols,nrows = find_smallest_rectangle(len(plot_colors))
-    # print "plot_colors dir = %s" % (dir(plot_colors), )
-    # print "plot_colors keys = %s" % (plot_colors.keys(), )
+    # logger.log(loglevel_debug, "plot_colors dir = %s" % (dir(plot_colors), ))
+    # logger.log(loglevel_debug, "plot_colors keys = %s" % (plot_colors.keys(), ))
 
     colors = plot_colors
     plot_colors_img = np.zeros((ncols, nrows))
@@ -120,7 +126,7 @@ def test_plot_colors():
     # nrows = n // ncols + 1
     
 
-    print "sorted_names", sorted_names, "n", n
+    logger.log(loglevel_debug, "sorted_names", sorted_names, "n", n)
     
     fig, ax = plt.subplots(figsize=(8, 5))
 
@@ -245,7 +251,7 @@ def make_fig(rows = 1, cols = 1, wspace = 0.0, hspace = 0.0, axesspec = None, ti
     else:
         axes = make_axes_from_spec(fig, gs, axesspec)
         
-    # print "fig.axes", fig.axes
+    # logger.log(loglevel_debug, "fig.axes", fig.axes)
     plt.subplots_adjust(wspace = wspace, hspace = hspace)
     # plt.subplots_adjust(wspace=0.1, hspace = 0.3)
     # plt.subplots_adjust(wspace=0.1, hspace = 0.3)
@@ -313,9 +319,9 @@ def get_colorcycler(cmap_str = None, cmap_idx = None, c_s = 0, c_e = 255, c_n = 
     if cmap_idx is None:
         # cmap_idx = np.linspace(0, 1000, 345, endpoint = False)
         cmap_idx = np.linspace(c_s, c_e, c_n, endpoint = False)
-        # print "cmap_idx", cmap_idx, cmap.N
+        # logger.log(loglevel_debug, "cmap_idx", cmap_idx, cmap.N)
         cmap_idx = [int(i) % cmap.N for i in cmap_idx]
-        # print "cmap_idx", cmap_idx
+        # logger.log(loglevel_debug, "cmap_idx", cmap_idx)
         
     colorcycler = cycler('color', [c for c in cmap(cmap_idx)])
     return colorcycler
@@ -330,7 +336,7 @@ def configure_style():
     # rc = rc_params()
     rc('axes', prop_cycle = colorcycler)
     
-    # print "cc", colorcycler
+    # logger.log(loglevel_debug, "cc", colorcycler)
 
 def kwargs_plot_clean_plot(**kwargs):
     """create kwargs dict from scratch by copying fixed list of item from old kwargs
@@ -425,11 +431,11 @@ def timeseries(ax, data, **kwargs):
     #     #     **kwargs_)
 
     if kwargs_.has_key('orientation') and kwargs_['orientation'] != 'horizontal':
-        # print "plot.timeseries kwargs orientation", x, y
+        # logger.log(loglevel_debug, "plot.timeseries kwargs orientation", x, y)
         x_ = x.copy()
         x = y
         y = x_
-        # print "plot.timeseries kwargs orientation", x, y
+        # logger.log(loglevel_debug, "plot.timeseries kwargs orientation", x, y)
         axis_keys = ['label', 'scale', 'lim', 'ticks', 'ticklabels']
         for ax_key in axis_keys:
             # for ax_name in ['x', 'y']:
@@ -481,22 +487,22 @@ def timeseries(ax, data, **kwargs):
     
 def ax_invert(ax, **kwargs):
     kwargs_ = kwargs
-    # print "    plot.ax_invert kwargs_ = %s" % (kwargs_, )
+    # logger.log(loglevel_debug, "    plot.ax_invert kwargs_ = %s" % (kwargs_, ))
     # axis invert?
     if kwargs_.has_key('xinvert') and kwargs_['xinvert'] is not None:
-        print "    plot.ax_invert inverting xaxis with xinvert = %s" % (kwargs_['xinvert'], )
+        logger.log(loglevel_debug, "    plot.ax_invert inverting xaxis with xinvert = %s" % (kwargs_['xinvert'], ))
         ax.invert_xaxis()
     if kwargs_.has_key('yinvert') and kwargs_['yinvert'] is not None:
-        print "    plot.ax_invert inverting yaxis with yinvert = %s" % (kwargs_['yinvert'], )
+        logger.log(loglevel_debug, "    plot.ax_invert inverting yaxis with yinvert = %s" % (kwargs_['yinvert'], ))
         ax.invert_yaxis()
 
 def ax_set_ticks(ax, **kwargs):
     ax_xticks = ax.get_xticks()
     ax_yticks = ax.get_yticks()
-    print "    plot.ax_set_ticks ax = %s, xticks = %s" % (ax.get_title(), ax_xticks,)
-    print "    plot.ax_set_ticks ax = %s, yticks = %s" % (ax.get_title(), ax_yticks,)
+    logger.log(loglevel_debug, "    plot.ax_set_ticks ax = %s, xticks = %s" % (ax.get_title(), ax_xticks,))
+    logger.log(loglevel_debug, "    plot.ax_set_ticks ax = %s, yticks = %s" % (ax.get_title(), ax_yticks,))
 
-    # print "ax_set_ticks kwargs = %s" % (kwargs.keys(),)
+    # logger.log(loglevel_debug, "ax_set_ticks kwargs = %s" % (kwargs.keys(),))
     if kwargs.has_key('xticks'):
         if kwargs['xticks'] is None:
             pass
@@ -508,7 +514,7 @@ def ax_set_ticks(ax, **kwargs):
             ax.set_xticklabels(kwargs['xticks'])
         else:
             ax.set_xticks(ax_xticks)
-        print "    plot.ax_set_ticks     kwargs[xticks] = %s, xticks = %s" % (kwargs['xticks'], ax.get_xticks(),)
+        logger.log(loglevel_debug, "    plot.ax_set_ticks     kwargs[xticks] = %s, xticks = %s" % (kwargs['xticks'], ax.get_xticks(),))
                 
     if kwargs.has_key('xticklabels'):
         if kwargs['xticklabels'] is None:
@@ -517,10 +523,10 @@ def ax_set_ticks(ax, **kwargs):
             ax.set_xticklabels([])
         elif type(kwargs['xticklabels']) is list or type(kwargs['xticklabels']) is tuple:
             ax.set_xticklabels(kwargs['xticklabels'])
-        print "    plot.ax_set_ticks     kwargs[xticklabels] = %s, xticklabels = %s" % (kwargs['xticklabels'], ax.get_xticklabels(),)
+        logger.log(loglevel_debug, "    plot.ax_set_ticks     kwargs[xticklabels] = %s, xticklabels = %s" % (kwargs['xticklabels'], ax.get_xticklabels(),))
         
     if kwargs.has_key('yticks'):
-        # print "timeseries kwargs[yticks]", kwargs['yticks']
+        # logger.log(loglevel_debug, "timeseries kwargs[yticks]", kwargs['yticks'])
         if kwargs['yticks'] is None:
             pass
         elif not kwargs['yticks']:
@@ -531,7 +537,7 @@ def ax_set_ticks(ax, **kwargs):
             ax.set_yticklabels(kwargs['yticks'])
         else:
             ax.set_yticks(ax_yticks)
-        print "    plot.ax_set_ticks     kwargs[yticks] = %s, yticks = %s" % (kwargs['yticks'], ax.get_yticks(),)
+        logger.log(loglevel_debug, "    plot.ax_set_ticks     kwargs[yticks] = %s, yticks = %s" % (kwargs['yticks'], ax.get_yticks(),))
         
     if kwargs.has_key('yticklabels'):
         if kwargs['yticklabels'] is None:
@@ -540,12 +546,12 @@ def ax_set_ticks(ax, **kwargs):
             ax.set_yticklabels([])
         elif type(kwargs['yticklabels']) is list or type(kwargs['yticklabels']) is tuple:
             ax.set_yticklabels(kwargs['yticklabels'])
-        print "    plot.ax_set_ticks     kwargs[yticklabels] = %s, yticklabels = %s" % (kwargs['yticklabels'], ax.get_yticklabels(),)
+        logger.log(loglevel_debug, "    plot.ax_set_ticks     kwargs[yticklabels] = %s, yticklabels = %s" % (kwargs['yticklabels'], ax.get_yticklabels(),))
             
 def histogram(ax, data, **kwargs):
     """histogram plot"""
     assert len(data.shape) > 0
-    # print "histo kwargs", kwargs
+    # logger.log(loglevel_debug, "histo kwargs", kwargs)
     kwargs_ = {
         # style params
         # axis title
@@ -565,33 +571,33 @@ def histogram(ax, data, **kwargs):
     # if not kwargs.has_key('histtype'):
     #     kwargs_['histtype'] = kwargs['histtype']
 
-    print "    plot.histogram kwargs.keys = %s" % (kwargs.keys())
-    print "    plot.histogram kwargs_.keys = %s" % (kwargs_.keys())
+    logger.log(loglevel_debug, "    plot.histogram kwargs.keys = %s" % (kwargs.keys()))
+    logger.log(loglevel_debug, "    plot.histogram kwargs_.keys = %s" % (kwargs_.keys()))
 
     if kwargs_['ylim'] is not None and kwargs_['orientation'] == 'horizontal':
         bins = np.linspace(kwargs_['ylim'][0], kwargs_['ylim'][1], 21)
-        print "    plot.histogram setting bins = %s for orientation = %s from ylim = %s" % (bins, kwargs_['orientation'], kwargs_['ylim'])
+        logger.log(loglevel_debug, "    plot.histogram setting bins = %s for orientation = %s from ylim = %s" % (bins, kwargs_['orientation'], kwargs_['ylim']))
     elif kwargs_['xlim'] is not None and kwargs_['orientation'] == 'vertical':
         bins = np.linspace(kwargs_['xlim'][0], kwargs_['xlim'][1], 21)
-        print "    plot.histogram setting bins = %s for orientation = %s from xlim = %s" % (bins, kwargs_['orientation'], kwargs_['xlim'])
+        logger.log(loglevel_debug, "    plot.histogram setting bins = %s for orientation = %s from xlim = %s" % (bins, kwargs_['orientation'], kwargs_['xlim']))
     else:
         bins = 'auto'
-        print "    plot.histogram setting bins = %s for orientation = %s from xlim = %s" % (bins, kwargs_['orientation'], kwargs_['xlim'])
+        logger.log(loglevel_debug, "    plot.histogram setting bins = %s for orientation = %s from xlim = %s" % (bins, kwargs_['orientation'], kwargs_['xlim']))
 
     # axis title
     ax.title.set_text(kwargs_['title'])
 
-    # print "plot.histogram bins = %s" % (bins, )
-    # print "plot.histogram data = %s" % (data.T, )
+    # logger.log(loglevel_debug, "plot.histogram bins = %s" % (bins, ))
+    # logger.log(loglevel_debug, "plot.histogram data = %s" % (data.T, ))
     (n, bins, patches) = ax.hist(
         # data, bins = int(np.log(max(3, data.shape[0]/2))),
         data, bins = bins, **kwargs)
 
-    # print "hist n    = %s" % ( n.shape, )
-    # print "hist bins = %s, len(bins) = %d" % ( bins.shape, len(bins))
+    # logger.log(loglevel_debug, "hist n    = %s" % ( n.shape, ))
+    # logger.log(loglevel_debug, "hist bins = %s, len(bins) = %d" % ( bins.shape, len(bins)))
 
     # # binshalf = int(len(bins)/2.0)
-    # # print "binshalf", binshalf
+    # # logger.log(loglevel_debug, "binshalf", binshalf)
     # binidx = np.random.choice(len(bins))
     # # ax.text(0.2, bins[5], 'sum(n / binwidth) = %f' % (np.sum(n * np.diff(bins)), ), fontsize = 8)
     # ax.text(0.2, (bins[binidx] + bins[binidx + 1])/2.0, 'sum(n / binwidth) = %f' % (np.sum(n * np.diff(bins)), ), fontsize = 8)
@@ -625,7 +631,7 @@ def ax_set_aspect(ax, **kwargs):
         ax_aspect = ax.get_aspect()
         ax_xlim = ax.get_xlim()
         ax_ylim = ax.get_ylim()
-        print "   plot.ax_set_aspect ax = %s, aspect = %s, xlim = %s, ylim = %s" % (ax, ax_aspect, ax_xlim, ax_ylim)
+        logger.log(loglevel_debug, "   plot.ax_set_aspect ax = %s, aspect = %s, xlim = %s, ylim = %s" % (ax, ax_aspect, ax_xlim, ax_ylim))
         if kwargs_['aspect'] == 'shared': # means square proportions
             xlim_range = 2.2 #  FIXME: hardcoded constant, np.abs(ax_xlim[1] - ax_xlim[0])
             ylim_range = np.abs(ax_ylim[1] - ax_ylim[0])
@@ -633,7 +639,7 @@ def ax_set_aspect(ax, **kwargs):
         else:
             ax_aspect = kwargs_['aspect']
             
-        print "   plot.histogram set axis aspect = %s" % (ax_aspect, )
+        logger.log(loglevel_debug, "   plot.histogram set axis aspect = %s" % (ax_aspect, ))
         ax.set_aspect(ax_aspect)
     
     
@@ -645,7 +651,7 @@ if HAVE_PYUNICORN:
         """
         emb_del = 1
         emb_dim = 10
-        # print "rp_timeseries_embedding data", data
+        # logger.log(loglevel_debug, "rp_timeseries_embedding data", data)
         # make data "strictly" one-dimensional
         data = data.reshape((-1, ))
         rp = RecurrencePlot(time_series = data, tau = emb_del, dim = emb_dim, threshold_std = 1.5)
@@ -660,7 +666,7 @@ if HAVE_PYUNICORN:
         ax.set_ylabel("$n$")
 else:
     def rp_timeseries_embedding(ax, data, **kwargs):
-        print "Dummy, pyunicorn not installed"
+        logger.log(loglevel_debug, "Dummy, pyunicorn not installed")
 
 # visualization of multi-dimensional data
 # check
@@ -686,7 +692,7 @@ if HAVE_SEABORN:
         g.map_diag(sns.kdeplot)
         g.map_offdiag(plt.hexbin, cmap="gray", gridsize=30, bins="log");
 
-        # print "dir(g)", dir(g)
+        # logger.log(loglevel_debug, "dir(g)", dir(g))
         # print g.diag_axes
         # print g.axes
     
@@ -705,18 +711,18 @@ if HAVE_SEABORN:
         # plot_scattermatrix(df, ax = None)
 else:
     def histogramnd(ax, data, **kwargs):
-        print "Dummy, seaborn not installed"
+        logger.log(loglevel_debug, "Dummy, seaborn not installed")
         
 def plot_scattermatrix(df, **kwargs):
     """plot a scattermatrix of dataframe df"""
     if df is None:
-        print "plot_scattermatrix: no data passed"
+        logger.log(loglevel_debug, "plot_scattermatrix: no data passed")
         return
         
     # df = pd.DataFrame(X, columns=['x1_t', 'x2_t', 'x1_tptau', 'x2_tptau', 'u_t'])
     # scatter_data_raw = np.hstack((np.array(Xs), np.array(Ys)))
     # scatter_data_raw = np.hstack((Xs, Ys))
-    # print "scatter_data_raw", scatter_data_raw.shape
+    # logger.log(loglevel_debug, "scatter_data_raw", scatter_data_raw.shape)
     
     plt.ioff()
     # df = pd.DataFrame(scatter_data_raw, columns=["x_%d" % i for i in range(scatter_data_raw.shape[1])])
@@ -787,7 +793,7 @@ def interactive():
         Left click: show real size
         Right click: resize
         """
-        print 'button pressed', event.button, event.xdata, event.ydata, data.shape
+        logger.log(loglevel_debug, 'button pressed', event.button, event.xdata, event.ydata, data.shape)
         if event.xdata is not None:
             # data = np.array([[event.xdata, event.ydata],])
             # decoded = decoder.predict(data)
@@ -795,7 +801,7 @@ def interactive():
             # if args.rel_coords:
             #     decoded = np.cumsum(decoded, axis=1)
 
-            print "ax", ax, "data", data
+            logger.log(loglevel_debug, "ax", ax, "data", data)
             ax.clear()
 
             datarow = int(event.ydata)
@@ -864,7 +870,7 @@ def custom_colorbar():
     b = np.random.exponential(scale = 1.0)
     n = 32
     X = np.random.beta(a = a, b = b, size = (numplots, n, n))
-    # print "a = %f, b = %f, X = %s" % (a, b, X)
+    # logger.log(loglevel_debug, "a = %f, b = %f, X = %s" % (a, b, X))
 
     fig = plt.figure()
 
@@ -900,8 +906,8 @@ def custom_colorbar():
         w_im, h_im = get_ax_size(fig, ax_im)
         w_cb, h_cb = get_ax_size(fig, ax_cb)
 
-        print "w_im = %s, h_im = %s" % (w_im, h_im)
-        print "w_cb = %s, h_cb = %s" % (w_cb, h_cb)
+        logger.log(loglevel_debug, "w_im = %s, h_im = %s" % (w_im, h_im))
+        logger.log(loglevel_debug, "w_cb = %s, h_cb = %s" % (w_cb, h_cb))
 
     for i in range(numplots):
         cmap = plt.get_cmap("Reds")
@@ -939,8 +945,8 @@ def custom_colorbar():
         w_im, h_im = get_ax_size(fig, ax_im)
         w_cb, h_cb = get_ax_size(fig, ax_cb)
 
-        print "w_im = %s, h_im = %s" % (w_im, h_im)
-        print "w_cb = %s, h_cb = %s" % (w_cb, h_cb)
+        logger.log(loglevel_debug, "w_im = %s, h_im = %s" % (w_im, h_im))
+        logger.log(loglevel_debug, "w_cb = %s, h_cb = %s" % (w_cb, h_cb))
 
             
 
@@ -963,16 +969,16 @@ def uniform_divergence(*args, **kwargs):
     Returns:
        put image plotting primitve through
     """
-    # print "f", f
-    # print "args", len(args),
+    # logger.log(loglevel_debug, "f", f)
+    # logger.log(loglevel_debug, "args", len(args),)
     # for arg in args:
-    #     print "arg %s %s" % (type(arg), len(arg))
-    # print "kwargs", kwargs.keys()
+    #     logger.log(loglevel_debug, "arg %s %s" % (type(arg), len(arg)))
+    # logger.log(loglevel_debug, "kwargs", kwargs.keys())
     f = kwargs['f']
     del kwargs['f']
     color = kwargs['color']
     del kwargs['color']
-    # print "f", f
+    # logger.log(loglevel_debug, "f", f)
     # return partial(f, args, kwargs) # (args[0], args[1], kwargs)
     # ax = f(args[0].values, args[1].values, kwargs) # (args[0], args[1], kwargs)
     prior = 'uniform'
@@ -1000,8 +1006,8 @@ def uniform_divergence(*args, **kwargs):
     h = h / np.sum(h)
     h_unif = h_unif / np.sum(h_unif)
     
-    # print "h", h, "xe", xe, "ye", ye
-    # print "h_unif", h_unif, "xe_unif", xe_unif, "ye_unif", ye_unif
+    # logger.log(loglevel_debug, "h", h, "xe", xe, "ye", ye)
+    # logger.log(loglevel_debug, "h_unif", h_unif, "xe_unif", xe_unif, "ye_unif", ye_unif)
     # ax = f(*args, **kwargs)
     plt.grid(0)
     X, Y = np.meshgrid(xe, ye)
@@ -1011,12 +1017,12 @@ def uniform_divergence(*args, **kwargs):
     # divergence
     def div_kl(h1, h2):
         # div = np.sum(h1 * np.log(h1/h2))
-        print "h1", h1
-        print "h2", h2
+        logger.log(loglevel_debug, "h1", h1)
+        logger.log(loglevel_debug, "h2", h2)
         log_diff = np.clip(np.log(h1/h2), -20.0, 7.0)
-        print "log diff", log_diff
+        logger.log(loglevel_debug, "log diff", log_diff)
         div = h1 * log_diff
-        print "div", div.shape, div
+        logger.log(loglevel_debug, "div", div.shape, div)
         return div
     h_ = div_kl(h, h_unif)
 
@@ -1035,7 +1041,7 @@ def uniform_divergence(*args, **kwargs):
     plt.colorbar()
 
     # ax_unif = f( bins = ax[1])
-    # print "ax", ax
+    # logger.log(loglevel_debug, "ax", ax)
     return ax
     
     

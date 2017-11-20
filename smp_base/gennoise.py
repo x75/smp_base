@@ -11,6 +11,11 @@ import numpy as np
 import matplotlib.pylab as plt
 from sklearn.preprocessing import normalize
 
+import logging
+from smp_base.common import get_module_logger
+
+logger = get_module_logger(modulename = 'gennoise', loglevel = logging.DEBUG)
+
 N = 8192
 TWOPOWER = 13
 TWOPI = 6.283185307179586476925287
@@ -38,7 +43,7 @@ class Noise(object):
         pass
 
     @classmethod
-    def oneoverfnoise(self, N, beta):
+    def oneoverfnoise(self, N, beta, normalize = False):
         """oneover1noise(N, beta): generate 1/f noise
 
         Arguments:
@@ -48,25 +53,40 @@ class Noise(object):
         Returns:
          - tuple(freq, time) aka complex spectrum 'compl' and timeseries 'ts'
         """
+        # initialize complex component vectors
         real = np.zeros((N,))
         imag = np.zeros((N,))
 
+        # iterate FFT bands up to nyquist
         # FIXME: vectorize this
         for i in range(1, N/2):
+            # spectrum magnitude from eq. ?
             mag = (i+1)**(-beta/2.) * np.random.normal(0., 1.)
+            # spectrum phase random
             pha = TWOPI * np.random.uniform()
-            
+
+            # convert polar to cartesian
             real[i] = mag * np.cos(pha)
             imag[i] = mag * np.sin(pha)
+            
+            # fix corner case
             real[N-i] = real[i]
             imag[N-i] = -imag[i]
-
             imag[N/2] = 0
 
         # complex array
         compl = real + (imag*1j)
+        
+        # normalize spectral energy
+        if normalize:
+            compl /= np.linalg.norm(compl)
+            
         # print(compl)
-        ts = np.fft.ifft(compl)
+        ts = np.fft.ifft(compl) * N
+        logger.debug('timeseries ts is type = %s, shape = %s, var = %s from ifft(compl)' % (type(ts), ts.shape, np.var(ts)))
+        if normalize:
+            ts /= np.abs(ts)
+        logger.debug('timeseries ts is type = %s, shape = %s, var = %s from ifft(compl)' % (type(ts), ts.shape, np.var(ts)))
         return(compl, ts)
 
     @classmethod
@@ -112,7 +132,7 @@ if __name__ == "__main__":
 
     np.random.seed(seed)
 
-    (compl, ts) = Noise.oneoverfnoise(N, beta)
+    (compl, ts) = Noise.oneoverfnoise(N, beta, normalize = True)
     print("gennoise.main: compl = %s, ts = %s" %(compl, ts))
 
     real = compl.real
@@ -123,6 +143,7 @@ if __name__ == "__main__":
     fig = plt.figure()
     
     ax1 = fig.add_subplot(2,1,1)
+    ax1.set_title('Noise spectrum (real/imag)')
     ax1.plot(real, label = "real")
     ax1.plot(imag, label = "imag")
     ax1.legend()
@@ -131,6 +152,7 @@ if __name__ == "__main__":
     # print(ts.real)
 
     ax2 = fig.add_subplot(2,1,2)
+    ax2.set_title('Noise timeseries (real)')
     ax2.plot(ts.real)
 
     fig.show()
