@@ -44,7 +44,7 @@ class Noise(object):
 
     @classmethod
     def oneoverfnoise(self, N, beta, normalize = False):
-        """oneover1noise(N, beta): generate 1/f noise
+        """generate 1/f noise
 
         Arguments:
          - N(int): length
@@ -84,8 +84,8 @@ class Noise(object):
         # print(compl)
         ts = np.fft.ifft(compl) * N
         logger.debug('timeseries ts is type = %s, shape = %s, var = %s from ifft(compl)' % (type(ts), ts.shape, np.var(ts)))
-        if normalize:
-            ts /= np.abs(ts)
+        # if normalize:
+        #     ts /= np.abs(ts)
         logger.debug('timeseries ts is type = %s, shape = %s, var = %s from ifft(compl)' % (type(ts), ts.shape, np.var(ts)))
         return(compl, ts)
 

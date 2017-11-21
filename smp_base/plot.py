@@ -489,10 +489,10 @@ def ax_invert(ax, **kwargs):
     kwargs_ = kwargs
     # logger.log(loglevel_debug, "    plot.ax_invert kwargs_ = %s" % (kwargs_, ))
     # axis invert?
-    if kwargs_.has_key('xinvert') and kwargs_['xinvert'] is not None:
+    if kwargs_.has_key('xinvert') and kwargs_['xinvert']: # is not None:
         logger.log(loglevel_debug, "    plot.ax_invert inverting xaxis with xinvert = %s" % (kwargs_['xinvert'], ))
         ax.invert_xaxis()
-    if kwargs_.has_key('yinvert') and kwargs_['yinvert'] is not None:
+    if kwargs_.has_key('yinvert') and kwargs_['yinvert']: # is not None:
         logger.log(loglevel_debug, "    plot.ax_invert inverting yaxis with yinvert = %s" % (kwargs_['yinvert'], ))
         ax.invert_yaxis()
 
