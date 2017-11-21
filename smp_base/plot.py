@@ -54,6 +54,8 @@ from smp_base.common import get_module_logger
 loglevel_debug = logging.DEBUG - 1
 logger = get_module_logger(modulename = 'plot', loglevel = logging.DEBUG)
 
+from smp_base.measures import div_kl, meas_hist
+
 # all predefined matplotlib colors
 plot_colors = mplcolors.get_named_colors_mapping()
 plot_colors_idx = 0
@@ -344,11 +346,12 @@ def kwargs_plot_clean_plot(**kwargs):
     # kwargs_ = dict([(k, kwargs[k]) for k in ['xticks', 'yticks', 'xticklabels', 'yticklabels'] if kwargs.has_key(k)])
     # return kwargs_
     return dict([(k, kwargs[k]) for k in kwargs.keys() if k not in [
-        'delay', 'ordinate', 'orientation',
+        'delay', 'ordinate',
         'title', 'aspect',
         'xticks', 'yticks', 'xticklabels', 'yticklabels', 'xinvert', 'yinvert',
         'xlim', 'ylim', 'xscale', 'yscale', 'xlabel', 'ylabel',
-        ]])
+        'orientation',
+    ]])
 
 def kwargs_plot_clean_hist(**kwargs):
     """create kwargs dict from scratch by copying fixed list of item from old kwargs
@@ -358,6 +361,28 @@ def kwargs_plot_clean_hist(**kwargs):
         'title', 'aspect',
         'xticks', 'yticks', 'xticklabels', 'yticklabels', 'xinvert', 'yinvert',
         'xlim', 'ylim', 'xscale', 'yscale', 'xlabel', 'ylabel',
+    ]])
+
+def kwargs_plot_clean_histogram(**kwargs):
+    """create kwargs dict from scratch by copying fixed list of item from old kwargs
+    """
+    return dict([(k, kwargs[k]) for k in kwargs.keys() if k not in [
+        'delay', 'ordinate',
+        'title', 'aspect',
+        'xticks', 'yticks', 'xticklabels', 'yticklabels', 'xinvert', 'yinvert',
+        'xlim', 'ylim', 'xscale', 'yscale', 'xlabel', 'ylabel',
+        'alpha', 'orientation',
+    ]])
+
+def kwargs_plot_clean_bar(**kwargs):
+    """create kwargs dict from scratch by copying fixed list of item from old kwargs
+    """
+    return dict([(k, kwargs[k]) for k in kwargs.keys() if k not in [
+        'delay', 'ordinate',
+        'title', 'aspect',
+        'xticks', 'yticks', 'xticklabels', 'yticklabels', 'xinvert', 'yinvert',
+        'xlim', 'ylim', 'xscale', 'yscale', 'xlabel', 'ylabel',
+        'orientation', 
         ]])
 
 def timeseries(ax, data, **kwargs):
@@ -566,7 +591,7 @@ def histogram(ax, data, **kwargs):
         'yinvert': None,
     }
     kwargs_.update(**kwargs)
-    kwargs = kwargs_plot_clean_hist(**kwargs_)
+    kwargs = kwargs_plot_clean_histogram(**kwargs_)
     
     # if not kwargs.has_key('histtype'):
     #     kwargs_['histtype'] = kwargs['histtype']
@@ -583,15 +608,36 @@ def histogram(ax, data, **kwargs):
     else:
         bins = 'auto'
         logger.log(loglevel_debug, "    plot.histogram setting bins = %s for orientation = %s from xlim = %s" % (bins, kwargs_['orientation'], kwargs_['xlim']))
-
+        
     # axis title
     ax.title.set_text(kwargs_['title'])
 
     # logger.log(loglevel_debug, "plot.histogram bins = %s" % (bins, ))
     # logger.log(loglevel_debug, "plot.histogram data = %s" % (data.T, ))
-    (n, bins, patches) = ax.hist(
-        # data, bins = int(np.log(max(3, data.shape[0]/2))),
-        data, bins = bins, **kwargs)
+    # (n, bins, patches) = ax.hist(
+    #     # data, bins = int(np.log(max(3, data.shape[0]/2))),
+    #     data, bins = bins, **kwargs)
+
+    # (n, bins) = np.histogram(data, bins = bins, **kwargs)
+    (n, bins) = meas_hist(data, bins = bins, **kwargs)
+
+    kwargs = kwargs_plot_clean_bar(**kwargs_)
+    logger.log(loglevel_debug + 1, "kwargs = %s", kwargs.keys())
+    
+    binwidth = np.mean(np.abs(np.diff(bins)))
+    bincenters = bins[:-1] + binwidth/2.0
+    logger.log(loglevel_debug + 1, "binwidth = %s", binwidth)
+    logger.log(loglevel_debug + 1, "bincenters = %s", bincenters)
+    
+    # orientation
+    if kwargs_['orientation'] == 'vertical':
+        axbar = ax.bar
+        kwargs['width'] = binwidth
+    elif kwargs_['orientation'] == 'horizontal':
+        axbar = ax.barh
+        kwargs['height'] = binwidth
+        
+    patches = axbar(bincenters, n, **kwargs)
 
     # logger.log(loglevel_debug, "hist n    = %s" % ( n.shape, ))
     # logger.log(loglevel_debug, "hist bins = %s, len(bins) = %d" % ( bins.shape, len(bins)))
@@ -1015,15 +1061,6 @@ def uniform_divergence(*args, **kwargs):
     # difference
     # h_ = (h - h_unif)
     # divergence
-    def div_kl(h1, h2):
-        # div = np.sum(h1 * np.log(h1/h2))
-        logger.log(loglevel_debug, "h1", h1)
-        logger.log(loglevel_debug, "h2", h2)
-        log_diff = np.clip(np.log(h1/h2), -20.0, 7.0)
-        logger.log(loglevel_debug, "log diff", log_diff)
-        div = h1 * log_diff
-        logger.log(loglevel_debug, "div", div.shape, div)
-        return div
     h_ = div_kl(h, h_unif)
 
     ud_cmap = cc.cm['diverging_cwm_80_100_c22'] # rainbow
