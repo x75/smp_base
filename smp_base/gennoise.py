@@ -61,7 +61,9 @@ class Noise(object):
         # FIXME: vectorize this
         for i in range(1, N/2):
             # spectrum magnitude from eq. ?
-            mag = (i+1)**(-beta/2.) * np.random.normal(0., 1.)
+            # mag = (i+1)**(-beta/2.) * np.random.normal(0., 1.)
+            mag = np.power(i+1, -beta/2.) * np.random.normal(0., 1.)
+            # mag = np.power(i+1, -beta/2.) * np.random.uniform(0., 1.)
             # spectrum phase random
             pha = TWOPI * np.random.uniform()
 
