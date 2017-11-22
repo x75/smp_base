@@ -33,7 +33,7 @@ from smp_base.measures import meas
 import logging
 from smp_base.common import get_module_logger
 
-logger = get_module_logger(modulename = 'measures_infth', loglevel = logging.DEBUG)
+logger = get_module_logger(modulename = 'measures_infth', loglevel = logging.INFO) # .DEBUG)
 
 try:
     from jpype import getDefaultJVMPath, isJVMStarted, startJVM, attachThreadToJVM, isThreadAttachedToJVM

@@ -14,6 +14,12 @@ conditional variants reside in their own file
 
 import numpy as np
 
+import logging
+from smp_base.common import get_module_logger
+
+loglevel_debug = logging.DEBUG - 0
+logger = get_module_logger(modulename = 'measures', loglevel = logging.DEBUG)
+
 def meas_mse(x = None, x_ = None, *args, **kwargs):
     """smp_base.measures.meas_mse
 
@@ -24,23 +30,30 @@ def meas_mse(x = None, x_ = None, *args, **kwargs):
 def div_kl(h1, h2, *args, **kwargs):
     """naive kullback leibler divergence for histogram, element-wise
     """
+    _loglevel = loglevel_debug - 1
     # print "h1", h1, "h2", h2
     # div = np.sum(h1 * np.log(h1/h2))
-    if np.sum(h1) > 1.0: h1 /= np.sum(h1)
-    if np.sum(h2) > 1.0: h2 /= np.sum(h2)
-    # logger.log(loglevel_debug, "h1", h1)
-    # logger.log(loglevel_debug, "h2", h2)
-    log_diff = np.clip(np.log(h1/h2), -20.0, 7.0)
-    # logger.log(loglevel_debug, "log diff", log_diff)
+    h1_sum = np.sum(h1)
+    h2_sum = np.sum(h2)
+    logger.log(_loglevel, "h1_sum = %s", type(h1_sum))
+    logger.log(_loglevel, "h2_sum = %s", h2_sum)
+    if h1_sum > 1.0: h1 /= h1_sum
+    if h2_sum > 1.0: h2 /= h2_sum
+    logger.log(_loglevel, "h1 = %s", h1)
+    logger.log(_loglevel, "h2 = %s", h2)
+    log_h1_h2 = np.log(h1/h2)
+    logger.log(_loglevel, "log(h1/h2) = %s", log_h1_h2)
+    log_diff = np.clip(log_h1_h2, -20.0, 7.0)
+    logger.log(_loglevel, "log diff = %s", log_diff)
     div = h1 * log_diff
-    # logger.log(loglevel_debug, "div", div.shape, div)
+    logger.log(_loglevel, "div = %s/%s", div.shape, div)
     return div
 
 def div_chisquare(h1, h2, *args, **kwargs):
-    if np.sum(h1) > 1.0: h1 /= np.sum(h1)
-    if np.sum(h2) > 1.0: h2 /= np.sum(h2)
+    # if np.sum(h1) > 1.0: h1 /= np.sum(h1)
+    # if np.sum(h2) > 1.0: h2 /= np.sum(h2)
     # np.sum()
-    div = 0.5 * np.square(h1 - h2)/(h1 + h2 + np.random.uniform(-1e-6, 1e-6, h1.shape))
+    div = 1.0 * np.square(h1 - h2)/(h1 + h2 + np.random.uniform(-1e-6, 1e-6, h1.shape))
     return div
 
 def meas_hist(x = None, bins = None, *args, **kwargs):
