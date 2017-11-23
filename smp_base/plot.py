@@ -342,54 +342,114 @@ def configure_style():
     
     # logger.log(loglevel_debug, "cc", colorcycler)
 
-def kwargs_plot_clean_plot(**kwargs):
-    """create kwargs dict from scratch by copying fixed list of item from old kwargs
-    """
-    # kwargs_ = dict([(k, kwargs[k]) for k in ['xticks', 'yticks', 'xticklabels', 'yticklabels'] if kwargs.has_key(k)])
-    # return kwargs_
-    return dict([(k, kwargs[k]) for k in kwargs.keys() if k not in [
-        'delay', 'ordinate', 'orientation',
-        'title', 'aspect',
-        'labels',
-        'xticks', 'yticks', 'xticklabels', 'yticklabels', 'xinvert', 'yinvert',
-        'xlim', 'ylim', 'xscale', 'yscale', 'xlabel', 'ylabel',
-    ]])
+# def kwargs_plot_clean_plot(**kwargs):
+#     """create kwargs dict from scratch by copying fixed list of item from old kwargs
+#     """
+#     # kwargs_ = dict([(k, kwargs[k]) for k in ['xticks', 'yticks', 'xticklabels', 'yticklabels'] if kwargs.has_key(k)])
+#     # return kwargs_
+#     return dict([(k, kwargs[k]) for k in kwargs.keys() if k not in [
+#         'delay', 'ordinate',
+#         'title', 'title_pos', 'aspect',
+#         'labels',
+#         'xticks', 'yticks', 'xticklabels', 'yticklabels', 'xinvert', 'yinvert',
+#         'xlim', 'ylim', 'xscale', 'yscale', 'xlabel', 'ylabel',
+#         # specific
+#         'orientation',
+#     ]])
 
-def kwargs_plot_clean_hist(**kwargs):
-    """create kwargs dict from scratch by copying fixed list of item from old kwargs
-    """
-    return dict([(k, kwargs[k]) for k in kwargs.keys() if k not in [
-        'delay', 'ordinate',
-        'title', 'aspect',
-        'labels',
-        'xticks', 'yticks', 'xticklabels', 'yticklabels', 'xinvert', 'yinvert',
-        'xlim', 'ylim', 'xscale', 'yscale', 'xlabel', 'ylabel',
-    ]])
+# def kwargs_plot_clean_hist(**kwargs):
+#     """create kwargs dict from scratch by copying fixed list of item from old kwargs
+#     """
+#     return dict([(k, kwargs[k]) for k in kwargs.keys() if k not in [
+#         'delay', 'ordinate',
+#         'title', 'aspect',
+#         'labels',
+#         'xticks', 'yticks', 'xticklabels', 'yticklabels', 'xinvert', 'yinvert',
+#         'xlim', 'ylim', 'xscale', 'yscale', 'xlabel', 'ylabel',
+#     ]])
 
-def kwargs_plot_clean_histogram(**kwargs):
-    """create kwargs dict from scratch by copying fixed list of item from old kwargs
-    """
-    return dict([(k, kwargs[k]) for k in kwargs.keys() if k not in [
-        'delay', 'ordinate', 'orientation',
-        'title', 'aspect',
-        'labels',
-        'alpha', 'marker', 'linestyle',
-        'xticks', 'yticks', 'xticklabels', 'yticklabels', 'xinvert', 'yinvert',
-        'xlim', 'ylim', 'xscale', 'yscale', 'xlabel', 'ylabel',
-    ]])
+# def kwargs_plot_clean_histogram(**kwargs):
+#     """create kwargs dict from scratch by copying fixed list of item from old kwargs
+#     """
+#     return dict([(k, kwargs[k]) for k in kwargs.keys() if k not in [
+#         'delay', 'ordinate',
+#         'title', 'aspect',
+#         'labels',
+#         'xticks', 'yticks', 'xticklabels', 'yticklabels', 'xinvert', 'yinvert',
+#         'xlim', 'ylim', 'xscale', 'yscale', 'xlabel', 'ylabel',
+#         # specific
+#         'alpha', 'marker', 'linestyle',
+#         'orientation',
+#     ]])
 
-def kwargs_plot_clean_bar(**kwargs):
-    """create kwargs dict from scratch by copying fixed list of item from old kwargs
-    """
-    return dict([(k, kwargs[k]) for k in kwargs.keys() if k not in [
-        'delay', 'ordinate',
-        'title', 'aspect',
+# def kwargs_plot_clean_bar(**kwargs):
+#     """create kwargs dict from scratch by copying fixed list of item from old kwargs
+#     """
+#     return dict([(k, kwargs[k]) for k in kwargs.keys() if k not in [
+#         'delay', 'ordinate',
+#         'title', 'aspect',
+#         'labels',
+#         'xticks', 'yticks', 'xticklabels', 'yticklabels', 'xinvert', 'yinvert',
+#         'xlim', 'ylim', 'xscale', 'yscale', 'xlabel', 'ylabel',
+#         # specific
+#         'orientation',
+#         'marker',
+#         ]])
+
+def plot_clean_kwargs(clean_type = None, **kwargs):
+    clean = {'common': [
+        'aspect',
+        'delay',
         'labels',
-        'marker',
-        'xticks', 'yticks', 'xticklabels', 'yticklabels', 'xinvert', 'yinvert',
-        'xlim', 'ylim', 'xscale', 'yscale', 'xlabel', 'ylabel',
-        'orientation', 
-        ]])
+        'ordinate',
+        'title',
+        'title_pos',
+        'xinvert',
+        'xlabel',
+        'xlim',
+        'xscale',
+        'xticklabels',
+        'xticks',
+        'yinvert',
+        'ylabel',
+        'ylim',
+        'yscale',
+        'yticklabels',
+        'yticks',
+    ]}
+    clean['plot'] = ['orientation']
+    clean['histogram'] = ['orientation', 'marker', 'alpha', 'linestyle']
+    clean['bar'] = ['orientation', 'marker']
+
+    clean_keys = clean['common']
+    if clean_type is not None:
+        if clean.has_key(clean_type):
+            clean_keys += clean[clean_type]
+    
+    return dict([(k, kwargs[k]) for k in kwargs.keys() if k not in clean_keys])
+    
+
+def ax_set_title(ax, **kwargs):
+    ax.title.set_text(kwargs['title'])
+    ax.title.set_alpha(0.65)
+
+    # axis title and fontsize
+    if kwargs['title_pos'] == 'top_in':
+        # ax.text(
+        #     0.5, 0.9,
+        #     kwargs['title'],
+        #     horizontalalignment = 'center',
+        #     transform = ax.transAxes,
+        #     alpha = 0.65,
+        #     # bbox = dict(facecolor='red', alpha=0.5),
+        # )
+        ax.title.set_position((0.5, 0.9))
+    elif kwargs['title_pos'] == 'bottom':
+        # ax.title.set_text(kwargs['title'], alpha = 0.65)
+        ax.title.set_position((0.5, -0.1))
+    else:
+        ax.title.set_position((0.5, 1.05))
+        # ax.title.set_text(kwargs['title'], alpha = 0.65)
 
 class plotfunc(object):
     def __call__(self, f):
@@ -404,6 +464,7 @@ class plotfunc(object):
                 'marker': 'None',
                 'orientation': 'horizontal',
                 'title': '%s of %s-shaped data' % (f.func_name, data.shape,),
+                'title_pos': 'top_in',
                 'xinvert': None,
                 'xlabel': 'steps [n]',
                 'xlim': None,
@@ -422,21 +483,13 @@ class plotfunc(object):
 
             logger.log(_loglevel, 'plotfunc f = %s' % (f.func_name, ))
             
+            # set axis title
+            ax_set_title(ax, **kwargs_)
+    
             # x-axis shift / bus delay compensation
             if kwargs_.has_key('delay'):
                 data = np.roll(data, kwargs['delay'], axis = 1)
-                
-            # axis title and fontsize
-            # ax.title.set_text(kwargs_['title'])
-            ax.text(
-                0.5, 0.9,
-                kwargs_['title'],
-                horizontalalignment = 'center',
-                transform = ax.transAxes,
-                alpha = 0.65,
-                # bbox = dict(facecolor='red', alpha=0.5),
-            )
-    
+
             logger.log(_loglevel, 'plotfunc kwargs_ = %s' % (kwargs_.keys(), ))
             # call plotfunc
             fval = f(ax, data, *args, **kwargsf)
@@ -516,10 +569,22 @@ def table(ax, data, **kwargs):
         colLabels = None, # colLabels,
         colLoc = 'center',
         loc = 'center',
-        fontsize = 6,
+        # fontsize = 6,
     )
 
+    # table position tuning
+    # left bottom, width, height
+    # ax.set_position([0.0, 0.0, 1.0, 0.9])
+    # the_table.set_position([0.0, 0.0, 1.0, 0.9])
     # table = mplTable()
+    bbox = ax.get_position()
+    logger.log(_loglevel, '    ax position = %s' % (bbox, ))
+    bbox.x0 *= 1.2
+    bbox.y0 *= 0.7
+
+    ax.set_position(bbox)
+    bbox2 = ax.get_position()
+    logger.log(_loglevel, '    ax position = %s' % (bbox2, ))
     
     # EDIT: Thanks to Oz for the answer-- Looping through the properties of the table allows easy modification of the height property:
 
@@ -605,7 +670,8 @@ def timeseries(ax, data, **kwargs):
                 kwargs_.pop(ax_key_y)
 
     # prepare timeseries kwargs
-    kwargs = kwargs_plot_clean_plot(**kwargs_)
+    # kwargs = kwargs_plot_clean_plot(**kwargs_)
+    kwargs = plot_clean_kwargs('plot', **kwargs_)
     
     logger.log(_loglevel, "    timeseries pre plot x = %s, y = %s" % (x.shape, y.shape))
     # plot
@@ -698,7 +764,8 @@ def histogram(ax, data, **kwargs):
         # 'yinvert': None,
     }
     kwargs_.update(**kwargs)
-    kwargs = kwargs_plot_clean_histogram(**kwargs_)
+    # kwargs = kwargs_plot_clean_histogram(**kwargs_)
+    kwargs = plot_clean_kwargs('histogram', **kwargs_)
     
     # if not kwargs.has_key('histtype'):
     #     kwargs_['histtype'] = kwargs['histtype']
@@ -728,7 +795,8 @@ def histogram(ax, data, **kwargs):
     # (n, bins) = np.histogram(data, bins = bins, **kwargs)
     (n, bins) = meas_hist(data, bins = bins, **kwargs)
 
-    kwargs = kwargs_plot_clean_bar(**kwargs_)
+    # kwargs = kwargs_plot_clean_bar(**kwargs_)
+    kwargs = plot_clean_kwargs('bar', **kwargs_)
     logger.log(_loglevel, "kwargs = %s", kwargs.keys())
     
     binwidth = np.mean(np.abs(np.diff(bins)))
