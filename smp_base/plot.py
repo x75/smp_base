@@ -564,7 +564,7 @@ def timeseries(ax, data, **kwargs):
     #     'yscale': 'linear',
     #     'yinvert': None,
     # }
-    _loglevel = loglevel_debug + 0
+    _loglevel = loglevel_debug + 1
     
     kwargs_ = {}
     kwargs_.update(**kwargs)
@@ -580,13 +580,13 @@ def timeseries(ax, data, **kwargs):
     # y axis (abscissa)
     y = data
 
+    logger.log(_loglevel, "    timeseries x = %s, y = %s" % (x.shape, y.shape))
     # orientation
     if kwargs_.has_key('orientation') and kwargs_['orientation'] != 'horizontal':
-        logger.log(_loglevel, "    timeseries kwargs orientation 0 x = %s, y = %s" % (x.shape, y.shape))
         x_ = x.copy()
         x = y
         y = x_
-        logger.log(_loglevel, "    timeseries kwargs orientation 1 x = %s, y = %s" % (x.shape, y.shape))
+        logger.log(_loglevel, "    timeseries orientation x = %s, y = %s" % (x.shape, y.shape))
         axis_keys = ['label', 'scale', 'lim', 'ticks', 'ticklabels']
         for ax_key in axis_keys:
             # for ax_name in ['x', 'y']:
@@ -607,6 +607,7 @@ def timeseries(ax, data, **kwargs):
     # prepare timeseries kwargs
     kwargs = kwargs_plot_clean_plot(**kwargs_)
     
+    logger.log(_loglevel, "    timeseries pre plot x = %s, y = %s" % (x.shape, y.shape))
     # plot
     ax.plot(x, y, **kwargs)
 

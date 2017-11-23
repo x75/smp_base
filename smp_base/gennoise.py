@@ -14,7 +14,7 @@ from sklearn.preprocessing import normalize
 import logging
 from smp_base.common import get_module_logger
 
-logger = get_module_logger(modulename = 'gennoise', loglevel = logging.DEBUG)
+logger = get_module_logger(modulename = 'gennoise', loglevel = logging.INFO)
 
 N = 8192
 TWOPOWER = 13
