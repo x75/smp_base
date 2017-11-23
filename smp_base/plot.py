@@ -410,12 +410,14 @@ def plot_clean_kwargs(clean_type = None, **kwargs):
         'xscale',
         'xticklabels',
         'xticks',
+        'xtwin',
         'yinvert',
         'ylabel',
         'ylim',
         'yscale',
         'yticklabels',
         'yticks',
+        'ytwin',
     ]}
     clean['plot'] = ['orientation']
     clean['histogram'] = ['orientation', 'marker', 'alpha', 'linestyle']
