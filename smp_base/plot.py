@@ -1261,22 +1261,23 @@ def uniform_divergence(*args, **kwargs):
     # ax_unif = f( bins = ax[1])
     # logger.log(loglevel_debug, "ax", ax)
     return ax
-    
-    
-# plotting funcs for callback
+
+# plot functions of this module
 plotfuncs = {
-    'timeseries': timeseries,
-    'histogram': histogram,
-    'histogramnd': histogramnd,
-    'plot_scattermatrix': plot_scattermatrix,
-    'plot_img': plot_img,
     'hexbin': plt.hexbin,
     'hexbin': plt.hexbin,
     'hist2d': plt.hist2d,
+    'histogram': histogram,
+    'histogramnd': histogramnd,
     'kdeplot': sns.kdeplot,
+    'partial': partial,
+    'plot_img': plot_img,
+    'plot_scattermatrix': plot_scattermatrix,
     'scatter': plt.scatter,
+    'table': table,
+    'timeseries': timeseries,
     'uniform_divergence': uniform_divergence,
-    }
+}
 
 # configure, ah, style
 configure_style()
@@ -1299,4 +1300,3 @@ if __name__ == "__main__":
     else:
         print "Unknown mode %s, exiting" % (args.mode)
         sys.exit(1)
-        
