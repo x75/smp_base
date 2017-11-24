@@ -631,7 +631,7 @@ def timeseries(ax, data, **kwargs):
     #     'yscale': 'linear',
     #     'yinvert': None,
     # }
-    _loglevel = loglevel_debug + 1
+    _loglevel = loglevel_debug + 0 # 1
     
     kwargs_ = {}
     kwargs_.update(**kwargs)
