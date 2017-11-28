@@ -1015,7 +1015,7 @@ def interactive():
     
     set_interactive(1)
 
-    def on_click(event, ax, data):
+    def on_click_orig(event, ax, data):
         """
         Left click: show real size
         Right click: resize
@@ -1068,10 +1068,126 @@ def interactive():
     set_interactive(0)
     
     plt.show()
+
+def fig_interaction(fig, ax, data):
+    do_interaction = True
     
+    def on_click(event, ax, data):
+        """
+        Left click: show real size
+        Right click: resize
+        """
+        logger.log(
+            loglevel_debug, 'ax.inaxes = %s button %s pressed, xdata = %s, ydata = %s, data.shape = %s',
+            event.inaxes, event.button, event.xdata, event.ydata, data.shape)
+        
+        # if not do_interaction: return
+
+        if ax is None: return
+        if data is None: return
+        if event.inaxes != ax: return
+            
+        if event.xdata is not None:
+            # data = np.array([[event.xdata, event.ydata],])
+            # decoded = decoder.predict(data)
+            # decoded = reshape_paths(decoded, flat=False)
+            # if args.rel_coords:
+            #     decoded = np.cumsum(decoded, axis=1)
+
+            logger.log(loglevel_debug + 1, "event type = %s, dir = %s", type(event), dir(event))
+            logger.log(loglevel_debug + 1, "ax = %s, data = %s", ax, data.shape)
+
+            
+            # ax.clear()
+
+            # datarow = int(event.ydata)
+            
+            # ax.plot(data[datarow,:], "k-o", alpha = 0.5)
+            # plt.pause(1e-6)
+            
+            # if event.button == 1:
+            #     # left click
+            #     if args.rel_coords:
+            #         ax.set_xlim([-0.5, 0.5])
+            #         ax.set_ylim([-0.5, 0.5])
+            #     else:
+            #         ax.set_xlim([0.0, 1.0])
+            #         ax.set_ylim([0.0, 1.0])
+            # else:
+            #     ax.autoscale(True)
+            # ax.scatter(decoded.T[0], decoded.T[1])
+
+            fig_ = makefig()
+            fig_.suptitle(ax.title.get_text())
+            # fig_.axes.append(ax)
+            # fig_.add_axes(ax)
+            ax_ = fig_.add_subplot(1,1,1)
+            ax_.clear()
+            # for l in ax.get_lines():
+            #     ax_.add_line(copy.deepcopy(l))
+            ax_.plot(data)
+            ax_.legend(ax.get_legend_handles_labels())
+            
+            # fig_.draw()
+            fig_.show()
+            plt.draw()
+            plt.pause(1e-9)
+            # ax_.draw()
+
+        
+    def on_click_zoom(event, ax, data):
+        """Enlarge or restore the selected axis."""
+    
+        logger.log(
+            loglevel_debug, 'on_click_zoom ax.inaxes = %s button %s pressed, xdata = %s, ydata = %s, data.shape = %s',
+            event.inaxes, event.button, event.xdata, event.ydata, data.shape)
+
+        # if not do_interaction: return
+        
+        inax = event.inaxes
+        if inax is None:
+            # Occurs when a region not in an axis is clicked...
+            return
+        if event.button is 1:
+            # On left click, zoom the selected axes
+            inax._orig_position = inax.get_position()
+            inax.set_position([0.1, 0.1, 0.85, 0.85])
+            for axis in event.canvas.figure.axes:
+                # Hide all the other axes...
+                if axis is not inax:
+                    axis.set_visible(False)
+        elif event.button is 3:
+            # On right click, restore the axes
+            try:
+                inax.set_position(inax._orig_position)
+                for axis in event.canvas.figure.axes:
+                    axis.set_visible(True)
+            except AttributeError:
+                # If we haven't zoomed, ignore...
+                pass
+        else:
+            # No need to re-draw the canvas if it's not a left or right click
+            return
+        
+        event.canvas.draw()
+        plt.draw()
+        plt.pause(1e-9)
+        
+    fig.canvas.mpl_connect('button_press_event', partial(on_click, ax = ax, data = data))
+    # fig.canvas.mpl_connect('button_press_event', partial(on_click_zoom, ax = ax, data = data))
+    
+    # def on_key(event, ax, data): # , block, fig
+    #     print('you pressed', event.key, event.xdata, event.ydata, do_interaction)
+    #     # do_interaction = not do_interaction
+
+    #     # cid = fig.canvas.mpl_connect('key_press_event', on_key)
+
+    # fig.canvas.mpl_connect('key_press_event', partial(on_key, ax = ax, data = data))
+    # # fig.canvas.mpl_connect('button_press_event', partial(on_click_zoom, ax = ax, data = data))
+
 def custom_colorbar():
     """custom_colorbar
-
+    
     basic example for custom colorbar geometry control
      1. create the colorbar axis with the gridspec, plot the colorbar and set its aspect to match the quadmesh
      2. use inset_axis to create the colorbar axis
