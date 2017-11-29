@@ -212,6 +212,14 @@ def make_axes_from_spec(fig, gs, axesspec):
 
     Returns:
      - list of lists (2D array) of subplot axes
+
+    Gridspec slice example by slicing parts out of the maximum resolution grid:
+    .. code::
+        # regular
+        axesspec = [(0, 0), (0,1), (1, 0), (1,1)]
+        # row 1 colspan is 3
+        axesspec = [(0, 0), (0, 1), (0, 2), (0, slice(3, None))]
+    
     """
     axes = []
     # (rows, cols) = gs.get_geometry()
