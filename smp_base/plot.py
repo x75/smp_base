@@ -557,7 +557,7 @@ def table(ax, data, **kwargs):
     }
     _loglevel = loglevel_debug + 1
     
-    logger.log(_loglevel, '    table ax = %s, data = %s, kwargs = %s' % (ax.title.get_text(), data, kwargs.keys()))
+    # logger.log(_loglevel, '    table ax = %s, data = %s, kwargs = %s' % (ax.title.get_text(), data, kwargs.keys()))
     # logger.log(_loglevel, '    table ' % (ax.title.get_text(), data, kwargs.keys()))
 
     ax.axis('tight')
@@ -567,7 +567,7 @@ def table(ax, data, **kwargs):
     colLabels = None # ['Measure']
     rowLabels = kwargs['labels'] # ['Average', 'Service Average', 'Benchmark']
     cellText = [['%.04f' % (_, )] for _ in data.T] # .T # [overall, svc_avg, benchmark]
-    logger.log(_loglevel, '    table cellText = %s' % (cellText, ))
+    logger.log(_loglevel, '    running ax.table on cellText = %s' % (cellText, ))
     
     font = FontManager(size = 8)
     the_table = ax.table(
