@@ -1,3 +1,32 @@
+"""smp_base.models
+
+Base *smp* model class :mod:`smpModel` and wrappers :mod:`smpModelInit`, :mod:`smpModelStep`.
+
+The smpModel interface consists of an (obvious)
+:meth:`smpModel.__init__(conf)` and a :meth:`smpModel.step()`
+method. Simply put, an smpModel is a map together with some context
+that can provide memory of past events. The initialization prepares
+the context which can be quite specific for some models and the step
+function implements a single full step of the model's update
+equation. The composition of the model's step function can again be
+quite specific but functionally consists of generating a prediction by
+sampling model outputs from its current hidden state. Adaptive models
+usually perform a fit using the currently incoming measurement before
+the predict step, so that the current prediction is based on the most
+recent information.
+
+In addition there are some soft requirements, or conventions,
+respectively like a bootstrap method that prepares an untrained
+subordinate model for inference, a visualize method that provides some
+visualization of the model's current state for debugging and analysis
+and a save/load method pair for storing and loading model's which is
+useful for large models with long training times.
+
+Things:
+ - use abstract method defs, either abc or NotImplementedError
+ - merge stray models such as UniformRandomBlock2, iir, CodingBlock2, ...
+ - fix visualization
+"""
 import cPickle
 import numpy as np
 import matplotlib.pyplot as plt
