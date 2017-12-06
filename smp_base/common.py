@@ -1,12 +1,32 @@
+"""smp_base.common
+
+common frequently required micro patterns and utils
+
+TODO: consolidate with :mod:`smp_graphs.common`
+"""
 
 import logging
 
 def set_attr_from_dict(obj, dictionary):
-    """set object attribute k = v from a dictionary's k, v for all dict items"""
+    """set object attribute 'k' = v from a dictionary's k, v for all dict items
+
+    Transfer configuration dictionaries into an object's member
+    namespace (self.__dict__) with :func:`setattr`.
+    """
     for k,v in dictionary.items():
         setattr(obj, k, v)
 
 def get_module_logger(modulename = 'experiment', loglevel = logging.INFO):
+    """get a logging.logger instance with reasonable defaults
+
+    Create a new logger and configure its name, loglevel, formatter
+    and output stream handling.
+     1. initialize a logger with name from arg 'modulename'
+     2. set loglevel from arg 'loglevel'
+     3. configure matching streamhandler
+     4. set formatting swag
+     5. return the logger
+    """
     if modulename.startswith('smp_graphs'):
         modulename = '.'.join(modulename.split('.')[1:])
         # print "get_module_logger: modulename = %s" % (modulename, )

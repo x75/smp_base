@@ -239,12 +239,13 @@ def makefig(rows = 1, cols = 1, wspace = 0.0, hspace = 0.0, axesspec = None, tit
 def make_fig(rows = 1, cols = 1, wspace = 0.0, hspace = 0.0, axesspec = None, title = None):
     """Create a matplotlib figure using the args as spec, create the figure, the subplot gridspec and the axes array
 
-    Args:
+    Arguments:
      - rows (int): number of rows
      - cols (int):  number of cols
      - wspace (float):  horizontal padding
      - hspace (float):  vertical padding
-     - axesspec (list):  list of slices to create irregular grids by slicing the regular gridspec
+     - axesspec (list): list of slices to create irregular grids by
+       slicing the regular gridspec
      - title (str):  the figure's super title (suptitle)
        
     Returns:
@@ -1081,7 +1082,9 @@ def fig_interaction(fig, ax, data):
     do_interaction = True
     
     def on_click(event, ax, data):
-        """
+        """event handler (on_click, ...) for opening a subplot in a
+        separate figure to satisfy advanced zooming desires.
+
         Left click: show real size
         Right click: resize
         """
@@ -1102,9 +1105,8 @@ def fig_interaction(fig, ax, data):
             # if args.rel_coords:
             #     decoded = np.cumsum(decoded, axis=1)
 
-            logger.log(loglevel_debug + 1, "event type = %s, dir = %s", type(event), dir(event))
-            logger.log(loglevel_debug + 1, "ax = %s, data = %s", ax, data.shape)
-
+            logger.log(loglevel_debug + 1, "event type = %s,  dir = %s", type(event), dir(event))
+            logger.log(loglevel_debug + 1, "        ax = %s, data = %s", ax, data.shape)
             
             # ax.clear()
 
@@ -1125,22 +1127,56 @@ def fig_interaction(fig, ax, data):
             #     ax.autoscale(True)
             # ax.scatter(decoded.T[0], decoded.T[1])
 
-            fig_ = makefig()
-            fig_.suptitle(ax.title.get_text())
+            fig_ = makefig(rows = 1, cols = 1, title = ax.title.get_text())
+            # fig_.suptitle(ax.title.get_text())
+            logger.log(loglevel_debug + 1, "        fig_.axes = %s", fig_.axes)
             # fig_.axes.append(ax)
             # fig_.add_axes(ax)
-            ax_ = fig_.add_subplot(1,1,1)
+            # ax_ = fig_.add_subplot(1,1,1)
+            ax_ = fig_.axes[0]
+            logger.log(loglevel_debug + 1, "        fig_.axes = %s", fig_.axes)
             ax_.clear()
+            # ax_.cla()
+            # ax_.autoscale()
+
+            logger.log(loglevel_debug + 1, "    post clear")
+            logger.log(loglevel_debug + 1, "        ax_.get_lines() = %s", ax_.get_lines())
+            logger.log(loglevel_debug + 1, "        ax_.get_legend_handles_labels() = %s", ax_.get_legend_handles_labels())
+            # ax_.draw()
+            
             # for l in ax.get_lines():
             #     ax_.add_line(copy.deepcopy(l))
-            ax_.plot(data)
-            ax_.legend(ax.get_legend_handles_labels())
+            
+            # ax_.plot(np.random.uniform(0, 1, (data.shape[0], )))
+            cmap_str = 'rainbow'
+
+            num_cgroups = 5
+            num_cgroup_color = 5
+            num_cgroup_dist = 255/num_cgroups
+
+            for i in range(data.shape[1]):
+                inkc = i
+                ax_.set_prop_cycle(
+                    get_colorcycler(
+                        cmap_str = cmap_str, cmap_idx = None,
+                        c_s = inkc * num_cgroup_dist, c_e = (inkc + 1) * num_cgroup_dist, c_n = num_cgroup_color
+                    )
+                )
+            
+                ax_.plot(data[:,i], label = 'data_%d' % (i, ), alpha = 0.5, linestyle = '-', marker = '.')
+            # ax.get_legend_handles_labels()
+            # lg = ax.get_legend()
+            # ax_.legend(['x%d' % (i, ) for i in range(data.shape[1])])
+            ax_.legend()
+
+            logger.log(loglevel_debug + 1, "        ax_.get_lines() = %s", ax_.get_lines())
+            logger.log(loglevel_debug + 1, "        ax.get_legend_handles_labels() = %s", ax.get_legend_handles_labels())
+            logger.log(loglevel_debug + 1, "        ax_.get_legend_handles_labels() = %s", ax_.get_legend_handles_labels())
             
             # fig_.draw()
             fig_.show()
             plt.draw()
             plt.pause(1e-9)
-            # ax_.draw()
 
         
     def on_click_zoom(event, ax, data):
