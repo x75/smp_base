@@ -1105,8 +1105,8 @@ def fig_interaction(fig, ax, data):
             # if args.rel_coords:
             #     decoded = np.cumsum(decoded, axis=1)
 
-            logger.log(loglevel_debug + 1, "event type = %s,  dir = %s", type(event), dir(event))
-            logger.log(loglevel_debug + 1, "        ax = %s, data = %s", ax, data.shape)
+            # logger.log(loglevel_debug + 1, "event type = %s,  dir = %s", type(event), dir(event))
+            # logger.log(loglevel_debug + 1, "        ax = %s, data = %s", ax, data.shape)
             
             # ax.clear()
 
@@ -1129,20 +1129,20 @@ def fig_interaction(fig, ax, data):
 
             fig_ = makefig(rows = 1, cols = 1, title = ax.title.get_text())
             # fig_.suptitle(ax.title.get_text())
-            logger.log(loglevel_debug + 1, "        fig_.axes = %s", fig_.axes)
+            # logger.log(loglevel_debug + 1, "        fig_.axes = %s", fig_.axes)
             # fig_.axes.append(ax)
             # fig_.add_axes(ax)
             # ax_ = fig_.add_subplot(1,1,1)
             ax_ = fig_.axes[0]
-            logger.log(loglevel_debug + 1, "        fig_.axes = %s", fig_.axes)
+            # logger.log(loglevel_debug + 1, "        fig_.axes = %s", fig_.axes)
             ax_.clear()
             # ax_.cla()
             # ax_.autoscale()
 
-            logger.log(loglevel_debug + 1, "    post clear")
-            logger.log(loglevel_debug + 1, "        ax_.get_lines() = %s", ax_.get_lines())
-            logger.log(loglevel_debug + 1, "        ax_.get_legend_handles_labels() = %s", ax_.get_legend_handles_labels())
-            # ax_.draw()
+            # logger.log(loglevel_debug + 1, "    post clear")
+            # logger.log(loglevel_debug + 1, "        ax_.get_lines() = %s", ax_.get_lines())
+            # logger.log(loglevel_debug + 1, "        ax_.get_legend_handles_labels() = %s", ax_.get_legend_handles_labels())
+            # # ax_.draw()
             
             # for l in ax.get_lines():
             #     ax_.add_line(copy.deepcopy(l))
@@ -1163,15 +1163,15 @@ def fig_interaction(fig, ax, data):
                     )
                 )
             
-                ax_.plot(data[:,i], label = 'data_%d' % (i, ), alpha = 0.5, linestyle = '-', marker = '.')
+                ax_.plot(data[:,[i]], label = 'data_%d' % (i, ), alpha = 0.5, linestyle = '-', marker = '.')
             # ax.get_legend_handles_labels()
             # lg = ax.get_legend()
             # ax_.legend(['x%d' % (i, ) for i in range(data.shape[1])])
             ax_.legend()
 
-            logger.log(loglevel_debug + 1, "        ax_.get_lines() = %s", ax_.get_lines())
-            logger.log(loglevel_debug + 1, "        ax.get_legend_handles_labels() = %s", ax.get_legend_handles_labels())
-            logger.log(loglevel_debug + 1, "        ax_.get_legend_handles_labels() = %s", ax_.get_legend_handles_labels())
+            # logger.log(loglevel_debug + 1, "        ax_.get_lines() = %s", ax_.get_lines())
+            # logger.log(loglevel_debug + 1, "        ax.get_legend_handles_labels() = %s", ax.get_legend_handles_labels())
+            # logger.log(loglevel_debug + 1, "        ax_.get_legend_handles_labels() = %s", ax_.get_legend_handles_labels())
             
             # fig_.draw()
             fig_.show()
