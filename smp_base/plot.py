@@ -803,6 +803,7 @@ def histogram(ax, data, **kwargs):
     #     # data, bins = int(np.log(max(3, data.shape[0]/2))),
     #     data, bins = bins, **kwargs)
 
+    # FIXME: decouple compute histogram; incoming data is bar data already (def bar(...))
     # (n, bins) = np.histogram(data, bins = bins, **kwargs)
     (n, bins) = meas_hist(data, bins = bins, **kwargs)
 
