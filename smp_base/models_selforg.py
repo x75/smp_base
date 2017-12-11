@@ -1,7 +1,12 @@
+"""smp_base.models_selforg
 
+.. moduleauthor:: Oswald Berthold, 2017
+
+Self-organizing models.
+"""
 import numpy as np
 
-from smp_graphs.common import set_attr_from_dict
+from smp_base.common import set_attr_from_dict
 
 ################################################################################
 # helper funcs

@@ -1,21 +1,37 @@
-"""smp_base - smp sensorimotor experiments base functions
+"""smp_base.measures
 
-measures
+measures: errors, distances, divergences
 
-2017 Oswald Berthold
+.. moduleauthor:: 2017 Oswald Berthold
 
-Measures measure things about data like statistical moments,
-distances, entropy, complexity and so on
+Measures measure things about data like *point-wise errors*,
+*statistical moments*, *distances*, *entropy*, *shared entropy*,
+*complexity*, and so on.
 
 Information theoretic measures like entropy, shared entropy and its
-conditional variants reside in their own file
-:file:`measures_infth.py`
+conditional variants are implemented in the separate
+:file:`measures_infth.py`.
 """
 
 import numpy as np
 
 import logging
 from smp_base.common import get_module_logger
+
+try:
+    from pyemd import emd as pyemd
+    from pyemd import emd_with_flow as pyemd_with_flow
+    HAVE_PYEMD = True
+except ImportError, e:
+    print "Couldn't import emd from pyemd with %s, make sure pyemd is installed." % (e, )
+    HAVE_PYEMD = False
+
+try:
+    from emd import emd
+    HAVE_EMD = True
+except ImportError, e:
+    print "Couldn't import emd from emd with %s, make sure emd is installed." % (e, )
+    HAVE_EMD = False
 
 loglevel_debug = logging.DEBUG - 0
 logger = get_module_logger(modulename = 'measures', loglevel = logging.DEBUG)
@@ -24,6 +40,13 @@ def meas_mse(x = None, x_ = None, *args, **kwargs):
     """smp_base.measures.meas_mse
 
     Compute mean squared error mse = 1/N \sum (x - x_)^2
+
+    Arguments:
+     - x(ndarray): matrix of points $x_1$
+     - x_(ndarray): matrix of point $x_2$
+
+    Returns:
+     - mse(ndarray): $\text{mse} := 1/N \sum_i^N (x_1_i - x_2_i)^2$
     """
     return np.mean(np.power(x - x_, 2), axis = 0, keepdims = True)
 
@@ -50,11 +73,43 @@ def div_kl(h1, h2, *args, **kwargs):
     return div
 
 def div_chisquare(h1, h2, *args, **kwargs):
+    """chi-square divergence of two histograms
+
+    Arguments:
+     - h1(ndarray): first histogram
+     - h2(ndarray): second histogram
+
+    Returns:
+     - div(ndarray): the chi-square divergence
+    """
     # if np.sum(h1) > 1.0: h1 /= np.sum(h1)
     # if np.sum(h2) > 1.0: h2 /= np.sum(h2)
     # np.sum()
     div = 1.0 * np.square(h1 - h2)/(h1 + h2 + np.random.uniform(-1e-6, 1e-6, h1.shape))
     return div
+
+# earth mover's distance
+def div_pyemd_HAVE_PYEMD(h1, h2, *args, **kwargs):
+    """earth movers distance using pyemd
+
+    Earth movers distance between two distributions of n-dimensional
+    points is a work measure from the product ground distance x mass.
+
+    Pyemd version requires an explicit distance matrix.
+    """
+    flow = None
+    if kwargs.has_key('flow') and kwargs['flow']:
+        div, flow = pyemd_with_flow(h1, h2, args[0])
+    else:
+        div = pyemd(h1, h2, args[0])
+    return div, flow
+    
+def div_pyemd_(h1, h2, *args, **kwargs):
+    logger.warning('pyemd could not be imported.')
+    return -1
+
+if HAVE_PYEMD: div_pyemd = div_pyemd_HAVE_PYEMD
+else: div_pyemd = div_pyemd_
 
 def meas_hist(x = None, bins = None, *args, **kwargs):
     """smp_base.measures.meas_hist
@@ -108,3 +163,14 @@ class meas(object):
         """Simple reward: let body acceleration point into reduced error direction"""
         return np.sign(err) * acc
         # self.perf = np.sign(err) * np.sign(acc) * acc**2
+
+measures = {
+    'sub': {'func': np.subtract},
+    'mse': {'func': meas_mse},
+    'hist': {'func': meas_hist}, # compute histogram
+    'kld':  {'func': div_kl},
+    'chisq':  {'func': div_chisquare},
+}
+
+if HAVE_PYEMD:
+    measures['pyemd'] = {'func': div_pyemd}

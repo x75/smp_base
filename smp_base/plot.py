@@ -6,8 +6,11 @@ Depends: numpy, matplotlib, pyunicorn, seaborn, pandas
 
 Includes:
  - config variables: plot_colors, ...
- - utility functions for creating figures and subplot grids and for computing and setting of plot parameters, custom_colorbar
- - low-level kwargs-configurable plotting funcs: timeseries, histogram, histogramnd, rp_timeseries_embedding, plot_scattermatrix, plot_img, ...
+ - utility functions for creating figures and subplot grids and for
+   computing and setting of plot parameters, custom_colorbar
+ - low-level kwargs-configurable plotting funcs: timeseries,
+   histogram, histogramnd, rp_timeseries_embedding,
+   plot_scattermatrix, plot_img, ...
  - TODO: custom_colorbar, custom_legend moving smartly out of the way
  - TODO: plotting style configuration: fonts, colors, sizes, formats
  - TODO: sift existing plotting funcs from smp* models, systems, ...
@@ -53,7 +56,7 @@ from pandas.tools.plotting import scatter_matrix
 import logging
 from smp_base.common import get_module_logger
 
-loglevel_debug = logging.DEBUG - 1
+loglevel_debug = logging.DEBUG - 0
 logger = get_module_logger(modulename = 'plot', loglevel = logging.DEBUG)
 
 from smp_base.measures import div_kl, meas_hist
@@ -214,7 +217,9 @@ def make_axes_from_spec(fig, gs, axesspec):
      - list of lists (2D array) of subplot axes
 
     Gridspec slice example by slicing parts out of the maximum resolution grid:
+
     .. code::
+
         # regular
         axesspec = [(0, 0), (0,1), (1, 0), (1,1)]
         # row 1 colspan is 3
@@ -857,6 +862,77 @@ def histogram(ax, data, **kwargs):
     
     # # axis ticks and ticklabels
     # ax_set_ticks(ax, **kwargs_)
+
+@plotfunc()
+def bar(ax, data, **kwargs):
+    """bar plot"""
+    assert len(data.shape) > 0
+    
+    _loglevel = loglevel_debug + 0
+    
+    # logger.log(_loglevel, "histo kwargs", kwargs)
+    kwargs_ = {
+    }
+    kwargs_.update(**kwargs)
+
+    logger.log(_loglevel, "    plot.bar kwargs.keys = %s" % (kwargs.keys()))
+    logger.log(_loglevel, "    plot.bar kwargs_.keys = %s" % (kwargs_.keys()))
+
+    if kwargs_['ylim'] is not None and kwargs_['orientation'] == 'horizontal':
+        bins = np.linspace(kwargs_['ylim'][0], kwargs_['ylim'][1], 21 + 1)
+        logger.log(_loglevel, "    plot.bar setting bins = %s for orientation = %s from ylim = %s" % (bins, kwargs_['orientation'], kwargs_['ylim']))
+    elif kwargs_['xlim'] is not None and kwargs_['orientation'] == 'vertical':
+        bins = np.linspace(kwargs_['xlim'][0], kwargs_['xlim'][1], 21 + 1)
+        logger.log(_loglevel, "    plot.bar setting bins = %s for orientation = %s from xlim = %s" % (bins, kwargs_['orientation'], kwargs_['xlim']))
+    else:
+        bins = 'auto'
+        logger.log(_loglevel, "    plot.bar setting bins = %s for orientation = %s from xlim = %s" % (bins, kwargs_['orientation'], kwargs_['xlim']))
+        
+    # FIXME: decouple compute bar; incoming data is bar data already (def bar(...))
+    # (n, bins) = np.bar(data, bins = bins, **kwargs)
+    # (n, bins) = meas_hist(data, bins = bins, **kwargs)
+
+    # kwargs = kwargs_plot_clean_bar(**kwargs_)
+    kwargs = plot_clean_kwargs('bar', **kwargs_)
+    logger.log(_loglevel, "kwargs = %s", kwargs.keys())
+    
+    # binwidth = np.mean(np.abs(np.diff(bins)))
+    # bincenters = bins[:-1] + binwidth/2.0
+    # logger.log(_loglevel, "n = %s/%s", n.shape, n)
+    # logger.log(_loglevel, "binwidth = %s", binwidth)
+    # logger.log(_loglevel, "bincenters = %s/%s", bincenters.shape, bincenters)
+
+    # bincenters = []
+    # binwidth = []
+    # n = []
+
+    # implicit coordinates
+    if kwargs_.has_key('ordinate'):
+        bincenters = kwargs_['ordinate']
+        binwidth = np.ones_like(bincenters) * np.mean(np.abs(np.diff(bincenters)))
+    else:
+        bincenters = np.arange(data.shape[0])
+        binwidth = 1.
+
+    # orientation
+    if kwargs_['orientation'] == 'vertical':
+        axbar = ax.bar
+        kwargs['width'] = binwidth
+    elif kwargs_['orientation'] == 'horizontal':
+        axbar = ax.barh
+        kwargs['height'] = binwidth
+        
+    logger.log(_loglevel, "bar bincenters = %s, n    = %s" % (bincenters.shape, n.shape, ))
+    logger.log(_loglevel, "bar bincenters = %s, n    = %s" % (bincenters, n, ))
+    
+    # rename data
+    # n = data[:,0]
+    for i in range(data.shape[1]):
+        n = data[:,i]
+        patches = axbar(bincenters, n, **kwargs)
+
+    # logger.log(_loglevel, "hist n    = %s" % ( n.shape, ))
+    # logger.log(_loglevel, "hist bins = %s, len(bins) = %d" % ( bins.shape, len(bins)))
 
 def ax_set_aspect(ax, **kwargs):
     _loglevel = loglevel_debug + 0

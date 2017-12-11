@@ -1,10 +1,12 @@
-"""
-Author: Eugenio Piasini <e.piasini@ucl.ac.uk>, Oswald Berthold
-Date:   Wed Jun 21 15:38:52 CEST 2017
+"""smp_base.dimstack
 
-    First version of core dimensional stacking function.
+.. moduleauthor:: Oswald Berthold, Eugenio Piasini <e.piasini@ucl.ac.uk>
 
-    Added digitize pointcloud function to convert pointclouds into grid spaces by binning the points and averaging the function values per bin
+First version of dimensional stacking core worker function.
+
+Added digitize pointcloud function to convert pointclouds into
+grid spaces by binning the points and averaging the function
+values per bin.
 """
 
 import numpy as np
@@ -17,10 +19,17 @@ def dimensional_stacking(data, x_dims, y_dims):
 
     See LeBlanc, Ward, Wittels 1990, 'Exploring N-Dimensional
     Databases'.
-     * data: n-dimensional ndarray (e.g. data.shape=[4,5,6])
-     * x_dims: dimensions to be stacked on the x axis, big-endian style ('slowest' dimension first, 'fastest' dimension last.). e.g. x_dims=[2,0]
-     * y_dims: dimensions to be stacked on the y axis, big-endian. e.g. y_dims = [1]
 
+    Arguments:
+     - data(ndarray): n-dimensional ndarray (e.g. data.shape=[4,5,6])
+     - x_dims(list): dimensions to be stacked on the x axis,
+       big-endian style ('slowest' dimension first, 'fastest'
+       dimension last.). e.g. x_dims=[2,0]
+     - y_dims(list): dimensions to be stacked on the y axis,
+       big-endian. e.g. y_dims = [1]
+
+    Returns:
+     - stacked_data(ndarray)
     """
     new_x_length = reduce(lambda x, y: x * y,
 			  [data.shape[idx] for idx in x_dims])

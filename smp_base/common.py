@@ -21,11 +21,11 @@ def get_module_logger(modulename = 'experiment', loglevel = logging.INFO):
 
     Create a new logger and configure its name, loglevel, formatter
     and output stream handling.
-     1. initialize a logger with name from arg 'modulename'
-     2. set loglevel from arg 'loglevel'
-     3. configure matching streamhandler
-     4. set formatting swag
-     5. return the logger
+    1. initialize a logger with name from arg 'modulename'
+    2. set loglevel from arg 'loglevel'
+    3. configure matching streamhandler
+    4. set formatting swag
+    5. return the logger
     """
     if modulename.startswith('smp_graphs'):
         modulename = '.'.join(modulename.split('.')[1:])

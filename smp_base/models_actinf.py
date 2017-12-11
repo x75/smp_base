@@ -1,26 +1,26 @@
 """smp_base.models_actinf
 
-Active inference models, former actinf project code
+..moduleauthor:: Oswald Berthold, 2016-2017
 
-Oswald Berthold, 2016-2017
+Active inference models based on :mod:`smp.actinf` project code.
 
 This file contains the learners which can be used as adaptive models
 of sensorimotor contexts designed for an active inference
 approach. Currently implemented models are
- - k nearest neighbours (knn)
- - sparse online gaussian process models powered by Harold Soh's OTL library (soesgp, storkgp)
- - gaussian mixture model based on pypr's gmm (gmm)
- - hebbian connected SOM via bruno lara, guido schillaci (hebbsom)
- - incremental gaussian mixtures (igmm via juan acevedo-valle)
- - SOMs connected with hebbian associative links
+- k nearest neighbours (knn)
+- sparse online gaussian process models powered by Harold Soh's OTL library (soesgp, storkgp)
+- gaussian mixture model based on pypr's gmm (gmm)
+- hebbian connected SOM via bruno lara, guido schillaci (hebbsom)
+- incremental gaussian mixtures (igmm via juan acevedo-valle)
+- SOMs connected with hebbian associative links
 
 TODO:
- - consolidate calling convention / api for all model types
-   - init with single argument config dictionary
-   - predict, fit, sample, conditionals, visualize
-   - common test code
+- consolidate calling convention / api for all model types
+-- init with single argument config dictionary
+-- predict, fit, sample, conditionals, visualize
+-- common test code
 
- - implement missing models
+- implement missing models
    - missing: single hidden layer networks: linear/elm/res with RLS/FORCE/MDN/EH, merge with otl
    - missing: imol/models.py
    - missing: im/models.py
@@ -34,12 +34,12 @@ TODO:
    - consistent sampling from probabilistic models (gmm, hebbsom, ...): sample from prior, stick with last sample's vicinity
 
 
- - model visualization
+- model visualization
    - def visualize for all models
    - plot current / final som configuration
    - plot densities
 
- - hebbsom
+- hebbsom
    - som track residual error from map training
    - som use residual for adjusting rbf width
    - som extend sampling to sample actual prediction from gaussian with unit's mu and sigma
