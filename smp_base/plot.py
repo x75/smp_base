@@ -56,7 +56,7 @@ from pandas.tools.plotting import scatter_matrix
 import logging
 from smp_base.common import get_module_logger
 
-loglevel_debug = logging.DEBUG - 0
+loglevel_debug = logging.DEBUG - 1
 logger = get_module_logger(modulename = 'plot', loglevel = logging.DEBUG)
 
 from smp_base.measures import div_kl, meas_hist
@@ -339,7 +339,7 @@ def get_colorcycler(cmap_str = None, cmap_idx = None, c_s = 0, c_e = 255, c_n = 
         cmap_idx = np.linspace(c_s, c_e, c_n, endpoint = False)
         # logger.log(loglevel_debug, "cmap_idx", cmap_idx, cmap.N)
         cmap_idx = [int(i) % cmap.N for i in cmap_idx]
-        # logger.log(loglevel_debug, "cmap_idx", cmap_idx)
+        # logger.log(loglevel_debug, "cmap_idx = %s", cmap_idx)
         
     colorcycler = cycler('color', [c for c in cmap(cmap_idx)])
     return colorcycler
@@ -573,7 +573,7 @@ def table(ax, data, **kwargs):
     colLabels = None # ['Measure']
     rowLabels = kwargs['labels'] # ['Average', 'Service Average', 'Benchmark']
     cellText = [['%.04f' % (_, )] for _ in data.T] # .T # [overall, svc_avg, benchmark]
-    logger.log(_loglevel, '    running ax.table on cellText = %s' % (cellText, ))
+    # logger.log(_loglevel, '    running ax.table on cellText = %s' % (cellText, ))
     
     font = FontManager(size = 8)
     the_table = ax.table(
@@ -594,13 +594,13 @@ def table(ax, data, **kwargs):
     # the_table.set_position([0.0, 0.0, 1.0, 0.9])
     # table = mplTable()
     bbox = ax.get_position()
-    logger.log(_loglevel, '    ax position = %s' % (bbox, ))
+    # logger.log(_loglevel, '    ax position = %s' % (bbox, ))
     bbox.x0 *= 1.2
     bbox.y0 *= 0.7
 
     ax.set_position(bbox)
     bbox2 = ax.get_position()
-    logger.log(_loglevel, '    ax position = %s' % (bbox2, ))
+    # logger.log(_loglevel, '    ax position = %s' % (bbox2, ))
     
     # EDIT: Thanks to Oz for the answer-- Looping through the properties of the table allows easy modification of the height property:
 

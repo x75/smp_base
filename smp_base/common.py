@@ -27,6 +27,13 @@ def get_module_logger(modulename = 'experiment', loglevel = logging.INFO):
     4. set formatting swag
     5. return the logger
     """
+    loglevels = {'debug': logging.DEBUG, 'info': logging.INFO, 'warn': logging.WARNING}
+    if type(loglevel) is str:
+        try:
+            loglevel = loglevels[loglevel]
+        except:
+            loglevel = logging.INFO
+            
     if modulename.startswith('smp_graphs'):
         modulename = '.'.join(modulename.split('.')[1:])
         # print "get_module_logger: modulename = %s" % (modulename, )
