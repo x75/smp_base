@@ -922,8 +922,7 @@ def bar(ax, data, **kwargs):
         axbar = ax.barh
         kwargs['height'] = binwidth
         
-    logger.log(_loglevel, "bar bincenters = %s, n    = %s" % (bincenters.shape, n.shape, ))
-    logger.log(_loglevel, "bar bincenters = %s, n    = %s" % (bincenters, n, ))
+    logger.log(_loglevel, "bar bincenters.shape = %s, bincenters = %s" % (bincenters.shape, bincenters, ))
     
     # rename data
     # n = data[:,0]
