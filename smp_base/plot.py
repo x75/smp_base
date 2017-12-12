@@ -1,8 +1,12 @@
-"""smp_base.plot - plotting functions
+"""smp_base.plot
+
+plotting functions
 
 .. moduleauthor:: Oswald Berthold, 2017
 
-Depends: numpy, matplotlib, pyunicorn, seaborn, pandas
+Depends: numpy, matplotlib
+
+Optional: pyunicorn, seaborn, pandas
 
 Includes:
  - config variables: plot_colors, ...
@@ -789,6 +793,7 @@ def histogram(ax, data, **kwargs):
     logger.log(_loglevel, "    plot.histogram kwargs.keys = %s" % (kwargs.keys()))
     logger.log(_loglevel, "    plot.histogram kwargs_.keys = %s" % (kwargs_.keys()))
 
+    # explicit limits and bins configuration
     if kwargs_['ylim'] is not None and kwargs_['orientation'] == 'horizontal':
         bins = np.linspace(kwargs_['ylim'][0], kwargs_['ylim'][1], 21 + 1)
         logger.log(_loglevel, "    plot.histogram setting bins = %s for orientation = %s from ylim = %s" % (bins, kwargs_['orientation'], kwargs_['ylim']))
@@ -799,16 +804,8 @@ def histogram(ax, data, **kwargs):
         bins = 'auto'
         logger.log(_loglevel, "    plot.histogram setting bins = %s for orientation = %s from xlim = %s" % (bins, kwargs_['orientation'], kwargs_['xlim']))
         
-    # # axis title
-    # ax.title.set_text(kwargs_['title'])
-
-    # logger.log(_loglevel, "plot.histogram bins = %s" % (bins, ))
-    # logger.log(_loglevel, "plot.histogram data = %s" % (data.T, ))
-    # (n, bins, patches) = ax.hist(
-    #     # data, bins = int(np.log(max(3, data.shape[0]/2))),
-    #     data, bins = bins, **kwargs)
-
-    # FIXME: decouple compute histogram; incoming data is bar data already (def bar(...))
+    # FIXME: decouple compute histogram; incoming data is bar data
+    # already (def bar(...))
     # (n, bins) = np.histogram(data, bins = bins, **kwargs)
     (n, bins) = meas_hist(data, bins = bins, **kwargs)
 
@@ -832,84 +829,27 @@ def histogram(ax, data, **kwargs):
         
     patches = axbar(bincenters, n, **kwargs)
 
-    # logger.log(_loglevel, "hist n    = %s" % ( n.shape, ))
-    # logger.log(_loglevel, "hist bins = %s, len(bins) = %d" % ( bins.shape, len(bins)))
-
-    # # binshalf = int(len(bins)/2.0)
-    # # logger.log(_loglevel, "binshalf", binshalf)
-    # binidx = np.random.choice(len(bins))
-    # # ax.text(0.2, bins[5], 'sum(n / binwidth) = %f' % (np.sum(n * np.diff(bins)), ), fontsize = 8)
-    # ax.text(0.2, (bins[binidx] + bins[binidx + 1])/2.0, 'sum(n / binwidth) = %f' % (np.sum(n * np.diff(bins)), ), fontsize = 8)
-    # # ax.text(0.2, bins[5], 'bla')
-        
-    # # axis labels
-    # if kwargs_.has_key('xlabel') and kwargs_['xlabel'] is not None:
-    #     ax.set_xlabel('%s' % kwargs_['xlabel'])
-
-    # if kwargs_.has_key('ylabel') and kwargs_['ylabel'] is not None:
-    #     ax.set_ylabel('%s' % kwargs_['ylabel'])
-
-    # # axis scale and limits
-    # ax.set_xscale(kwargs_['xscale'])
-    # ax.set_yscale(kwargs_['yscale'])
-    # if kwargs_['xlim'] is not None:
-    #     ax.set_xlim(kwargs_['xlim'])
-    # if kwargs_['ylim'] is not None:
-    #     ax.set_ylim(kwargs_['ylim'])
-
-    # # # ax is aspect
-    # # ax_set_aspect(ax, **kwargs_)
-    
-    # # axis ticks and ticklabels
-    # ax_set_ticks(ax, **kwargs_)
-
 @plotfunc()
 def bar(ax, data, **kwargs):
-    """bar plot"""
+    """bar plot
+    """
     assert len(data.shape) > 0
     
     _loglevel = loglevel_debug + 0
     
-    # logger.log(_loglevel, "histo kwargs", kwargs)
-    kwargs_ = {
-    }
+    # setting default args
+    kwargs_ = {}
     kwargs_.update(**kwargs)
 
-    logger.log(_loglevel, "    plot.bar kwargs.keys = %s" % (kwargs.keys()))
-    logger.log(_loglevel, "    plot.bar kwargs_.keys = %s" % (kwargs_.keys()))
-
-    if kwargs_['ylim'] is not None and kwargs_['orientation'] == 'horizontal':
-        bins = np.linspace(kwargs_['ylim'][0], kwargs_['ylim'][1], 21 + 1)
-        logger.log(_loglevel, "    plot.bar setting bins = %s for orientation = %s from ylim = %s" % (bins, kwargs_['orientation'], kwargs_['ylim']))
-    elif kwargs_['xlim'] is not None and kwargs_['orientation'] == 'vertical':
-        bins = np.linspace(kwargs_['xlim'][0], kwargs_['xlim'][1], 21 + 1)
-        logger.log(_loglevel, "    plot.bar setting bins = %s for orientation = %s from xlim = %s" % (bins, kwargs_['orientation'], kwargs_['xlim']))
-    else:
-        bins = 'auto'
-        logger.log(_loglevel, "    plot.bar setting bins = %s for orientation = %s from xlim = %s" % (bins, kwargs_['orientation'], kwargs_['xlim']))
-        
-    # FIXME: decouple compute bar; incoming data is bar data already (def bar(...))
-    # (n, bins) = np.bar(data, bins = bins, **kwargs)
-    # (n, bins) = meas_hist(data, bins = bins, **kwargs)
-
-    # kwargs = kwargs_plot_clean_bar(**kwargs_)
+    # cleaning smp keywords for mpl plot func
     kwargs = plot_clean_kwargs('bar', **kwargs_)
     logger.log(_loglevel, "kwargs = %s", kwargs.keys())
     
-    # binwidth = np.mean(np.abs(np.diff(bins)))
-    # bincenters = bins[:-1] + binwidth/2.0
-    # logger.log(_loglevel, "n = %s/%s", n.shape, n)
-    # logger.log(_loglevel, "binwidth = %s", binwidth)
-    # logger.log(_loglevel, "bincenters = %s/%s", bincenters.shape, bincenters)
-
-    # bincenters = []
-    # binwidth = []
-    # n = []
-
-    # implicit coordinates
+    # explicit coordinates
     if kwargs_.has_key('ordinate'):
         bincenters = kwargs_['ordinate']
         binwidth = np.ones_like(bincenters) * np.mean(np.abs(np.diff(bincenters)))
+    # implicit coordinates
     else:
         bincenters = np.arange(data.shape[0])
         binwidth = 1.
@@ -921,11 +861,11 @@ def bar(ax, data, **kwargs):
     elif kwargs_['orientation'] == 'horizontal':
         axbar = ax.barh
         kwargs['height'] = binwidth
-        
+
+    # debug
     logger.log(_loglevel, "bar bincenters.shape = %s, bincenters = %s" % (bincenters.shape, bincenters, ))
     
-    # rename data
-    # n = data[:,0]
+    # iterate data columns bar only does single array
     for i in range(data.shape[1]):
         n = data[:,i]
         patches = axbar(bincenters, n, **kwargs)
@@ -934,6 +874,8 @@ def bar(ax, data, **kwargs):
     # logger.log(_loglevel, "hist bins = %s, len(bins) = %d" % ( bins.shape, len(bins)))
 
 def ax_set_aspect(ax, **kwargs):
+    """set mpl axis aspect
+    """
     _loglevel = loglevel_debug + 0
     kwargs_ = kwargs
     logger.log(_loglevel, "   ax_set_aspect ax = %s, kwargs.keys = %s" % (ax.title.get_text(), kwargs_.keys(),))
@@ -993,6 +935,8 @@ else:
 # ...?
 if HAVE_SEABORN:
     def histogramnd(ax, data, **kwargs):
+        """n-dimensional histogram seaborn based
+        """
         scatter_data_raw  = data
         scatter_data_cols = ["x_%d" % (i,) for i in range(data.shape[1])]
 
@@ -1026,7 +970,8 @@ else:
         logger.log(loglevel_debug, "Dummy, seaborn not installed")
         
 def plot_scattermatrix(df, **kwargs):
-    """plot a scattermatrix of dataframe df"""
+    """plot a scattermatrix from dataframe
+    """
     if df is None:
         logger.log(loglevel_debug, "plot_scattermatrix: no data passed")
         return
@@ -1048,6 +993,8 @@ def plot_scattermatrix(df, **kwargs):
 
 
 def plot_img(ax, data, **kwargs):
+    """plot an image using imshow, pcolor, pcolormesh
+    """
     assert ax is not None, "missing axis argument 'ax'"
     vmin = kwargs['vmin']
     vmax = kwargs['vmax']
@@ -1094,8 +1041,10 @@ def plot_img(ax, data, **kwargs):
     ax.set_yticks([])
 
 def interactive():
-    """basic example for interactive plotting from GUI interaction via felix stiehler"""
+    """basic example for interactive plotting and GUI interaction
 
+    via felix stiehler
+    """
     from functools import partial
     
     set_interactive(1)
@@ -1155,6 +1104,8 @@ def interactive():
     plt.show()
 
 def fig_interaction(fig, ax, data):
+    """expanded example for interactive plotting and GUI interaction
+    """
     do_interaction = True
     
     def on_click(event, ax, data):
@@ -1418,7 +1369,8 @@ def custom_colorbar():
     plt.show()
 
 def uniform_divergence(*args, **kwargs):
-    """Compute histogram based divergence of bivariate data distribution from prior distribution
+    """Compute histogram based divergence of bivariate data
+    distribution from prior distribution
 
     Args:
        args[0](numpy.ndarray, pandas.Series): timeseries X_1
@@ -1430,7 +1382,7 @@ def uniform_divergence(*args, **kwargs):
        xxx: ?
 
     Returns:
-       put image plotting primitve through
+       pass through image plotting primitive
     """
     # logger.log(loglevel_debug, "f", f)
     # logger.log(loglevel_debug, "args", len(args),)
