@@ -438,8 +438,8 @@ def plot_clean_kwargs(clean_type = None, **kwargs):
         'ytwin',
     ]}
     clean['plot'] = ['orientation']
-    clean['histogram'] = ['orientation', 'marker', 'alpha', 'linestyle']
-    clean['bar'] = ['orientation', 'marker']
+    clean['histogram'] = ['orientation', 'marker', 'alpha', 'linestyle', 'histtype']
+    clean['bar'] = ['orientation', 'marker', 'histtype', 'normed']
 
     clean_keys = clean['common']
     if clean_type is not None:
