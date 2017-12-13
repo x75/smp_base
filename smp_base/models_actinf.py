@@ -93,7 +93,11 @@ except ImportError, e:
     print("Couldn't import IGMM lib", e)
 
 from smp_base.reservoirs import LearningRules
-    
+
+import logging
+from smp_base.common import get_module_logger
+logger = get_module_logger(modulename = 'models_actinf', loglevel = logging.DEBUG)
+
 saveplot = False # True
 model_classes = ["KNN", "SOESGP", "STORKGP", "GMM", "HebbSOM", ",IGMM", "all"]
         
@@ -133,7 +137,7 @@ class smpKNN(smpModel):
         Bootstrap the model with some initial dummy samples to prepare it for inference after init
         """
         # bootstrap model
-        print("%s.bootstrapping with %s prior" % (self.__class__.__name__, self.prior))
+        logger.info("%s.bootstrapping with %s prior" % (self.__class__.__name__, self.prior))
         if self.prior == 'random':
             for i in range(10):
                 if self.idim == self.odim:

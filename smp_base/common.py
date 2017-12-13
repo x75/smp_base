@@ -36,7 +36,9 @@ def get_module_logger(modulename = 'experiment', loglevel = logging.INFO):
             
     if modulename.startswith('smp_graphs'):
         modulename = '.'.join(modulename.split('.')[1:])
-        # print "get_module_logger: modulename = %s" % (modulename, )
+        
+    if len(modulename) > 20:
+        modulename = modulename[-20:]
     
     # create logger
     logger = logging.getLogger(modulename)

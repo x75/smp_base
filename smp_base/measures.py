@@ -69,7 +69,7 @@ def div_kl(h1, h2, *args, **kwargs):
     # fix division by zero if h2 contains 0 elements
     if np.any(h2 == 0.0):
         # by adding small amplitude noise
-        h2 += np.random.exponential(1e-6, h2.shape)
+        h2 += np.random.exponential(1e-4, h2.shape)
     # get term 1
     log_h1_h2 = np.log(h1/h2)
     logger.log(_loglevel, "log(h1/h2) = %s", log_h1_h2)
