@@ -56,21 +56,32 @@ def div_kl(h1, h2, *args, **kwargs):
     _loglevel = loglevel_debug - 1
     # print "h1", h1, "h2", h2
     # div = np.sum(h1 * np.log(h1/h2))
+    # get input sums
     h1_sum = np.sum(h1)
     h2_sum = np.sum(h2)
     logger.log(_loglevel, "h1_sum = %s", type(h1_sum))
     logger.log(_loglevel, "h2_sum = %s", h2_sum)
+    # normalize to a density if necessary
     if h1_sum > 1.0: h1 /= h1_sum
     if h2_sum > 1.0: h2 /= h2_sum
     logger.log(_loglevel, "h1 = %s", h1)
     logger.log(_loglevel, "h2 = %s", h2)
+    # fix division by zero if h2 contains 0 elements
+    if np.any(h2 == 0.0):
+        # by adding small amplitude noise
+        h2 += np.random.exponential(1e-6, h2.shape)
+    # get term 1
     log_h1_h2 = np.log(h1/h2)
     logger.log(_loglevel, "log(h1/h2) = %s", log_h1_h2)
+    # sanitize term 1
     log_diff = np.clip(log_h1_h2, -20.0, 7.0)
     logger.log(_loglevel, "log diff = %s", log_diff)
+    # get term 2, final
     div = h1 * log_diff
     logger.log(_loglevel, "div = %s/%s", div.shape, div)
-    return div
+    # return element-wise divergence
+    logger.debug('div_kl sum(div) = %s, div = %s', np.sum(div), div)
+    return np.sum(div), div
 
 def div_chisquare(h1, h2, *args, **kwargs):
     """chi-square divergence of two histograms
@@ -86,7 +97,8 @@ def div_chisquare(h1, h2, *args, **kwargs):
     # if np.sum(h2) > 1.0: h2 /= np.sum(h2)
     # np.sum()
     div = 1.0 * np.square(h1 - h2)/(h1 + h2 + np.random.uniform(-1e-6, 1e-6, h1.shape))
-    return div
+    logger.debug('div_chisquare sum(div) = %s, div = %s', np.sum(div), div)
+    return np.sum(div), div
 
 # earth mover's distance
 def div_pyemd_HAVE_PYEMD(h1, h2, *args, **kwargs):
@@ -97,12 +109,16 @@ def div_pyemd_HAVE_PYEMD(h1, h2, *args, **kwargs):
 
     Pyemd version requires an explicit distance matrix.
     """
-    flow = None
+    flow = np.zeros((1,1))
     if kwargs.has_key('flow') and kwargs['flow']:
         div, flow = pyemd_with_flow(h1, h2, args[0])
     else:
         div = pyemd(h1, h2, args[0])
-    return div, flow
+    flow = np.array(flow)
+    flow_zero_diag = flow - np.diag(np.diag(flow))
+    flow_ = np.sum(flow_zero_diag, axis = 1, keepdims = True).T/2.0
+    # logger.debug('div_pyemd_HAVE_PYEMD sum(div) = %s, flow_ = %s, flow = %s', np.sum(div), flow_.shape, flow)
+    return div, flow_
     
 def div_pyemd_(h1, h2, *args, **kwargs):
     logger.warning('pyemd could not be imported.')
