@@ -137,9 +137,10 @@ class smpKNN(smpModel):
         Bootstrap the model with some initial dummy samples to prepare it for inference after init
         """
         # bootstrap model
+        self.n_samples_bootstrap = max(10, self.n_neighbors)
         logger.info("%s.bootstrapping with %s prior" % (self.__class__.__name__, self.prior))
         if self.prior == 'random':
-            for i in range(10):
+            for i in range(self.n_samples_bootstrap):
                 if self.idim == self.odim:
                     self.X_.append(np.ones((self.idim, )) * i * 0.1)
                     self.y_.append(np.ones((self.odim, )) * i * 0.1)
@@ -151,8 +152,8 @@ class smpKNN(smpModel):
                         -noise_amp, noise_amp, (self.odim,)))
 
         elif self.prior == 'linear':
-            for i in range(10):
-                p_ = -self.prior_width/2.0 + float(i)/10.0
+            for i in range(self.n_samples_bootstrap):
+                p_ = -self.prior_width/2.0 + float(i)/self.n_samples_bootstrap
                 X = np.ones((self.idim, )) * p_ + np.random.uniform(-0.01, 0.01)
                 y = np.ones((self.odim, )) * p_ + np.random.uniform(-0.01, 0.01)
                 self.X_.append(X)
