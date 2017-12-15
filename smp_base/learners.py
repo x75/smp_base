@@ -10,6 +10,8 @@ interface to the robot sensorimotor loop for doing
 
 """
 
+from __future__ import configparser
+
 import sys, time
 
 import numpy as np
