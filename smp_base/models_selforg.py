@@ -65,7 +65,7 @@ class HK():
         # controller
         # self.C  = np.eye(self.nummot) * 0.4
         self.C  = np.zeros((self.nummot, self.numsen))
-        self.C[range(self.nummot),range(self.nummot)] = 1 # * 0.4
+        self.C[list(range(self.nummot)),list(range(self.nummot))] = 1 # * 0.4
         # self.C  = np.random.uniform(-1e-2, 1e-2, (self.nummot, self.numsen))
         # print "models_selforg.py: HK.__init__: self.C", self.C
         self.h  = np.zeros((self.nummot,1))

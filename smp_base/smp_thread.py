@@ -35,7 +35,7 @@ class smp_thread(threading.Thread):
         self.srv = {}
 
     def shutdown_handler(self, signum, frame):
-        print ('smp_thread: Signal handler called with signal', signum)
+        print(('smp_thread: Signal handler called with signal', signum))
         self.isrunning = False
         # for sub in self.sub:
         #     self.sub.shutdown()
@@ -73,9 +73,9 @@ class smp_thread_ros(smp_thread):
 
     def pub_sub_local(self, pubs = {}, subs = {}):
         # pass
-        for k, v in pubs.items():
+        for k, v in list(pubs.items()):
             self.pub[k.replace("/", "_")] = rospy.Publisher(k, v[0], queue_size = self.default_queue_size_pub)
-        for k, v in subs.items():
+        for k, v in list(subs.items()):
             self.sub[k.replace("/", "_")] = rospy.Subscriber(k, v[0], v[1])
 
     def pub_sub_local_legacy(self):
@@ -104,15 +104,15 @@ class smp_thread_ros(smp_thread):
         if topic == "eta":
             # self.eta_init = msg.data
             self.cfg.eta_EH = msg.data
-            print("eta_EH", self.cfg.eta_EH)
+            print(("eta_EH", self.cfg.eta_EH))
         elif topic == "target":
             self.cfg.target = msg.data
-            print("target", self.cfg.target)
+            print(("target", self.cfg.target))
         elif topic == "theta":
             self.cfg.theta = msg.data
             self.res.set_theta(self.cfg.theta)
             # self.res.theta = self.cfg.theta
-            print("theta", self.res.theta, self.res.theta_amps)
+            print(("theta", self.res.theta, self.res.theta_amps))
 
     def pub_all(self):
         # ros publish
@@ -146,7 +146,7 @@ class smp_thread_ros(smp_thread):
         print("implement: controller()")
 
     def prepare_output(self, z, zn):
-        print("implement: prepare_output(z, zn)", z, zn)
+        print(("implement: prepare_output(z, zn)", z, zn))
 
     def savelogs(self):
         print("implement: save logfiles")

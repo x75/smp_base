@@ -27,7 +27,7 @@ Things:
  - merge stray models such as UniformRandomBlock2, iir, CodingBlock2, ...
  - fix visualization
 """
-import cPickle
+import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
@@ -49,13 +49,13 @@ class smpModelInit():
         def wrap(xself, *args, **kwargs):
             # print "args", args
             # print "kwargs", kwargs
-            assert kwargs.has_key('conf'), "smpModel needs conf dict"
+            assert 'conf' in kwargs, "smpModel needs conf dict"
             conf = kwargs['conf']
             if conf is None:
                 conf = xself.defaults
             else:
-                for k, v in xself.defaults.items():
-                    if not conf.has_key(k):
+                for k, v in list(xself.defaults.items()):
+                    if k not in conf:
                         # print "models.init setting default", k, v
                         conf[k] = v
             
@@ -78,12 +78,12 @@ class smpModelStep():
             ret = f(xself, *args, **kwargs)
 
             if xself.visualize:
-                if kwargs.has_key('X'):
+                if 'X' in kwargs:
                     X = kwargs['X']
                 else:
                     X = args[0]
 
-                if kwargs.has_key('Y'):
+                if 'Y' in kwargs:
                     Y = kwargs['Y']
                 else:
                     Y = args[1]
@@ -161,7 +161,7 @@ class smpModel(object):
         Predict method of model
         """
         if self.model is None:
-            print("%s.predict: implement me" % (self.__class__.__name__))
+            print(("%s.predict: implement me" % (self.__class__.__name__)))
             return np.zeros((1, self.odim))
             
     def fit(self, X, Y):
@@ -170,7 +170,7 @@ class smpModel(object):
         Fit method of model
         """
         if self.model is None:
-            print("%s.fit: implement me" % (self.__class__.__name__))
+            print(("%s.fit: implement me" % (self.__class__.__name__)))
 
     def step(self, X, Y):
         """smpModel.fit
@@ -178,7 +178,7 @@ class smpModel(object):
         Step the model (fit, predict)
         """
         if self.model is None:
-            print("%s.fit: implement me" % (self.__class__.__name__))
+            print(("%s.fit: implement me" % (self.__class__.__name__)))
 
     def visualize_model_init(self):
         return
@@ -189,14 +189,14 @@ class smpModel(object):
         Visualize the model with whichever methods suits the model
         """
         if self.model is None:
-            print("%s.visualize: implement me" % (self.__class__.__name__))
+            print(("%s.visualize: implement me" % (self.__class__.__name__)))
 
     def save(self, filename):
         """smpModel.save
 
         Save method of model
         """
-        cPickle.dump(self, open(filename, "wb"))
+        pickle.dump(self, open(filename, "wb"))
 
     @classmethod
     def load(cls, filename):
@@ -204,7 +204,7 @@ class smpModel(object):
 
         Load a model and return the instance
         """
-        return cPickle.load(open(filename, "rb"))
+        return pickle.load(open(filename, "rb"))
 
 
 ################################################################################
@@ -335,7 +335,7 @@ def plot_nodes_over_data_1d_components(fig, X, Y, mdl, e_nodes, p_nodes, e_nodes
     
 
 if __name__ == '__main__':
-    print "testing iir_firstorder coef/freq conversion"
+    print("testing iir_firstorder coef/freq conversion")
     # loop over frequencies
     for f in np.logspace(0.001, 0.2, 21, base = np.exp(1)) - 1:
         # compute coeffs
@@ -343,4 +343,4 @@ if __name__ == '__main__':
         # reconstruct f_c
         f_ = iir_firstorder_coef_to_freq(b = b, a = -a)
         # print stuff
-        print "f = %f, b = %f, a = %f, f_ = %f" % (f, b, a, f_)
+        print("f = %f, b = %f, a = %f, f_ = %f" % (f, b, a, f_))

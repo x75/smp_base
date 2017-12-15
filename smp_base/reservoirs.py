@@ -44,7 +44,7 @@ try:
         sys.path.append(RLSPY)
     import rlspy
 except ImportError:
-    print "ImportError for rlspy"
+    print("ImportError for rlspy")
     rlspy = None
 
 # from learners import GHA
@@ -440,12 +440,12 @@ class LearningRules(object):
         # print "|dmu| = %f" % (np.linalg.norm(dmu))
         
         if self.cnt % 100 == 0:
-            print "count[%d]" % self.cnt
+            print("count[%d]" % self.cnt)
             # print "    loss = %f / %f / %d" % (self.loss/self.cnt, self.loss, self.cnt)
-            print "    loss = %f / %d" % (np.mean(self.loss_), self.cnt)
-            print "    dmu", np.linalg.norm(np.array(dmu).flatten())
-            print "    dlogisig", np.linalg.norm(dlogsig)
-            print "    dpiu", np.linalg.norm(dpiu.flatten())
+            print("    loss = %f / %d" % (np.mean(self.loss_), self.cnt))
+            print("    dmu", np.linalg.norm(np.array(dmu).flatten()))
+            print("    dlogisig", np.linalg.norm(dlogsig))
+            print("    dpiu", np.linalg.norm(dpiu.flatten()))
 
         return np.vstack((dmu, dlogsig, dpiu))
 
@@ -603,12 +603,12 @@ class LearningRules(object):
         # print "|dmu| = %f" % (np.linalg.norm(dmu))
 
         if self.cnt % 100 == 0:
-            print "count[%d]" % self.cnt
+            print("count[%d]" % self.cnt)
             # print "    loss = %f / %f / %d" % (self.loss/self.cnt, self.loss, self.cnt)
-            print "    loss = %f / %d" % (self.loss, self.cnt)
-            print "    dmu", np.linalg.norm(np.array(dmu).flatten())
-            print "    dlogisig", np.linalg.norm(dlogsig)
-            print "    dpiu", np.linalg.norm(dpiu.flatten())
+            print("    loss = %f / %d" % (self.loss, self.cnt))
+            print("    dmu", np.linalg.norm(np.array(dmu).flatten()))
+            print("    dlogisig", np.linalg.norm(dlogsig))
+            print("    dpiu", np.linalg.norm(dpiu.flatten()))
             
         return np.hstack((np.array(dmu).flatten(), dlogsig, dpiu.flatten())).T
     
@@ -741,7 +741,7 @@ class Reservoir(object):
             # self.tau = np.exp(np.random.uniform(-8, -0.5, (self.N, 1)))
             self.tau = np.exp(np.random.uniform(-5, -0.5, (self.N, 1)))
             # self.tau = np.exp(np.random.uniform(-5., -0.2, (self.N, 1)))
-            print "self.tau", self.tau.T
+            print("self.tau", self.tau.T)
         else:
             self.tau = tau
         self.multiactivation = False # True
@@ -760,7 +760,7 @@ class Reservoir(object):
         self.input_coupling = input_coupling
         self.wi_amp = input_scale
         self.init_wi()
-        print "reservoirs.init wi = %s" % (self.wi.shape, )
+        print("reservoirs.init wi = %s" % (self.wi.shape, ))
 
         # readout feedback term
         self.output_num = output_num
@@ -776,7 +776,7 @@ class Reservoir(object):
         self.u = np.zeros(shape=(self.input_num, 1))
         self.x = np.zeros(shape=(self.N, 1))
         self.r = np.zeros(shape=(self.N, 1))
-        self.r_idx = range(self.N)
+        self.r_idx = list(range(self.N))
         np.random.shuffle(self.r_idx)
         # np.array([]).T
         self.r_nl = np.zeros(shape=(self.N, 1))
@@ -852,7 +852,7 @@ class Reservoir(object):
     ############################################################
     # save network
     def save(self, filename=""):
-        from cPickle import Pickler
+        from pickle import Pickler
         if filename == "":
             timestamp = time.strftime("%Y-%m-%d-%H%M%S")
             filename = "reservoir-%s.bin" % timestamp
@@ -866,8 +866,8 @@ class Reservoir(object):
     # load network (restore from file)
     # @classmethod
     def load(self, filename):
-        from cPickle import Unpickler
-        print "reservoirs.py: loading %s" % filename
+        from pickle import Unpickler
+        print("reservoirs.py: loading %s" % filename)
         f = open(filename,'rb')
         u = Unpickler(f)
         tmp_dict = u.load()
@@ -922,7 +922,7 @@ class Reservoir(object):
             elif self.input_coupling in ['ones']:
                 self.init_wi_ones()
             else:
-                print "Reservoir.init_wi: unknown input_coupling = '%s'" % (self.input_coupling, )
+                print("Reservoir.init_wi: unknown input_coupling = '%s'" % (self.input_coupling, ))
                 sys.exit(-1)
         else:
             self.wi = res_input_matrix_random(idim = self.input_num, odim = self.N, dist = 'normal') * self.wi_amp
@@ -1211,7 +1211,7 @@ class Reservoir2(Reservoir):
         # reservoir connection matrix
         if self.g == 0.:
             sparse = False
-            print ("sparse False (g = %f)" % self.g)
+            print(("sparse False (g = %f)" % self.g))
         # initialize reservoir matrix with weights drawn from N(0,1)
         if sparse:
             # reservoir connection matrix: sparse version
@@ -1225,7 +1225,7 @@ class Reservoir2(Reservoir):
             # print "scale", self.scale.shape, "M", self.M.shape
             # self.M = np.array(self.M * self.g)
             self.M = np.array(self.M)
-            print "M", self.M.shape
+            print("M", self.M.shape)
 
             # input matrix
             p_wi = 0.5
@@ -1251,7 +1251,7 @@ class Reservoir2(Reservoir):
         [w,v] = LA.eig(self.M)
         # get maximum absolute eigenvalue
         lae = np.max(np.abs(w))
-        print "lae pre", lae
+        print("lae pre", lae)
         # normalize matrix
         self.M /= lae
         # scale to desired spectral radius
@@ -1265,7 +1265,7 @@ class Reservoir2(Reservoir):
         # nonlinearity
         self.nonlin_func = nonlin_func
 
-        print "ip", self.ip
+        print("ip", self.ip)
         # # inputs and input weight matrix
         # self.wi = np.random.normal(0, self.wi_amp, (self.N, self.input_num))
         # # readout feedback term
@@ -1414,7 +1414,7 @@ def get_data(elen, outdim, mode="MSO_s1"):
             # ds_n.append(rsmp)
             f = si.interp1d(np.arange(0, elen/20), ds[i][0].T)
             tt = np.linspace(0, elen/20-1, elen)
-            print f(tt)
+            print(f(tt))
             ds_n.append(f(tt))
             # ds_n.append(ds[i][0].T)
         # 2 rows, n cols
@@ -1430,7 +1430,7 @@ def get_data(elen, outdim, mode="MSO_s1"):
         rate, data = wavfile.read(args.file)
         # rate, data = wavfile.read("drinksonus_mono_short.wav")
         offset = np.random.randint(0, data.shape[0] - elen)
-        print "get_data: wav:", data.dtype, offset
+        print("get_data: wav:", data.dtype, offset)
         data = data.astype(np.float)
         # data = data[offset:offset+elen].reshape((outdim, -1))
         data = data[offset:offset+elen].reshape((-1, outdim)).T
@@ -1455,16 +1455,16 @@ def get_data(elen, outdim, mode="MSO_s1"):
         sincomp = np.sin(2 * np.pi * (freqs * t.T + 0.0)) # * amps
         # freq_steps = int((2*np.pi)/freqs)
         freq_steps = int(1/freqs)
-        print "freq_steps", freq_steps
+        print("freq_steps", freq_steps)
         pulse = (np.arange(t.shape[0]) % (2*freq_steps)) > (0.7 * freq_steps) # np.zeros_like(t)
         pulse = pulse * 1.0 - 0.0
         from scipy import signal
         b, a  = signal.butter(4, 0.5)
         pulse = signal.filtfilt(b, a, pulse)
-        print "pulse", pulse
+        print("pulse", pulse)
         # pulse *= 1.0
         ds_real = (sincomp + pulse) * (1.0/f_numcomp)
-        print "ds_real.shape", ds_real
+        print("ds_real.shape", ds_real)
         return ds_real.reshape((outdim, -1))
 
     # generate waveform from frequencies array
@@ -1589,7 +1589,7 @@ class ReservoirPlot(object):
         # plotting params for res hidden activation random projection
         self.selsize = 20
         # self.rindex = np.random.randint(self.ressize, size=self.selsize)
-        self.rindex = np.random.choice(range(self.ressize), self.selsize, replace=False)
+        self.rindex = np.random.choice(list(range(self.ressize)), self.selsize, replace=False)
 
     def plot_data(self, args, data, incr = 1000, lr = None, testing = 100):
         (ds_real, out_t, out_t_mdn_sample, r_t, perf_t, loss_t, wo_t_norm, dw_t_norm) = data
@@ -1710,7 +1710,7 @@ def test_mixtureMV(args):
     ax = fig.axes[0] # (2 * mixcomps) + c]
     for i in range(1000):
         y = lr.mixtureMV(mu, S, pi)
-        print "y", y
+        print("y", y)
         ax.plot([y[0]], [y[1]], "ro", alpha = 0.2, markersize = 3.0)
 
     ax.set_aspect(1)
@@ -1722,7 +1722,7 @@ def test_mixtureMV(args):
     fig.show()
     plt.show()
     
-    print "mu", mu.shape, "S", S.shape
+    print("mu", mu.shape, "S", S.shape)
         
 class ReservoirTest(object):
 
@@ -1742,10 +1742,10 @@ def save_wavfile(out_t, timestr):
         wav_out = (out_t.T * 32767).astype(np.int16)
         wavfile.write("../data/res_out_%s.wav" % (timestr), 44100, wav_out)
     except ImportError:
-        print "ImportError for scipy.io.wavfile"
+        print("ImportError for scipy.io.wavfile")
 
 def main(args):
-    print "mode", args.mode
+    print("mode", args.mode)
     if args.mode == 'ip':
         test_ip(args)
         sys.exit(0)
@@ -1813,7 +1813,7 @@ def main(args):
 
     # get training data
     ds_real = get_data(episode_len+1, outsize, args.target)
-    print "ds_real.shape", ds_real.shape
+    print("ds_real.shape", ds_real.shape)
 
     # compute effective tapping for these timeseries problems
     # non AR regression setup
@@ -1883,7 +1883,7 @@ def main(args):
         # do some setup
         if ReservoirTest.modes[args.mode] == ReservoirTest.modes["ol_rls"]:
             if rlspy is None:
-                print "Dont have rlspy, exiting"
+                print("Dont have rlspy, exiting")
                 sys.exit()
             # initialize rlspy
             # res.learnRLSsetup(None, None)
@@ -1895,7 +1895,7 @@ def main(args):
             lr.learnRLSsetup(x0 = res.wo, P0 = np.eye(res.N))
             
         elif ReservoirTest.modes[args.mode] == ReservoirTest.modes["ol_pi"]:
-            print "ol_pi in progress, exiting"
+            print("ol_pi in progress, exiting")
             sys.exit(1)
 
         # interactive plotting
@@ -2051,7 +2051,7 @@ if __name__ == "__main__":
     parser.add_argument("-l", "--length", help="Episode length [30000]", default=30000, type=int)
     parser.add_argument("-lr", "--learning_ratio", help="Ratio of learning to episode len [0.8]", default=0.8, type=float)
     parser.add_argument("-e", "--eta", help="Learning rate eta [1e-3]", default=1e-3, type=float)
-    parser.add_argument("-m", "--mode", help="Mode [ol_rls], one of " + str(ReservoirTest.modes.keys()), default = "ol_rls")
+    parser.add_argument("-m", "--mode", help="Mode [ol_rls], one of " + str(list(ReservoirTest.modes.keys())), default = "ol_rls")
     parser.add_argument("-mt", "--multitau", dest="multitau", action="store_true",
                         help="Use multiple random time constants in reservoir, doesn't seem to work so well with EH [False]")
     parser.add_argument("-mc", "--mixcomps", help="Number of mixture components for mixture network [3]", type=int, default=3)
@@ -2061,7 +2061,7 @@ if __name__ == "__main__":
     parser.add_argument("-rs", "--ressize", help="Reservoir (hidden layer) size [300]", default=300, type=int)
     parser.add_argument("-s", "--seed", help="RNG seed [101]", default=101, type=int)
     parser.add_argument("-sf", "--scale_feedback", help="Global feedback strength (auto-regressive) [0.0]", default=0.0, type=float)
-    parser.add_argument("-t", "--target", help="Target [MSO_s1], one of " + str(ReservoirTest.targets.keys()), default = "MSO_s1")
+    parser.add_argument("-t", "--target", help="Target [MSO_s1], one of " + str(list(ReservoirTest.targets.keys())), default = "MSO_s1")
     parser.add_argument("-f", "--file", help="File to use as data input", dest="file", default="data/notype_mono_short.wav")
     parser.add_argument("-tf", "--teacher_forcing", dest="teacher_forcing", action="store_true",
                         help="Use teacher forcing during training [False]")

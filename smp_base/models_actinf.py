@@ -47,18 +47,18 @@ TODO:
 """
 
 
-from __future__ import print_function
+
 
 import numpy as np
 import scipy.sparse as sparse
 import scipy.stats  as stats
 import pylab as pl
 import matplotlib.gridspec as gridspec
-import cPickle
+import pickle
 from functools import partial
 
-from models import smpModelInit, smpModel
-from models import savefig, plot_nodes_over_data_1d_components_fig, plot_nodes_over_data_1d_components
+from .models import smpModelInit, smpModel
+from .models import savefig, plot_nodes_over_data_1d_components_fig, plot_nodes_over_data_1d_components
 
 # KNN
 from sklearn.neighbors import KNeighborsRegressor
@@ -68,14 +68,14 @@ try:
     from otl_oesgp import OESGP
     from otl_storkgp import STORKGP
     HAVE_SOESGP = True
-except ImportError, e:
+except ImportError as e:
     print("couldn't import online GP models:", e)
     HAVE_SOESGP = False
 
 # Gaussian mixtures PyPR
 try:
     import pypr.clustering.gmm as gmm
-except ImportError, e:
+except ImportError as e:
     print("Couldn't import pypr.clustering.gmm", e)
 
 # hebbsom
@@ -83,13 +83,13 @@ try:
     from kohonen.kohonen import Map, Parameters, ExponentialTimeseries, ConstantTimeseries
     from kohonen.kohonen import Gas, GrowingGas, GrowingGasParameters, Filter
     from kohonen.kohonen import argsample
-except ImportError, e:
+except ImportError as e:
     print("Couldn't import lmjohns3's kohonon SOM lib", e)
 
 # IGMM
 try:
     from igmm_cond import IGMM_COND
-except ImportError, e:
+except ImportError as e:
     print("Couldn't import IGMM lib", e)
 
 from smp_base.reservoirs import LearningRules
@@ -319,14 +319,14 @@ class smpOTLModel(smpModel):
         print("otlmodel", otlmodel_)
         self.otlmodel = None
         print("otlmodel", otlmodel_)       
-        cPickle.dump(self, open(filename, "wb"))
+        pickle.dump(self, open(filename, "wb"))
         self.otlmodel = otlmodel_
         print("otlmodel", self.otlmodel)
 
     @classmethod
     def load(cls, filename):
         # otlmodel_ = cls.otlmodel
-        otlmodel_wrap = cPickle.load(open(filename, "rb"))
+        otlmodel_wrap = pickle.load(open(filename, "rb"))
         print("%s.load cls.otlmodel filename = %s, otlmodel_wrap.otlmodel_type = %s" % (cls.__name__, filename, otlmodel_wrap.otlmodel_type))
         if otlmodel_wrap.otlmodel_type == "soesgp":
             otlmodel_cls = OESGP
@@ -443,7 +443,7 @@ class smpSOESGP(smpOTLModel):
         self.bootstrap()
     
     def bootstrap(self):
-        from reservoirs import res_input_matrix_random_sparse
+        from .reservoirs import res_input_matrix_random_sparse
         self.otlmodel.init(self.idim, self.odim, self.modelsize, self.input_weight,
                     self.output_feedback_weight, self.activation_function,
                     self.leak_rate, self.connectivity, self.spectral_radius,
@@ -607,7 +607,7 @@ class smpGMM(smpModel):
                 self.Xy, K = self.K, max_iter = self.em_max_iter,
                 verbose = False, iter_call = None)
             self.fitted =  True
-        except Exception, e:
+        except Exception as e:
             print( "%s.fit_batch fit failed with %s" % (self.__class__.__name__,  e.args ,))
             # sys.exit()
         print("%s.fit_batch Log likelihood (how well the data fits the model) = %f" % (self.__class__.__name__, self.logL))
@@ -1642,8 +1642,8 @@ def plot_nodes_over_data_scattermatrix(X, Y, mdl, e_nodes, p_nodes, e_nodes_cov,
     sm = scatter_matrix(df, alpha=0.2, figsize=(5,5), diagonal="hist")
     # print("sm = %s" % (sm))
     # loop over i/o components
-    idims = range(idim)
-    odims = range(idim, idim+odim)
+    idims = list(range(idim))
+    odims = list(range(idim, idim+odim))
 
         
     for i in range(numplots):
@@ -2108,7 +2108,7 @@ def test_model(args):
         idim = 1
         odim = 1
         X,Y = generate_inverted_sinewave_dataset(N = args.numsteps)
-        idx = range(args.numsteps)
+        idx = list(range(args.numsteps))
         np.random.shuffle(idx)
         X = X[idx]
         Y = Y[idx]
@@ -2119,7 +2119,7 @@ def test_model(args):
         # X2,Y2 = generate_inverted_sinewave_dataset(N = args.numsteps, f = 2.0, a1 = -0.5, a2 = 0.5)
         # X2,Y2 = generate_inverted_sinewave_dataset(N = args.numsteps, f = 1.5, a1 = 1.0, a2 = 0.4)
         X2,Y2 = generate_inverted_sinewave_dataset(N = args.numsteps, f = 0.25, p = np.pi/2.0, a1 = 0.0, a2 = 0.3)
-        idx = range(args.numsteps)
+        idx = list(range(args.numsteps))
         np.random.shuffle(idx)
         print("X1.shape", X1.shape, X1[idx].shape)
         # print("idx", idx)
@@ -2188,7 +2188,7 @@ def test_model(args):
 
         print("X", X.shape, "Y", Y.shape)
 
-        idx = range(args.numsteps)
+        idx = list(range(args.numsteps))
         np.random.shuffle(idx)
 
         X = X[idx]

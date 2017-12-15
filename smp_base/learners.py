@@ -18,7 +18,7 @@ import scipy.linalg as sLA
 
 from matplotlib.pyplot import figure
 
-import ConfigParser, ast
+import configparser, ast
 
 from smp_base.eligibility import Eligibility
 from smp_base.models import smpModelInit, smpModelStep, smpModel
@@ -31,8 +31,8 @@ try:
     from jpype import JPackage
     init_jpype()
     HAVE_JPYPE = True
-except ImportError, e:
-    print "Couldn't import init_jpype from measures_infth, make sure jpype is installed", e
+except ImportError as e:
+    print("Couldn't import init_jpype from measures_infth, make sure jpype is installed", e)
     HAVE_JPYPE = False
     
 # TODO
@@ -135,8 +135,8 @@ class smpSHL(smpModel):
 
         # debugging
         for v in ['lrname', 'theta', 'input_coupling', 'visualize']:
-            print "%s.%s = %s, conf[%s] = %s" % (
-                self.__class__.__name__, v, getattr(self, v), v, conf[v])
+            print("%s.%s = %s, conf[%s] = %s" % (
+                self.__class__.__name__, v, getattr(self, v), v, conf[v]))
 
         # representation specific pre config
         if self.lrname == 'FORCEmdn':
@@ -149,7 +149,7 @@ class smpSHL(smpModel):
             self.odim_real = self.num_mu + self.num_sig + self.num_pi
             # self.alpha = 10.0
             self.tau = 1.0 # 0.025
-            print "self.alpha", self.alpha
+            print("self.alpha", self.alpha)
         else:
             self.odim_real = self.odim
 
@@ -229,7 +229,7 @@ class smpSHL(smpModel):
         if self.lrname == 'FORCEmdn':
             sigmas = [self.sigma_mu] * self.num_mu + [self.sigma_sig] * self.num_sig + [self.sigma_pi] * self.num_pi
             # sigmas = [1e-1] * self.odim_real
-            print "%s.init sigmas = %s" % (self.__class__.__name__, sigmas)
+            print("%s.init sigmas = %s" % (self.__class__.__name__, sigmas))
             # output weight initialization
             self.model.init_wo_random(
                 np.zeros((1, self.odim_real)),
@@ -283,7 +283,7 @@ class smpSHL(smpModel):
         plotdata.append(np.hstack(self.losshist))
         plotdata.append(np.hstack(self.Whist))
 
-        print plotdata[-1].shape
+        print(plotdata[-1].shape)
 
         lentotal = len(self.Xhist)
         backwin = 10000
@@ -383,7 +383,7 @@ class smpSHL(smpModel):
 
                 # loss_t[0,j] = self.lr.loss
                 if self.cnt_step % 100 == 0:
-                    print "|wo| = %s" % np.linalg.norm(self.model.wo) # mdn_loss_val
+                    print("|wo| = %s" % np.linalg.norm(self.model.wo)) # mdn_loss_val
                 self.model.perf = self.lr.e # mdn_loss_val
             elif self.lrname in ['EH', 'eh']:
                 """exploratory hebbian rule"""
@@ -571,7 +571,7 @@ class learnerConf():
     def __init__(self, cfgfile="default.cfg"):
         """learnerConf init"""
         self.cfgfile = cfgfile
-        self.cfg = ConfigParser.ConfigParser()
+        self.cfg = configparser.ConfigParser()
 
     def set_cfgfile(self, cfgfile="default.cfg"):
         """set the config file path"""
@@ -579,7 +579,7 @@ class learnerConf():
         
     def read(self):
         """read config from file"""
-        print("opening %s" % self.cfgfile)
+        print(("opening %s" % self.cfgfile))
         self.cfg.read(self.cfgfile)
         # print("tau = %f" % (self.cfg.getfloat("learner", "tau")))
 
@@ -644,7 +644,7 @@ class learnerConf():
         self.tp_target_spec  = ast.literal_eval(self.cfg.get("experiment", "tp_target"))
         # print ("target types:", self.tp_target_spec)
         self.target_interval = self.cfg.getint("experiment", "target_interval")
-        print ("config params: tau = %f, g = %f, lag = %d, eta = %f, theta = %f, target = %f" % (self.tau, self.g, self.lag, self.eta_EH, self.res_theta, self.target))
+        print(("config params: tau = %f, g = %f, lag = %d, eta = %f, theta = %f, target = %f" % (self.tau, self.g, self.lag, self.eta_EH, self.res_theta, self.target)))
 
         self.len_episode          = self.cfg.getint("experiment", "len_episode")
         self.len_washout          = self.cfg.getint("experiment", "len_washout")
@@ -861,7 +861,7 @@ class DataLoader():
         try:
             f = open(filepath, "r")
         except IOError as e:
-            print ("IOError", e)
+            print(("IOError", e))
             sys.exit(1)
         
         self.data_names = f.readline().rstrip("\n").split(self.delim)
@@ -945,7 +945,7 @@ class learnerEH(learner):
         self.cfg.cfgget()
 
         # FIXME: need to put this here to avoid circular import
-        from reservoirs import Reservoir, Reservoir2
+        from .reservoirs import Reservoir, Reservoir2
         # print "g =", self.cfg.g
         self.res = Reservoir(N=self.cfg.N,
                              p = self.cfg.p,
@@ -995,7 +995,7 @@ class learnerEH(learner):
         # expand input coupling matrix from specification
         self.use_icm = True
         self.input_coupling_mtx = np.zeros_like(self.iosm.x)
-        for k,v in self.cfg.input_coupling_mtx_spec.items():
+        for k,v in list(self.cfg.input_coupling_mtx_spec.items()):
             self.input_coupling_mtx[k] = v
         # print ("input coupling matrix", self.input_coupling_mtx)
 
@@ -1034,13 +1034,13 @@ class learnerEH(learner):
 
         z = np.polyfit(p_x, p_y, pdeg)
 
-        print "learner polyfit", type(z), z
+        print("learner polyfit", type(z), z)
 
         self.bound_weight_poly = np.poly1d(z)
 
     def bound_weight(self, x):
         ret = np.clip(self.bound_weight_poly(x), 0., 1.)
-        print "bw", ret
+        print("bw", ret)
         return ret
     
     def predict_and_learn(self, ti):
@@ -1122,7 +1122,7 @@ class learnerEH(learner):
             # dw = eta * self.iosm.r_[bi] * (self.iosm.zn_[bi,i] - self.iosm.zn_lp_[bi,i]) * (self.rew.perf[i,0] - self.rew.perf_lp[i,0])
             # print "mse", self.iosm.mse.shape
             if self.iosm.mse[i,0] == 0.:
-                print "WARNING: mse = 0"
+                print("WARNING: mse = 0")
             # this should be abs(mse)
             dw = eta * self.iosm.r_[bi] * (self.iosm.zn_[bi,i] - self.iosm.zn_lp_[bi,i]) * self.rew.mdltr[i,0] # * self.iosm.mse[i,0]
             # print np.linalg.norm(dw)
@@ -1151,9 +1151,9 @@ class learnerEH(learner):
         else:
             eta = self.cfg.eta_EH
             
-        print "%s.learnEHE eta = %s" % (self.__class__.__name__, eta)
-        print "%s.learnEHE theta = %s, self.res.theta = %s" % (
-            self.__class__.__name__, theta, self.res.theta)
+        print("%s.learnEHE eta = %s" % (self.__class__.__name__, eta))
+        print("%s.learnEHE theta = %s, self.res.theta = %s" % (
+            self.__class__.__name__, theta, self.res.theta))
         
         #  rescale for eligibility window
         # eta *= self.ewin_inv
@@ -1190,8 +1190,8 @@ class learnerEH(learner):
                 # accumulate dw for each slot in the eligibility window
                 dw += ddw
 
-            print "et corr argmax:", self.et_corr.argmax()
-            print "et corr argmin:", self.et_corr.argmin()
+            print("et corr argmax:", self.et_corr.argmax())
+            print("et corr argmin:", self.et_corr.argmin())
             # print self.iosm.zn_[bi]
             # print self.iosm.r_[bi]
             # print "dw", dw.shape, dw
@@ -1317,7 +1317,7 @@ class learnerEH(learner):
                             zn_lp = self.iosm.zn_lp_, w = self.iosm.w_, e = self.iosm.e_,
                             t = self.iosm.t_,
                             mse = self.iosm.mse_)
-        print "logs saved to %s" % logfile
+        print("logs saved to %s" % logfile)
         return logfile
         
         
@@ -1365,17 +1365,17 @@ class dataPCA():
             M = sLA.orth(M)
             print (M)
             S = np.dot(np.diag([0, .25]), np.random.randn(self.ndims, self.l))
-            print ("S.shape", S.shape)
+            print(("S.shape", S.shape))
             print (S)
             A = np.dot(M, S)
-            print ("A.shape", A.shape)
+            print(("A.shape", A.shape))
             # print A
             return(A, S, M)
             
         elif type == "close":
             S = 2 * (np.random.rand(self.ndims, self.l) - 0.5)
             A = S
-            print (A.shape)
+            print((A.shape))
             # A(2:end,:) = A(2:end,:) + A(1:end-1, :)/2;
             A[1:-1,:] = A[1:-1,:] + A[0:-2, :]/2.
             return (A, S, np.zeros((1,1)))
@@ -1390,7 +1390,7 @@ class dataPCA():
             c1 = (2.7 * sine) + (2 * nu)
             c2 = (1.1 * sine) + (1.2 * nu)
             A = np.vstack((c1, c2))
-            print (A.shape)
+            print((A.shape))
             # A(2:end,:) = A(2:end,:) + A(1:end-1, :)/2;
             # A[1:-1,:] = A[1:-1,:] + A[0:-2, :]/2.
             return (A, np.zeros((2, self.l)), np.zeros((1,1)))
@@ -1398,8 +1398,8 @@ class dataPCA():
 if __name__ == "__main__":
     try:
         import argparse
-    except ImportError, e:
-        print "Importing argparse failed: %s" % e
+    except ImportError as e:
+        print("Importing argparse failed: %s" % e)
         sys.exit(1)
 
     parser = argparse.ArgumentParser()
@@ -1413,13 +1413,13 @@ if __name__ == "__main__":
             # unit testing
             import unittest
             from smptests import TestLearner
-        except ImportError, e:
-            print "Importing unittest failed: %s" % (e)
+        except ImportError as e:
+            print("Importing unittest failed: %s" % (e))
             sys.exit(1)
 
         # proceed with testing
         tl = TestLearner()
-        print tl
+        print(tl)
         unittest.main()
 
     else:

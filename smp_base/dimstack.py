@@ -10,6 +10,7 @@ values per bin.
 """
 
 import numpy as np
+from functools import reduce
 
 def dimensional_stacking(data, x_dims, y_dims):
     """dimensional_stacking
@@ -82,7 +83,7 @@ def digitize_pointcloud(data, argdims = [0], numbins = 3, valdims = 1, f_fval = 
 
     # enumerate matrix indices
     # np.indices((3,3,3,3,3,3)) # this should work as well
-    for idx_ in [np.array([k]) for k in itertools.product(*[range(1, numbins + 1)] * len(argdims))]:
+    for idx_ in [np.array([k]) for k in itertools.product(*[list(range(1, numbins + 1))] * len(argdims))]:
         # print "idx_", idx_
 
         # get indices where digitized space equal to current index element-wise
