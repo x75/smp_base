@@ -3,6 +3,7 @@ data/*
 *.jpg
 *~
 *.pyc
+*.bak
 doc/_build
 doc/html
 doc/latex
