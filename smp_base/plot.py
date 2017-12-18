@@ -20,7 +20,7 @@ Includes:
  - TODO: sift existing plotting funcs from smp* models, systems, ...
  - TODO: clean up and merge with sift results
 """
-from functools import partial
+from functools import partial, wraps
 from cycler import cycler
 import copy
 
@@ -474,7 +474,8 @@ def ax_set_title(ax, **kwargs):
 class plotfunc(object):
     def __call__(self, f):
         _loglevel = loglevel_debug + 0
-        
+
+        @wraps(f)
         def wrap(ax, data, *args, **kwargs):
             kwargs_ = {
                 # style params
