@@ -4,7 +4,7 @@
 
 Active inference models based on :mod:`smp.actinf` project code.
 
-This file contains the learners which can be used as adaptive models
+This file contains the models_learners which can be used as adaptive models
 of sensorimotor contexts designed for an active inference
 approach. Currently implemented models are
 - k nearest neighbours (knn)
@@ -92,7 +92,7 @@ try:
 except ImportError, e:
     print("Couldn't import IGMM lib", e)
 
-from smp_base.reservoirs import LearningRules
+from smp_base.models_reservoirs import LearningRules
 
 import logging
 from smp_base.common import get_module_logger
@@ -443,7 +443,7 @@ class smpSOESGP(smpOTLModel):
         self.bootstrap()
     
     def bootstrap(self):
-        from reservoirs import res_input_matrix_random_sparse
+        from models_reservoirs import res_input_matrix_random_sparse
         self.otlmodel.init(self.idim, self.odim, self.modelsize, self.input_weight,
                     self.output_feedback_weight, self.activation_function,
                     self.leak_rate, self.connectivity, self.spectral_radius,
@@ -2033,7 +2033,7 @@ def get_class_from_name(name = "KNN"):
     elif name == "HebbSOM":
         cls = smpHebbianSOM
     elif name == 'resRLS':
-        from smp_base.learners import smpSHL
+        from smp_base.models_learners import smpSHL
         cls = smpSHL
     else:
         cls = smpKNN

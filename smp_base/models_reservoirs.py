@@ -47,7 +47,7 @@ except ImportError:
     print "ImportError for rlspy"
     rlspy = None
 
-# from learners import GHA
+# from models_learners import GHA
 
 ############################################################
 # utility functions
@@ -164,6 +164,12 @@ def res_input_matrix_random(idim = 1, odim = 1, dist = 'normal'):
     elif dist == 'normal':
         wi = np.random.normal(0.0, 1.0, (odim, idim))
     return wi
+
+def res_input_matrix_from_conf(conf):
+    idim = conf['input_num']
+    odim = conf['N']
+    # tdnn input weights = [1, 0, 0, ..., 0]
+    # tdnn res   weights = []
 
 ################################################################################
 # Standalone class for learning rules

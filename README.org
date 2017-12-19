@@ -31,7 +31,7 @@ dynamics toolkit [fn:4]. Additional dependencies which might be made
 optional in the future are pandas, ros, pyunicorn, mdp, Oger, and igmm [fn:5].
 
 Additional dependencies which might be made optional in the future are
-pandas, ros, pyunicorn, and mdp/Oger.
+/pandas/, /ros/, /pyunicorn/, /mdp/, /Oger/, /pyemd/, /IncSfa/.
 
 : apt-get install python-pandas python-mdp
 

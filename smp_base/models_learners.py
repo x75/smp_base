@@ -24,7 +24,7 @@ from smp_base.eligibility import Eligibility
 from smp_base.models import smpModelInit, smpModelStep, smpModel
 from smp_base.models import make_figure, make_gridspec
 from smp_base.models import iir_fo
-from smp_base.reservoirs import Reservoir, LearningRules
+from smp_base.models_reservoirs import Reservoir, LearningRules
 
 try:
     from smp_base.measures_infth import init_jpype, dec_compute_infth_soft
@@ -945,7 +945,7 @@ class learnerEH(learner):
         self.cfg.cfgget()
 
         # FIXME: need to put this here to avoid circular import
-        from reservoirs import Reservoir, Reservoir2
+        from models_reservoirs import Reservoir, Reservoir2
         # print "g =", self.cfg.g
         self.res = Reservoir(N=self.cfg.N,
                              p = self.cfg.p,

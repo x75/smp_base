@@ -38,7 +38,7 @@ dynamics toolkit  [4]_ . Additional dependencies which might be made
 optional in the future are pandas, ros, pyunicorn, mdp, Oger, and igmm  [5]_ .
 
 Additional dependencies which might be made optional in the future are
-pandas, ros, pyunicorn, and mdp/Oger.
+*pandas*, *ros*, *pyunicorn*, *mdp*, *Oger*, *pyemd*, *IncSfa*.
 
 ::
 
