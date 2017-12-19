@@ -766,7 +766,7 @@ class Reservoir(object):
         self.input_coupling = input_coupling
         self.wi_amp = input_scale
         self.init_wi()
-        print "reservoirs.init wi = %s" % (self.wi.shape, )
+        # print "reservoirs.init wi = %s" % (self.wi.shape, )
 
         # readout feedback term
         self.output_num = output_num
