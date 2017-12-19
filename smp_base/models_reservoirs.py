@@ -47,7 +47,9 @@ except ImportError:
     print "ImportError for rlspy"
     rlspy = None
 
-# from models_learners import GHA
+import logging
+from smp_base.common import get_module_logger
+logger = get_module_logger(modulename = 'models_reservoirs', loglevel = logging.DEBUG)
 
 ############################################################
 # utility functions
@@ -94,15 +96,28 @@ def normalize_spectral_radius(M, g):
 
     Normalize the spectral radius of a given matrix M to scale to g
     """
-    
+    # logger.debug('normalize_spectral_radius: M = %s, g = %s', M, g)
+    # eig_success = False
+    # eig_cnt = 0
     # compute eigenvalues
-    [w,v] = LA.eig(M)
+    # while not eig_success and eig_cnt < 100:
+    try:
+        [w,v] = LA.eig(M)
+        eig_success = True
+    except LA.linalg.LinAlgError as e:
+        # logger.error('normalize_spectral_radius LA.eig(M) failed for N = %d with e = %s', M.shape[0], e)
+        # eig_cnt += 1
+        pass
     # get maximum absolute eigenvalue
     lae = np.max(np.abs(w))
+    # if lae < 1e-3:
+    #     lae = 1
+    assert lae > 1e-3, "Largest eigenvalue is close to zero with lae = %f" % (lae, )
     # normalize matrix by max ev
     M /= lae
     # scale normalized matrix to desired spectral radius
     M *= g
+    # logger.debug('normalize_spectral_radius: M = %s, g = %s, lae = %s', M, g, lae)
     # check for scaling
     [w,v] = LA.eig(M)
     lae = np.max(np.abs(w))
@@ -166,11 +181,49 @@ def res_input_matrix_random(idim = 1, odim = 1, dist = 'normal'):
     return wi
 
 def res_input_matrix_from_conf(conf):
+    restypes = ['tdnn', 'lpfb']
+    # project this many inputs
     idim = conf['input_num']
+    # N is delay length, kept separate for each input
+    # conf['N'] *= idim
+    # onto this many hidden units
     odim = conf['N']
-    # tdnn input weights = [1, 0, 0, ..., 0]
+    if 'restype' not in conf or conf['restype'] not in restypes:
+        return res_input_matrix_random_sparse(idim, odim)
+    else:
+        # tdnn: time delay neural network
+        # tdnn: input weights = [[1, 0, 0, 0], [0, 0, 1, 0]] for N = delay length = 2
+        if conf['restype'] == 'tdnn':
+            assert odim % idim == 0, 'tdnn config requires idim divides odim'
+            wi_ = np.zeros((odim, idim))
+            for i in range(idim):
+                wi_[i*conf['N']/idim,i] = 1.0
+            return wi_
+        elif conf['restype'] == 'lpfb':
+            assert odim % idim == 0, 'lpfb config requires idim divides odim'
+            wi_ = np.zeros((odim, idim))
+            for i in range(idim):
+                #     r_ = conf['N']/idim
+                #     wi_[i*r_:(i+1)*r_,i] = 1.0
+                # wi_[...,i] = np.logspace(1e-3, 1e-1, conf['N']) - 1
+                wi_[...,i] = np.exp(np.linspace(-6, -0.69, conf['N']))
+            return wi_
+        
+def create_matrix_sparse_from_conf(conf):
+    restypes = ['tdnn', 'lpfb']
     # tdnn res   weights = []
-
+    if 'restype' not in conf or conf['restype'] not in restypes:
+        return None
+    else:
+        if conf['restype'] == 'tdnn':
+            w_ = spa.dia_matrix(np.diag(np.ones((conf['N']-1,)), k = -1))
+            return w_
+        elif conf['restype'] == 'lpfb':
+            # w_ = spa.dia_matrix(np.diag(1 - (np.logspace(1e-3, 1e-1, conf['N']) - 1), k = 0))
+            w_ = spa.dia_matrix(np.diag(1 - np.exp(np.linspace(-6, -0.69, conf['N'])), k = 0))
+            return w_
+    return None
+            
 ################################################################################
 # Standalone class for learning rules
 # - Recursive Least Squares (RLS, depends on rlspy.py): the vanilla online supervised

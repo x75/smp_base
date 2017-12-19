@@ -16,7 +16,7 @@ conditional variants are implemented in the separate
 import numpy as np
 
 import logging
-from smp_base.common import get_module_logger
+from smp_base.common import get_module_logger, compose
 
 try:
     from pyemd import emd as pyemd
@@ -182,6 +182,7 @@ class meas(object):
 
 measures = {
     'sub': {'func': np.subtract},
+    'abs': {'func': compose(np.abs, np.subtract)},
     'mse': {'func': meas_mse},
     'hist': {'func': meas_hist}, # compute histogram
     'kld':  {'func': div_kl},

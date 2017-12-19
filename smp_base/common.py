@@ -64,3 +64,20 @@ def get_module_logger(modulename = 'experiment', loglevel = logging.INFO):
     logger.propagate = False
     return logger
     
+# function composition
+# https://mathieularose.com/function-composition-in-python/
+def compose2(f, g):
+    """Compose two functions 'f' and 'g'
+
+    Returns:
+     - f(g(x): f return type (object)
+    """
+    return lambda x: f(g(x))
+
+def compose(*functions):
+    return reduce(lambda f, g: lambda *x: f(g(*x)), functions, lambda *x: x)
+
+# def compose(*functions):
+#     # def compose2(f, g):
+#     #     return lambda x: f(g(x))
+#     return reduce(compose2, functions, lambda x: x)
