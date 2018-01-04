@@ -1387,8 +1387,8 @@ def uniform_divergence(*args, **kwargs):
     """
     # logger.log(loglevel_debug, "f", f)
     # logger.log(loglevel_debug, "args", len(args),)
-    # for arg in args:
-    #     logger.log(loglevel_debug, "arg %s %s" % (type(arg), len(arg)))
+    for arg in args:
+        logger.log(loglevel_debug, "arg %s %s" % (type(arg), len(arg)))
     # logger.log(loglevel_debug, "kwargs", kwargs.keys())
     f = kwargs['f']
     del kwargs['f']
