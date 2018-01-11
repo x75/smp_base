@@ -22,6 +22,9 @@ def nonlin_2(x, a = 1.0, b = -1.0):
 def nonlin_3(x, a = pi, b = 0.0):
     return cos(linear(x, a, b = b))
 
+def nonlin_cosine(x, a = pi, b = 0.0):
+    return nonlin_3(x, a, b)
+
 def nonlin_poly(self, u):
     """nonlin_poly
 
