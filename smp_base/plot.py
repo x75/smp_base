@@ -993,7 +993,7 @@ def plot_scattermatrix(df, **kwargs):
     # fig.show()
     # plt.show()
 
-
+@plotfunc()
 def plot_img(ax, data, **kwargs):
     """plot an image using imshow, pcolor, pcolormesh
     """
