@@ -1002,8 +1002,10 @@ def plot_img(ax, data, **kwargs):
     vmax = kwargs['vmax']
     cmap = kwargs['cmap']
     title = kwargs['title']
+    
     # FIXME: convert plottype into func: imshow, pcolor, pcolormesh, pcolorfast
     mpl = ax.pcolorfast(data, vmin = vmin, vmax = vmax, cmap = cmap)
+    
     # normalize to [0, 1]
     # mpl = ax.imshow(inv, interpolation = "none")
     # mpl = ax.pcolorfast(data, vmin = vmin, vmax = vmax, cmap = cmap)
@@ -1023,24 +1025,28 @@ def plot_img(ax, data, **kwargs):
 
     if kwargs.has_key('colorbar'):
         if kwargs['colorbar']:
-            plt.colorbar(mappable = mpl, ax = ax, orientation = "horizontal")
+            if 'colorbar_orientation' in kwargs:
+                orientation = kwargs['colorbar_orientation']
+            else:
+                orientation = 'horizontal'
+            plt.colorbar(mappable = mpl, ax = ax, orientation = orientation)
 
     if kwargs.has_key('title'):
         ax.set_title(title) # , fontsize=8)
     else:
         ax.set_title("%s" % ('matrix')) # , fontsize=8)
         
-    # if kwargs.has_key('xlabel'):
-    ax.set_xlabel("")
+    # # if kwargs.has_key('xlabel'):
+    # ax.set_xlabel("")
         
-    # if kwargs.has_key('ylabel'):
-    ax.set_ylabel("")
+    # # if kwargs.has_key('ylabel'):
+    # ax.set_ylabel("")
         
-    # if kwargs.has_key('xticks'):
-    ax.set_xticks([])
+    # # if kwargs.has_key('xticks'):
+    # ax.set_xticks([])
         
-    # if kwargs.has_key('yticks'):
-    ax.set_yticks([])
+    # # if kwargs.has_key('yticks'):
+    # ax.set_yticks([])
 
 def interactive():
     """basic example for interactive plotting and GUI interaction
@@ -1363,8 +1369,6 @@ def custom_colorbar():
 
         logger.log(loglevel_debug, "w_im = %s, h_im = %s" % (w_im, h_im))
         logger.log(loglevel_debug, "w_cb = %s, h_cb = %s" % (w_cb, h_cb))
-
-            
 
     fig.show()
     
