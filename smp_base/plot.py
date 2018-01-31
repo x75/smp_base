@@ -522,10 +522,10 @@ class plotfunc(object):
             logger.log(_loglevel, 'plotfunc kwargs_ = %s' % (kwargs_.keys(), ))
             
             # axis labels
-            if kwargs_.has_key('xlabel') and kwargs_['xlabel'] is not None:
+            if kwargs_.has_key('xlabel') and kwargs_['xlabel'] and kwargs_['xlabel'] is not None:
                 ax.set_xlabel('%s' % kwargs_['xlabel'])
 
-            if kwargs_.has_key('ylabel') and kwargs_['ylabel'] is not None:
+            if kwargs_.has_key('ylabel') and kwargs_['ylabel'] and kwargs_['ylabel'] is not None:
                 ax.set_ylabel('%s' % kwargs_['ylabel'])
     
             # axis scale: linear / log
