@@ -1,26 +1,31 @@
-"""smp_base.measures_infth
+"""measures_infth
 
-..moduleauthor:: Oswald Berthold, 2017
+.. moduleauthor:: Oswald Berthold, 2017
 
-Information theoretic measures measure things related to the
-multivariate entropy of some data.
+Information theoretic measures: entropy, mutual information,
+conditional mutual information, and derived aggregate measures based
+on the great java information dynamics toolkit by Joe Lizier [1].
 
-TODO
-sift, sort and clean-up input from
-- smp/smp/infth.py
-- smp/playground/infth_feature_relevance.py
-- smp/sequence/\*.py
-- smp_sphero (was smp_infth)
-- evoplast/ep3.py
-- smp/infth
-- smp/infth/infth_homeokinesis_analysis_cont.py
-- smp/infth/infth_playground
-- smp/infth/infth_explore.py
-- smp/infth/infth_pointwise_plot.py
-- smp/infth/infth_measures.py: unfinished
-- smp/infth/infth_playground.py
-- smp/infth/infth_EH-2D.py
-- smp/infth/infth_EH-2D_clean.py
+Current implementation are thin wrappers around jidt calls as
+functions without a class.
+
+TODO: sift, sort and clean-up input from
+ - smp/smp/infth.py
+ - smp/playground/infth_feature_relevance.py
+ - smp/sequence/\*.py
+ - smp_sphero (was smp_infth)
+ - evoplast/ep3.py
+ - smp/infth
+ - smp/infth/infth_homeokinesis_analysis_cont.py
+ - smp/infth/infth_playground
+ - smp/infth/infth_explore.py
+ - smp/infth/infth_pointwise_plot.py
+ - smp/infth/infth_measures.py: unfinished
+ - smp/infth/infth_playground.py
+ - smp/infth/infth_EH-2D.py
+ - smp/infth/infth_EH-2D_clean.py
+
+[1] https://github.com/jlizier/jidt
 """
 import sys, os
 import numpy as np
@@ -70,27 +75,28 @@ def init_jpype(jarloc=None, jvmpath=None):
 # call init_jpype with global effects
 init_jpype()
 
-# infth classes
-class measH(meas):
-    """!@brief Measure entropy"""
-    def __init__(self):
-        meas.__init__(self)
+# obsolete 20180201
+# # infth classes
+# class measH(meas):
+#     """!@brief Measure entropy"""
+#     def __init__(self):
+#         meas.__init__(self)
 
-    def step(self, x):
-        """Assume observations in rows, variables in columns"""
-        # print "%s step: x = %s" % (self.__class__.__name__, x.shape)
-        # return compute_entropy(src = x)
-        return infth_mi_multivariate({'X': x, 'Y': x})
+#     def step(self, x):
+#         """Assume observations in rows, variables in columns"""
+#         # print "%s step: x = %s" % (self.__class__.__name__, x.shape)
+#         # return compute_entropy(src = x)
+#         return infth_mi_multivariate({'X': x, 'Y': x})
 
 
-class measMI(meas):
-    def __init__(self):
-        meas.__init__(self)
+# class measMI(meas):
+#     def __init__(self):
+#         meas.__init__(self)
 
-    def step(self, x, y):
-        """Assume observations in rows, variables in columns"""
-        # print "%s step: x = %s, y = %s" % (self.__class__.__name__, x.shape, y.shape)
-        return compute_mutual_information(src = x, dst = y)
+#     def step(self, x, y):
+#         """Assume observations in rows, variables in columns"""
+#         # print "%s step: x = %s, y = %s" % (self.__class__.__name__, x.shape, y.shape)
+#         return compute_mutual_information(src = x, dst = y)
 
 class dec_compute_infth_soft(object):
     """wrap infth calls and fail softly"""
@@ -106,7 +112,8 @@ class dec_compute_infth_soft(object):
         return wrap
 
 class dec_compute_infth(object):
-    """wrap infth calls and fail hard"""
+    """wrap infth calls and fail hard
+    """
     def __call__(self, f):
         def wrap(*args, **kwargs):
             assert HAVE_JPYPE
@@ -120,12 +127,24 @@ def prepare_data_and_attributes(data, check_shape = False): # False
     # prepare data and attributes
     src = np.atleast_2d(data["X"])
     dst = np.atleast_2d(data["Y"])
+    # condition
+    if 'C' in data:
+        cond = np.atleast_2d(data["C"])
+    else:
+        cond = np.zeros((1,1))
+            
     # check orientation
     if check_shape:
         if src.shape[0] < src.shape[1]:
             src = src.T
         if dst.shape[0] < dst.shape[1]:
             dst = dst.T
+        if cond.shape[0] < cond.shape[1]:
+            cond = cond.T
+
+    if 'C' in data:
+        return src, dst, cond
+    
     return src, dst
 
 ################################################################################
@@ -151,7 +170,7 @@ def compute_entropy_univariate(src):
 def compute_entropy_multivariate(src, delay = 0):
     """compute_entropy_multivariate
 
-    compute the joint entropy as self-information
+    Compute the joint entropy as the self-information I(src;src|delay=delay).
     """
     # concatenate all arrays in tuple
     if type(src) is tuple:
@@ -171,7 +190,7 @@ def compute_entropy_multivariate(src, delay = 0):
     # ent.setObservations(src, src)
     # h = ent.computeAverageLocalOfObservations()
 
-    return compute_mi_multivariate(data = {'X': src, 'Y': src}, delay = delay)
+    return infth_mi_multivariate(data = {'X': src, 'Y': src}, delay = delay)
 
 # def compute_mi_multivariate(*args, **kwargs):
 #     return infth_mi_multivariate(data = kwargs['data'], estimator = kwargs['estimator'], normalize = kwargs['normalize'])
@@ -181,8 +200,12 @@ def compute_mi_multivariate(data = {}, estimator = "kraskov1", normalize = True,
 
 @dec_compute_infth()
 def infth_mi_multivariate(data = {}, estimator = "kraskov1", normalize = True, delay = 0):
-    """compute total scalar MI multivariate
-    (from playground/infth_feature_relevance)"""
+    """infth_mi_multivariate
+
+    Compute the total (scalar) multivariate mutual information
+    
+    see also playground/infth_feature_relevance
+    """
     # print "infth_mi_multivariate estimator = %s" % estimator
     # init class and instance
     if estimator == 'kraskov1':
@@ -232,17 +255,74 @@ def infth_mi_multivariate(data = {}, estimator = "kraskov1", normalize = True, d
     return mimv_avg
 
 @dec_compute_infth()
-def compute_transfer_entropy_multivariate(src, dst, delay = 0):
+def compute_cond_mi_multivariate(data = {}, estimator = "kraskov1", normalize = True, delay = 0):
+    """infth_mi_multivariate
+
+    Compute the total (scalar) multivariate conditional mutual information
+    """
+
+    # init class and instance
+    if estimator == 'kraskov1':
+        calcClass = JPackage("infodynamics.measures.continuous.kraskov").ConditionalMutualInfoCalculatorMultiVariateKraskov1
+    elif estimator == 'kraskov2':
+        calcClass = JPackage("infodynamics.measures.continuous.kraskov").ConditionalMutualInfoCalculatorMultiVariateKraskov2
+    elif estimator == 'kernel':
+        calcClass = JPackage("infodynamics.measures.continuous.kernel").ConditionalMutualInfoCalculatorMultiVariateKernel
+
+    # instantiate
+    calc = calcClass()
+
+    # set properties
+    calc.setProperty("NORMALISE", str(normalize).lower())
+    # calc.setProperty("PROP_TIME_DIFF", str(delay))
+
+    # print "measures_infth: infth_mi_multivariate: calc.timeDiff = %d" % (calc.timeDiff)
+
+    calc.timeDiff = delay
+
+    # print "measures_infth: infth_mi_multivariate: calc.timeDiff = %d" % (calc.timeDiff)
+
+    # prepare data and attributes
+    assert 'C' in data, 'No condition passed via data, %s' % (data.keys())
+    src, dst, cond = prepare_data_and_attributes(data)
+    # src_ = src.copy()
+    # src = dst.copy()
+
+    # pl.hist(src[0], bins=255)
+    # pl.show()
+
+
+    # print "infth_mi_multivariate src/dst shapes", src.shape, dst.shape
+    # print "infth_mi_multivariate src/dst dtypes", src.dtype, dst.dtype
+
+    dim_src, dim_dst, dim_cond = src.shape[1], dst.shape[1], cond.shape[1]
+
+    # compute stuff
+    # calc.initialise()
+    calc.initialise(dim_src, dim_dst, dim_cond)
+    calc.setObservations(src, dst, cond)
+    # the average global MI between all source channels and all destination channels
+    try:
+        mimv_avg = calc.computeAverageLocalOfObservations()
+    except Exception, e:
+        mimv_avg = np.random.uniform(0, 1e-5, (1,1)) # np.zeros((1,1))
+        logger.error("Error occured in mimv calc, %s. Setting default mimv_avg = %s" % (e, mimv_avg))
+    return mimv_avg
+
+@dec_compute_infth()
+def compute_transfer_entropy_multivariate(
+        src, dst, delay = 0,
+        k = 1, k_tau = 1, l = 1, l_tau = 1):
     """measures_infth: compute the multivariate transfer entropy from src to dst"""
     temvCalcClass = JPackage("infodynamics.measures.continuous.kraskov").TransferEntropyCalculatorMultiVariateKraskov
     temvCalc = temvCalcClass()
 
     srcdim = src.shape[1]
     dstdim = dst.shape[1]
-    k = 1
-    k_tau = 1
-    l = 1
-    l_tau = 1
+    # k = 10
+    # k_tau = 1
+    # l = 10
+    # l_tau = 1
     # delay = 1 # param u in TE equations
 
     temvCalc.initialise(srcdim, dstdim, k, k_tau, l, l_tau, delay)
