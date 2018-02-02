@@ -1,9 +1,11 @@
+import numpy as np
+
 import sklearn
 from sklearn import linear_model
 from sklearn import kernel_ridge
 from sklearn.model_selection import train_test_split
 
-def meas_linear_regression_probe(self, data):
+def meas_linear_regression_probe(data, alpha = 0.0):
     """meas_linear_regression_probe
 
     Linear regression probe: evaluate random vector with respect to
@@ -12,7 +14,7 @@ def meas_linear_regression_probe(self, data):
     assert 'X' in data and 'Y' in data, "Data requires 'X' and 'Y' keys with input and labels resp."
 
     # linear model
-    lm = linear_model.Ridge(alpha = 0.0)
+    lm = linear_model.Ridge(alpha = alpha)
 
     # data
     X_train, X_test, y_train, y_test = train_test_split(data["X"], data["Y"], random_state=1)
@@ -35,6 +37,11 @@ def meas_linear_regression_probe(self, data):
     y_ = lm.predict(X_test)
     # compute measure
     mse = np.mean(np.square(y_test - y_))
+    w_norm = np.linalg.norm(lm.coef_)
+    intercept_norm = np.linalg.norm(lm.intercept_)
+    n_iter = lm.n_iter_
+
+    print "w_norm = %s, intercept_norm = %s, n_iter_ = %s" % (w_norm, intercept_norm, n_iter)
     
     # print "regression training MSE = %f" % (mse)
 
@@ -71,6 +78,8 @@ def meas_linear_regression_probe(self, data):
     # # pl.plot(y_krr_sorted)
     # # # pl.plot(idx_flat, lm2.coef_ * idx_flat.T + lm2.intercept_)
     # # pl.show()
-    
-    return mse
+
+    # shape match prediction
+    y_ = lm.predict(data['X'])
+    return y_, mse
         
