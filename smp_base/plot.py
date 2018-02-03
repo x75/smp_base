@@ -767,24 +767,13 @@ def ax_set_ticks(ax, **kwargs):
 @plotfunc()
 def histogram(ax, data, **kwargs):
     """histogram plot"""
-    assert len(data.shape) > 0
+    assert len(data.shape) > 0, 'Data has bad shape = %s' % (data.shape, )
     
-    _loglevel = loglevel_debug + 0
+    _loglevel = loglevel_debug + 1
     
-    # logger.log(_loglevel, "histo kwargs", kwargs)
-    kwargs_ = {
-        # # style params
-        # # axis title
-        # 'title': 'histogram of %s-shaped data' % (data.shape,),
-        # 'orientation': 'horizontal',
-        # 'alpha': 0.5,
-        # 'xscale': 'linear',
-        # 'yscale': 'linear',
-        # 'xlim': None,
-        # 'xinvert': None,
-        # 'ylim': None,
-        # 'yinvert': None,
-    }
+    # logger.log(_loglevel, "    plot.histogram histo kwargs", kwargs)
+    # init local kwargs
+    kwargs_ = {}
     kwargs_.update(**kwargs)
     # kwargs = kwargs_plot_clean_histogram(**kwargs_)
     kwargs = plot_clean_kwargs('histogram', **kwargs_)
@@ -792,7 +781,7 @@ def histogram(ax, data, **kwargs):
     # if not kwargs.has_key('histtype'):
     #     kwargs_['histtype'] = kwargs['histtype']
 
-    logger.log(_loglevel, "    plot.histogram kwargs.keys = %s" % (kwargs.keys()))
+    logger.log(_loglevel, "    plot.histogram kwargs .keys = %s" % (kwargs.keys()))
     logger.log(_loglevel, "    plot.histogram kwargs_.keys = %s" % (kwargs_.keys()))
 
     # explicit limits and bins configuration
@@ -804,32 +793,40 @@ def histogram(ax, data, **kwargs):
         logger.log(_loglevel, "    plot.histogram setting bins = %s for orientation = %s from xlim = %s" % (bins, kwargs_['orientation'], kwargs_['xlim']))
     else:
         bins = 'auto'
-        logger.log(_loglevel, "    plot.histogram setting bins = %s for orientation = %s from xlim = %s" % (bins, kwargs_['orientation'], kwargs_['xlim']))
+        logger.log(
+            _loglevel,
+            "    plot.histogram setting bins = %s for orientation = %s from xlim = %s",
+            bins, kwargs_['orientation'], kwargs_['xlim'])
         
     # FIXME: decouple compute histogram; incoming data is bar data
     # already (def bar(...))
-    # (n, bins) = np.histogram(data, bins = bins, **kwargs)
-    (n, bins) = meas_hist(data, bins = bins, **kwargs)
+    logger.log(_loglevel, "    plot.histogram data = %s", data.shape)
+    # if data.shape[-1] > 1:
+    for i in range(data.shape[-1]):
+        # (n, bins) = np.histogram(data, bins = bins, **kwargs)
+        # (n, bins) = meas_hist(data, bins = bins, **kwargs)
+        (n, bins_i) = meas_hist(data[:,[i]], bins = bins, **kwargs)
 
-    # kwargs = kwargs_plot_clean_bar(**kwargs_)
-    kwargs = plot_clean_kwargs('bar', **kwargs_)
-    logger.log(_loglevel, "kwargs = %s", kwargs.keys())
+        binwidth = np.mean(np.abs(np.diff(bins_i)))
+        bincenters = bins_i[:-1] + binwidth/2.0
     
-    binwidth = np.mean(np.abs(np.diff(bins)))
-    bincenters = bins[:-1] + binwidth/2.0
-    logger.log(_loglevel, "n = %s/%s", n.shape, n)
-    logger.log(_loglevel, "binwidth = %s", binwidth)
-    logger.log(_loglevel, "bincenters = %s/%s", bincenters.shape, bincenters)
+        logger.log(_loglevel, "    plot.histogram[%d] n = %s/%s", i, n.shape, n)
+        logger.log(_loglevel, "    plot.histogram[%d] binwidth = %s", i, binwidth)
+        logger.log(_loglevel, "    plot.histogram[%d] bincenters = %s/%s", i, bincenters.shape, bincenters)
     
-    # orientation
-    if kwargs_['orientation'] == 'vertical':
-        axbar = ax.bar
-        kwargs['width'] = binwidth
-    elif kwargs_['orientation'] == 'horizontal':
-        axbar = ax.barh
-        kwargs['height'] = binwidth
+        # kwargs = kwargs_plot_clean_bar(**kwargs_)
+        kwargs_b = plot_clean_kwargs('bar', **kwargs_)
+        logger.log(_loglevel, "    plot.histogram[%d] kwargs = %s", i, kwargs_b.keys())
+    
+        # orientation
+        if kwargs_['orientation'] == 'vertical':
+            axbar = ax.bar
+            kwargs_b['width'] = binwidth
+        elif kwargs_['orientation'] == 'horizontal':
+            axbar = ax.barh
+            kwargs_b['height'] = binwidth
         
-    patches = axbar(bincenters, n, **kwargs)
+        patches = axbar(bincenters, n, **kwargs_b)
 
 @plotfunc()
 def bar(ax, data, **kwargs):

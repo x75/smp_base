@@ -1,3 +1,10 @@
+"""smp_base.measures_probes
+
+.. moduleauthor:: Oswald Berthold, 2018
+
+Probe style measures
+"""
+
 import numpy as np
 
 import sklearn
