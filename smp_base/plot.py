@@ -769,7 +769,7 @@ def histogram(ax, data, **kwargs):
     """histogram plot"""
     assert len(data.shape) > 0, 'Data has bad shape = %s' % (data.shape, )
     
-    _loglevel = loglevel_debug + 1
+    _loglevel = loglevel_debug + 0
     
     # logger.log(_loglevel, "    plot.histogram histo kwargs", kwargs)
     # init local kwargs

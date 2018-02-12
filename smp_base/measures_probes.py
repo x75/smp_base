@@ -45,10 +45,10 @@ def meas_linear_regression_probe(data, alpha = 0.0):
     # compute measure
     mse = np.mean(np.square(y_test - y_))
     w_norm = np.linalg.norm(lm.coef_)
-    intercept_norm = np.linalg.norm(lm.intercept_)
+    i_norm = np.linalg.norm(lm.intercept_)
     n_iter = lm.n_iter_
 
-    print "w_norm = %s, intercept_norm = %s, n_iter_ = %s" % (w_norm, intercept_norm, n_iter)
+    # print "w_norm = %s, intercept_norm = %s, n_iter_ = %s" % (w_norm, intercept_norm, n_iter)
     
     # print "regression training MSE = %f" % (mse)
 
@@ -88,5 +88,5 @@ def meas_linear_regression_probe(data, alpha = 0.0):
 
     # shape match prediction
     y_ = lm.predict(data['X'])
-    return y_, mse
+    return y_, mse, w_norm, i_norm
         
