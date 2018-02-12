@@ -465,9 +465,12 @@ def ax_set_title(ax, **kwargs):
         #     # bbox = dict(facecolor='red', alpha=0.5),
         # )
         ax.title.set_position((0.5, 0.9))
-    elif kwargs['title_pos'] == 'bottom':
+    elif kwargs['title_pos'] in ['bottom', 'bottom_out']:
         # ax.title.set_text(kwargs['title'], alpha = 0.65)
         ax.title.set_position((0.5, -0.1))
+    elif kwargs['title_pos'] in ['bottom_in']:
+        # ax.title.set_text(kwargs['title'], alpha = 0.65)
+        ax.title.set_position((0.5, 0.1))
     else:
         ax.title.set_position((0.5, 1.05))
         # ax.title.set_text(kwargs['title'], alpha = 0.65)
