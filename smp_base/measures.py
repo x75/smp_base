@@ -48,7 +48,14 @@ def meas_mse(x = None, x_ = None, *args, **kwargs):
     Returns:
      - mse(ndarray): $\text{mse} := 1/N \sum_i^N (x_1_i - x_2_i)^2$
     """
-    mse = np.mean(np.power(x - x_, 2), axis = 0, keepdims = True)
+    axis = 0
+    keepdims = True
+    if 'axis' in kwargs:
+        axis = kwargs['axis']
+    if 'keepdims' in kwargs:
+        keepdims = kwargs['keepdims']
+        
+    mse = np.mean(np.power(x - x_, 2), axis=axis, keepdims=keepdims)
     return mse
 
 def meas_rmse(x = None, x_ = None, *args, **kwargs):

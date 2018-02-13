@@ -62,7 +62,7 @@ def meas_linear_regression_probe(data, alpha = 0.0, *args, **kwargs):
     # compute measure
     if 'meas' in kwargs and kwargs['meas'] in measures_available:
         measname = kwargs['meas']
-        meas = measures_available[kwargs['meas']]['func'](y_test, y_)
+        meas = measures_available[kwargs['meas']]['func'](y_test, y_, axis = None, keepdims = False)
     else:
         measname = 'mse'
         meas = np.mean(np.square(y_test - y_))
@@ -71,8 +71,9 @@ def meas_linear_regression_probe(data, alpha = 0.0, *args, **kwargs):
     n_iter = lm.n_iter_
 
     # print "w_norm = %s, intercept_norm = %s, n_iter_ = %s" % (w_norm, intercept_norm, n_iter)
-    
-    logger.debug("regression training %s = %f", measname.upper(), meas)
+
+    # print "meas", measname, meas
+    logger.debug("regression training %s = %s", measname.upper(), meas)
 
     # # pl.plot(data["Y"])
     # # pl.plot(Y_)
