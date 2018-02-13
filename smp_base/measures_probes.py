@@ -2,7 +2,16 @@
 
 .. moduleauthor:: Oswald Berthold, 2018
 
-Probe style measures
+Use measures inside a probe [1] to quantify location or time dependent
+model performance. Here we initially use regression rather than
+classification as the measure but the principle is the same:
+- create an adequate but simple model (e.g. ridge regression)
+- reuse that same model to compare variations on an equal footing
+- the variations are exclusively input variations, allowing to compare
+  different inputs (e.g. data at different stages of processing) based
+  on prediction MSE or other measure.
+
+[1] Alain, Guillaume, and Yoshua Bengio. "Understanding Intermediate Layers Using Linear Classifier Probes." ArXiv:1610.01644 [Cs, Stat], October 5, 2016. http://arxiv.org/abs/1610.01644.
 """
 
 import numpy as np
@@ -12,7 +21,14 @@ from sklearn import linear_model
 from sklearn import kernel_ridge
 from sklearn.model_selection import train_test_split
 
-def meas_linear_regression_probe(data, alpha = 0.0):
+import logging
+from smp_base.common import get_module_logger, compose
+from smp_base.measures import measures as measures_available
+
+loglevel_debug = logging.DEBUG - 0
+logger = get_module_logger(modulename = 'measures_probes', loglevel = logging.DEBUG)
+
+def meas_linear_regression_probe(data, alpha = 0.0, *args, **kwargs):
     """meas_linear_regression_probe
 
     Linear regression probe: evaluate random vector with respect to
@@ -42,15 +58,21 @@ def meas_linear_regression_probe(data, alpha = 0.0):
     lm.fit(X_train, y_train)
     # test the model
     y_ = lm.predict(X_test)
+    
     # compute measure
-    mse = np.mean(np.square(y_test - y_))
+    if 'meas' in kwargs and kwargs['meas'] in measures_available:
+        measname = kwargs['meas']
+        meas = measures_available[kwargs['meas']]['func'](y_test, y_)
+    else:
+        measname = 'mse'
+        meas = np.mean(np.square(y_test - y_))
     w_norm = np.linalg.norm(lm.coef_)
     i_norm = np.linalg.norm(lm.intercept_)
     n_iter = lm.n_iter_
 
     # print "w_norm = %s, intercept_norm = %s, n_iter_ = %s" % (w_norm, intercept_norm, n_iter)
     
-    # print "regression training MSE = %f" % (mse)
+    logger.debug("regression training %s = %f", measname.upper(), meas)
 
     # # pl.plot(data["Y"])
     # # pl.plot(Y_)
@@ -86,7 +108,6 @@ def meas_linear_regression_probe(data, alpha = 0.0):
     # # # pl.plot(idx_flat, lm2.coef_ * idx_flat.T + lm2.intercept_)
     # # pl.show()
 
-    # shape match prediction
+    # shape-match prediction
     y_ = lm.predict(data['X'])
-    return y_, mse, w_norm, i_norm
-        
+    return y_, meas, w_norm, i_norm

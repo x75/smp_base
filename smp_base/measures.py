@@ -48,7 +48,16 @@ def meas_mse(x = None, x_ = None, *args, **kwargs):
     Returns:
      - mse(ndarray): $\text{mse} := 1/N \sum_i^N (x_1_i - x_2_i)^2$
     """
-    return np.mean(np.power(x - x_, 2), axis = 0, keepdims = True)
+    mse = np.mean(np.power(x - x_, 2), axis = 0, keepdims = True)
+    return mse
+
+def meas_rmse(x = None, x_ = None, *args, **kwargs):
+    """smp_base.measures.meas_rmse
+
+    Compute root mean squared error $\text{rmse} = \sqrt{1/N \sum(x - x_)^2$}
+    """
+    mse = meas_mse(x, x_, *args, **kwargs)
+    return np.sqrt(mse)
 
 def div_kl(h1, h2, *args, **kwargs):
     """naive kullback leibler divergence for histogram, element-wise
@@ -184,6 +193,7 @@ measures = {
     'sub': {'func': np.subtract},
     'abs': {'func': compose(np.abs, np.subtract)},
     'mse': {'func': meas_mse},
+    'rmse': {'func': meas_rmse},
     'hist': {'func': meas_hist}, # compute histogram
     'kld':  {'func': div_kl},
     'chisq':  {'func': div_chisquare},
