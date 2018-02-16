@@ -725,7 +725,7 @@ def ax_set_ticks(ax, **kwargs):
     if kwargs.has_key('xticks'):
         if kwargs['xticks'] is None:
             pass
-        elif not kwargs['xticks']:
+        elif kwargs['xticks'] is False:
             ax.set_xticks([])
             ax.set_xticklabels([])
         elif type(kwargs['xticks']) is list or type(kwargs['xticks']) is tuple:
@@ -738,7 +738,7 @@ def ax_set_ticks(ax, **kwargs):
     if kwargs.has_key('xticklabels'):
         if kwargs['xticklabels'] is None:
             pass
-        elif not kwargs['xticklabels']:
+        elif kwargs['xticklabels'] is False:
             ax.set_xticklabels([])
         elif type(kwargs['xticklabels']) is list or type(kwargs['xticklabels']) is tuple:
             ax.set_xticklabels(kwargs['xticklabels'])
@@ -748,10 +748,10 @@ def ax_set_ticks(ax, **kwargs):
         # logger.log(loglevel_debug, "timeseries kwargs[yticks]", kwargs['yticks'])
         if kwargs['yticks'] is None:
             pass
-        elif not kwargs['yticks']:
+        elif kwargs['yticks'] is False:
             ax.set_yticks([])
             ax.set_yticklabels([])
-        elif type(kwargs['yticks']) is list or type(kwargs['yticks']) is tuple:
+        elif type(kwargs['yticks']) in [list, tuple, np.ndarray]:
             ax.set_yticks(kwargs['yticks'])
             ax.set_yticklabels(kwargs['yticks'])
         else:
@@ -761,7 +761,7 @@ def ax_set_ticks(ax, **kwargs):
     if kwargs.has_key('yticklabels'):
         if kwargs['yticklabels'] is None:
             pass
-        elif not kwargs['yticklabels']:
+        elif kwargs['yticklabels'] is False:
             ax.set_yticklabels([])
         elif type(kwargs['yticklabels']) is list or type(kwargs['yticklabels']) is tuple:
             ax.set_yticklabels(kwargs['yticklabels'])
@@ -1002,6 +1002,9 @@ def plot_img(ax, data, **kwargs):
     vmax = kwargs['vmax']
     cmap = kwargs['cmap']
     title = kwargs['title']
+    cax = None
+    if 'cax' in kwargs:
+        cax = kwargs['cax']
     
     # FIXME: convert plottype into func: imshow, pcolor, pcolormesh, pcolorfast
     mpl = ax.pcolorfast(data, vmin = vmin, vmax = vmax, cmap = cmap)
@@ -1029,25 +1032,17 @@ def plot_img(ax, data, **kwargs):
                 orientation = kwargs['colorbar_orientation']
             else:
                 orientation = 'horizontal'
-            plt.colorbar(mappable = mpl, ax = ax, orientation = orientation)
+            cb = plt.colorbar(mappable = mpl, ax = ax, cax=cax, orientation = orientation)
+            kwargs['cax'] = cb.ax
 
     if kwargs.has_key('title'):
         ax.set_title(title) # , fontsize=8)
     else:
         ax.set_title("%s" % ('matrix')) # , fontsize=8)
         
-    # # if kwargs.has_key('xlabel'):
-    # ax.set_xlabel("")
+    # return ax, cax
+    return kwargs
         
-    # # if kwargs.has_key('ylabel'):
-    # ax.set_ylabel("")
-        
-    # # if kwargs.has_key('xticks'):
-    # ax.set_xticks([])
-        
-    # # if kwargs.has_key('yticks'):
-    # ax.set_yticks([])
-
 def interactive():
     """basic example for interactive plotting and GUI interaction
 
@@ -1264,8 +1259,8 @@ def fig_interaction(fig, ax, data):
     # fig.canvas.mpl_connect('key_press_event', partial(on_key, ax = ax, data = data))
     # # fig.canvas.mpl_connect('button_press_event', partial(on_click_zoom, ax = ax, data = data))
 
-def custom_colorbar():
-    """custom_colorbar
+def custom_colorbar_demo():
+    """custom_colorbar_demo
     
     basic example for custom colorbar geometry control
      1. create the colorbar axis with the gridspec, plot the colorbar and set its aspect to match the quadmesh
@@ -1302,7 +1297,8 @@ def custom_colorbar():
     gs = gridspec.GridSpec(2, 2 * numplots, width_ratios = [9, 1] * numplots)
     gs.hspace = 0.05
     gs.wspace = 0.05
-        
+
+    # plot the first row
     for i in range(numplots):
         cmap = plt.get_cmap("Reds")
         norm = mpl.colors.Normalize(vmin=0, vmax=np.max(X[i]))
@@ -1331,6 +1327,7 @@ def custom_colorbar():
         logger.log(loglevel_debug, "w_im = %s, h_im = %s" % (w_im, h_im))
         logger.log(loglevel_debug, "w_cb = %s, h_cb = %s" % (w_cb, h_cb))
 
+    # plot the second row
     for i in range(numplots):
         cmap = plt.get_cmap("Reds")
         norm = mpl.colors.Normalize(vmin=0, vmax=np.max(X[i]))
@@ -1480,13 +1477,13 @@ if __name__ == "__main__":
     import argparse, sys
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-m", "--mode", type=str, default = "custom_colorbar", help = "testing mode: [custom_colorbar], interactive, plot_colors")
+    parser.add_argument("-m", "--mode", type=str, default = "custom_colorbar_demo", help = "testing mode: [custom_colorbar_demo], interactive, plot_colors")
 
     args = parser.parse_args()
     # fig = makefig(2, 3)
 
-    if args.mode == "custom_colorbar":
-        custom_colorbar()
+    if args.mode == "custom_colorbar_demo":
+        custom_colorbar_demo()
     elif args.mode == "interactive":
         interactive()
     elif args.mode == "plot_colors":
