@@ -453,14 +453,16 @@ def compute_transfer_entropy(src, dst, delay = 0):
 
 @dec_compute_infth()
 def compute_conditional_transfer_entropy(src, dst, cond, delay = 0, xcond = False):
-    """!@breif compute the conditional transfer entropy using jidt
+    """conditional transfer entropy (CTE)
 
-params
-src: source variables
-dst: destination variables
-cond: conditioning vars
-delay: delay u between src/dst
-xcond: do cross conditional assuming y and cond are the same vector
+    Compute the conditional transfer entropy using jidt
+
+    Args:
+     - src(ndarray): source variables
+     - dst(ndarray): destination variables
+     - cond(ndarray): conditioning vars
+     - delay: delay u between src/dst
+     - xcond: do cross conditional assuming src and cond are the same vector
     """
 
     numsrcvars, numdstvars, numcondvars = (src.shape[1], dst.shape[1], cond.shape[1])
