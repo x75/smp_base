@@ -8,7 +8,7 @@ Added digitize pointcloud function to convert pointclouds into
 grid spaces by binning the points and averaging the function
 values per bin.
 """
-
+from functools import reduce
 import numpy as np
 
 def dimensional_stacking(data, x_dims, y_dims):
