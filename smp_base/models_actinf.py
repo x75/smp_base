@@ -92,6 +92,8 @@ try:
 except ImportError, e:
     print("Couldn't import IGMM lib", e)
 
+# requirements: otl, kohonen, pypr, igmm
+    
 from smp_base.models_reservoirs import LearningRules
 
 import logging
@@ -104,7 +106,8 @@ model_classes = ["KNN", "SOESGP", "STORKGP", "GMM", "HebbSOM", ",IGMM", "all"]
 class smpKNN(smpModel):
     """smpKNN
 
-    k-NN function approximator for active inference
+    k-NN function approximator smpmodel originally used for the active
+    inference developmental model but generally reusable.
     """
     defaults = {
         'idim': 1,
@@ -120,14 +123,33 @@ class smpKNN(smpModel):
         init
         """
         smpModel.__init__(self, conf)
-        
+
+        # comply
+        if not hasattr(self, 'modelsize'):
+            self.modelsize = 1000 # self.n_neighbors
+
+        # the scikit base model
         self.fwd = KNeighborsRegressor(n_neighbors = self.n_neighbors)
 
+        # the data store
         self.X_ = []
         self.y_ = []
-
+        
+        self.hidden_dist = np.zeros((1, self.n_neighbors))
+        self.hidden_dist_sum = np.zeros((1, 1))
+        self.hidden_dist_sum_avg = np.zeros((1, 1))
+        self.hidden_idx = np.zeros((1, self.n_neighbors))
+        # bootstrap the model with prior
         self.bootstrap()
 
+    def get_params(self, *args, **kwargs):
+        if 'param' in kwargs:
+            if 'w_norm' in kwargs['param']:
+                # return np.tile(np.array([(len(self.X_) + len(self.y_))/2.0]), (self.odim, 1))
+                return np.tile(np.array([len(self.y_)]), (self.odim, 1))
+        
+        return self.fwd.get_params()
+        
     def visualize(self):
         pass
         
@@ -167,22 +189,36 @@ class smpKNN(smpModel):
 
         Predict Y using X on the current model state
         """
+        # FIXME: change scikit to store intermediate query results
+        #    or: fully local predict def
+        self.hidden_dist, self.hidden_idx = self.fwd.kneighbors(X)
+        self.hidden_dist_sum = np.mean(self.hidden_dist)
+        self.hidden_dist_sum_avg = 0.1 * self.hidden_dist_sum + 0.9 * self.hidden_dist_sum_avg
+        # self.hidden_idx_norm = self.hidden_idx.astype(np.float) * self.hidden_dist_sum_avg/1000.0
+        self.hidden_idx_norm = self.hidden_idx.astype(np.float) * 1e-3
+        # logger.debug('hidden dist = %s, idx = %s', self.hidden_dist, self.hidden_idx)
         return self.fwd.predict(X)
 
     def fit(self, X, y):
         """smpKNN.fit
 
-        Fit Y to X single time step
+        Single fit Y to X step. If the input is a batch of data, fit
+        that entire batch and forgetting existing data in X_ and
+        Y_. If the input is a single data point, append to X_ and Y_
+        and refit the model to that new data.
         """
         if X.shape[0] > 1: # batch of data
+            # self.modelsize = X.shape[0]
             return self.fit_batch(X, y)
+
+        # logger.debug("%s.fit[%d] len(X_) = %d, len(y_) = %d, modelsize = %d", self.__class__.__name__, self.cnt, len(self.X_), len(self.y_), self.modelsize)
+        self.cnt += 1
+        if len(self.X_) > self.modelsize: return
         
         self.X_.append(X[0,:])
         # self.y_.append(self.m[0,:])
         # self.y_.append(self.goal[0,:])
         self.y_.append(y[0,:])
-
-        # print("len(X_), len(y_)", len(self.X_), len(self.y_))
         
         self.fwd.fit(self.X_, self.y_)
 

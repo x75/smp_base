@@ -9,7 +9,7 @@ def set_latex_header():
     # plotting parameters
     rc('text', usetex=True)
     rc('font', serif="Times New Roman")
-    rc('font', family='serif')
+    rc('font', family='sans')
     rc('font', style="normal",
     variant="normal", weight=700,
     stretch="normal", size=10.0)

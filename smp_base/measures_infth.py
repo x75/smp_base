@@ -29,7 +29,7 @@ TODO: sift, sort and clean-up input from
 """
 import sys, os
 import numpy as np
-import config
+import smp_base.config as config
 
 # from smp_base.measures import meas
 from smp_base.measures import meas
@@ -43,7 +43,7 @@ try:
     from jpype import getDefaultJVMPath, isJVMStarted, startJVM, attachThreadToJVM, isThreadAttachedToJVM
     from jpype import JPackage
     HAVE_JPYPE = True
-except ImportError, e:
+except ImportError as e:
     print "Couldn't import jpype, %s" % e
     HAVE_JPYPE = False
     # sys.exit(1)

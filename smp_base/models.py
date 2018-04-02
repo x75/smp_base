@@ -128,6 +128,7 @@ class smpModel(object):
             
         set_attr_from_dict(self, conf)
         self.model = None
+        self.cnt = 0
 
         # FIXME: variables for  all models
         # X, Y
@@ -147,6 +148,10 @@ class smpModel(object):
             self.Yhist = []
             
             self.visualize_model_init()
+        
+    def get_params(self, *args, **kwargs):
+        # return sane defaults?
+        return np.zeros((1,self.odim))
         
     def bootstrap(self):
         """smpModel.bootstrap
