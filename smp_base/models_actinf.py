@@ -115,7 +115,7 @@ class smpKNN(smpModel):
         'n_neighbors': 5,
         'prior': 'random', # ['random', 'linear']
         'prior_width': 0.01,
-        }
+    }
     @smpModelInit()
     def __init__(self, conf):
         """smpKNN.__init__
@@ -213,7 +213,7 @@ class smpKNN(smpModel):
 
         # logger.debug("%s.fit[%d] len(X_) = %d, len(y_) = %d, modelsize = %d", self.__class__.__name__, self.cnt, len(self.X_), len(self.y_), self.modelsize)
         self.cnt += 1
-        if len(self.X_) > self.modelsize: return
+        # if len(self.X_) > self.modelsize: return
         
         self.X_.append(X[0,:])
         # self.y_.append(self.m[0,:])
