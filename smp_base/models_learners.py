@@ -26,6 +26,10 @@ from smp_base.models import make_figure, make_gridspec
 from smp_base.models import iir_fo
 from smp_base.models_reservoirs import Reservoir, LearningRules
 
+import logging
+from smp_base.common import get_module_logger
+logger = get_module_logger(modulename = 'models_learners', loglevel = logging.DEBUG)
+
 try:
     from smp_base.measures_infth import init_jpype, dec_compute_infth_soft
     from jpype import JPackage
@@ -135,7 +139,9 @@ class smpSHL(smpModel):
 
         # debugging
         for v in ['lrname', 'theta', 'input_coupling', 'visualize']:
-            print "%s.%s = %s, conf[%s] = %s" % (
+            # print "%s.%s = %s, conf[%s] = %s" % (
+            #     self.__class__.__name__, v, getattr(self, v), v, conf[v])
+            logger.debug('%s.%s = %s, conf[%s] = %s',
                 self.__class__.__name__, v, getattr(self, v), v, conf[v])
 
         # representation specific pre config
