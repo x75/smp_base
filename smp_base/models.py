@@ -260,8 +260,6 @@ class iir_fo(object):
     
 ################################################################################
 # plotting utilities
-    
-
 def savefig(fig, filename):
     fig_scale_inches = 0.75
     fig.set_size_inches((16 * fig_scale_inches, 9 * fig_scale_inches))
