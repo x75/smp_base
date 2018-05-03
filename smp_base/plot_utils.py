@@ -36,6 +36,10 @@ def resize_panel_horiz(resize_by = 0.8, ax = None):
     ax.set_position([box.x0, box.y0, box.width, box.height * resize_by])
 
 def custom_legend(labels = None, handles = None, resize_by = 0.8, ax = None, loc = 'right', lg = None):
+    """custom_legend
+
+    customize legend position outside of axis
+    """
     if loc == 'right' or loc == 'left':
         put_legend_out_right(labels = labels, handles=handles, resize_by = resize_by, ax = ax, right = loc, lg = lg)
     elif loc in ['upper', 'top'] or loc == 'lower':
