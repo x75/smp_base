@@ -21,6 +21,7 @@ Includes:
  - TODO: clean up and merge with sift results
 """
 from functools import partial, wraps
+from collections import OrderedDict
 from cycler import cycler
 import copy
 
@@ -436,11 +437,13 @@ def plot_clean_kwargs(clean_type = None, **kwargs):
         'yticklabels',
         'yticks',
         'ytwin',
+        'lineseg_val', 'lineseg_idx'
     ]}
     clean['plot'] = ['orientation']
     clean['histogram'] = ['orientation', 'marker', 'alpha', 'linestyle', 'histtype']
     clean['bar'] = ['orientation', 'marker', 'histtype', 'normed']
     clean['pcolor'] = ['colorbar']
+    # clean['linesegments'] = ['lineseg_val', 'lineseg_idx']
 
     clean_keys = clean['common']
     if clean_type is not None:
@@ -616,7 +619,29 @@ def table(ax, data, **kwargs):
     table_props = the_table.properties()
     table_cells = table_props['child_artists']
     for cell in table_cells: cell.set_height(0.1)
+
+@plotfunc()
+def linesegments(ax, data, **kwargs):
+    """plotfunc(linesegments)
+
+    Plot line segments between pairs (tuples) of x,y points.
+    """
+    kwargs_ = {}
+    kwargs_.update(**kwargs)
+    logger.info('kwargs = %s', kwargs)
+
+    lineseg_idx = np.array(kwargs['lineseg_idx'])
+    lineseg_x   = np.array(kwargs['lineseg_val'][0])
+
+    kwargs = plot_clean_kwargs('plot', **kwargs_)
     
+    for lineseg_i in lineseg_idx:
+        x = list(lineseg_i)
+        y = np.hstack((data[[lineseg_i[0],0]], data[[lineseg_i[1],0]]))
+
+        # timeseries()
+        ax.plot(x, y, **kwargs)
+        
 @plotfunc()
 def timeseries(ax, data, **kwargs):
     """Plot data as timeseries
@@ -1107,7 +1132,14 @@ def interactive():
     plt.show()
 
 def fig_interaction(fig, ax, data):
-    """expanded example for interactive plotting and GUI interaction
+    """fig_interaction
+
+    Expanded example for interactive plotting and GUI interaction.
+
+    Args:
+    - fig(figure): figure handle
+    - ax(ax): axis handle
+    - data(ndarray/dict): plotdatad dict
     """
     do_interaction = True
     
@@ -1120,7 +1152,7 @@ def fig_interaction(fig, ax, data):
         """
         logger.log(
             loglevel_debug, 'ax.inaxes = %s button %s pressed, xdata = %s, ydata = %s, data.shape = %s',
-            event.inaxes, event.button, event.xdata, event.ydata, data.shape)
+            event.inaxes, event.button, event.xdata, event.ydata, type(data))
         
         # if not do_interaction: return
 
@@ -1184,16 +1216,28 @@ def fig_interaction(fig, ax, data):
             num_cgroup_color = 5
             num_cgroup_dist = 255/num_cgroups
 
-            for i in range(data.shape[1]):
-                inkc = i
-                ax_.set_prop_cycle(
-                    get_colorcycler(
-                        cmap_str = cmap_str, cmap_idx = None,
-                        c_s = inkc * num_cgroup_dist, c_e = (inkc + 1) * num_cgroup_dist, c_n = num_cgroup_color
+            if type(data) in [dict, OrderedDict]:
+                for i, k in enumerate(data):
+                    inkc = i
+                    ax_.set_prop_cycle(
+                        get_colorcycler(
+                            cmap_str = cmap_str, cmap_idx = None,
+                            c_s = inkc * num_cgroup_dist, c_e = (inkc + 1) * num_cgroup_dist, c_n = num_cgroup_color
+                        )
                     )
-                )
             
-                ax_.plot(data[:,[i]], label = 'data_%d' % (i, ), alpha = 0.5, linestyle = '-', marker = '.')
+                    ax_.plot(data[k]['t'], data[k]['data'], label = 'data_%d' % (i, ), alpha = 0.5, linestyle = '-', marker = '.')
+            else:
+                for i in range(data.shape[1]):
+                    inkc = i
+                    ax_.set_prop_cycle(
+                        get_colorcycler(
+                            cmap_str = cmap_str, cmap_idx = None,
+                            c_s = inkc * num_cgroup_dist, c_e = (inkc + 1) * num_cgroup_dist, c_n = num_cgroup_color
+                        )
+                    )
+            
+                    ax_.plot(data[:,[i]], label = 'data_%d' % (i, ), alpha = 0.5, linestyle = '-', marker = '.')
             # ax.get_legend_handles_labels()
             # lg = ax.get_legend()
             # ax_.legend(['x%d' % (i, ) for i in range(data.shape[1])])
@@ -1214,7 +1258,7 @@ def fig_interaction(fig, ax, data):
     
         logger.log(
             loglevel_debug, 'on_click_zoom ax.inaxes = %s button %s pressed, xdata = %s, ydata = %s, data.shape = %s',
-            event.inaxes, event.button, event.xdata, event.ydata, data.shape)
+            event.inaxes, event.button, event.xdata, event.ydata, type(data))
 
         # if not do_interaction: return
         
@@ -1467,6 +1511,7 @@ plotfuncs = {
     'scatter': plt.scatter,
     'table': table,
     'timeseries': timeseries,
+    'linesegments': linesegments,
     'uniform_divergence': uniform_divergence,
 }
 
