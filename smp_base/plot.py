@@ -635,9 +635,10 @@ def linesegments(ax, data, **kwargs):
 
     kwargs = plot_clean_kwargs('plot', **kwargs_)
     
+    logger.info('data = %s', data.shape)
     for lineseg_i in lineseg_idx:
         x = list(lineseg_i)
-        y = np.hstack((data[[lineseg_i[0],0]], data[[lineseg_i[1],0]]))
+        y = np.hstack((data[lineseg_i[0],[0]], data[lineseg_i[1],[1]]))
 
         # timeseries()
         ax.plot(x, y, **kwargs)
