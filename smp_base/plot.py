@@ -437,10 +437,12 @@ def plot_clean_kwargs(clean_type = None, **kwargs):
         'yticklabels',
         'yticks',
         'ytwin',
-        'lineseg_val', 'lineseg_idx'
+        'lineseg_val', 'lineseg_idx',
+        'density',
+        'bins',
     ]}
     clean['plot'] = ['orientation']
-    clean['histogram'] = ['orientation', 'marker', 'alpha', 'linestyle', 'histtype']
+    clean['histogram'] = ['orientation', 'marker', 'alpha', 'linestyle', 'histtype', 'color']
     clean['bar'] = ['orientation', 'marker', 'histtype', 'normed']
     clean['pcolor'] = ['colorbar']
     # clean['linesegments'] = ['lineseg_val', 'lineseg_idx']
@@ -795,7 +797,10 @@ def ax_set_ticks(ax, **kwargs):
             
 @plotfunc()
 def histogram(ax, data, **kwargs):
-    """histogram plot"""
+    """smp_base.plot.histogram
+
+    Plot the histogram
+    """
     assert len(data.shape) > 0, 'Data has bad shape = %s' % (data.shape, )
     
     _loglevel = loglevel_debug + 0
@@ -816,22 +821,26 @@ def histogram(ax, data, **kwargs):
     # explicit limits and bins configuration
     if kwargs_['ylim'] is not None and kwargs_['orientation'] == 'horizontal':
         bins = np.linspace(kwargs_['ylim'][0], kwargs_['ylim'][1], 21 + 1)
-        logger.log(_loglevel, "    plot.histogram setting bins = %s for orientation = %s from ylim = %s" % (bins, kwargs_['orientation'], kwargs_['ylim']))
+        # logger.log(_loglevel, "    plot.histogram setting bins = %s for orientation = %s from ylim = %s" % (bins, kwargs_['orientation'], kwargs_['ylim']))
     elif kwargs_['xlim'] is not None and kwargs_['orientation'] == 'vertical':
         bins = np.linspace(kwargs_['xlim'][0], kwargs_['xlim'][1], 21 + 1)
-        logger.log(_loglevel, "    plot.histogram setting bins = %s for orientation = %s from xlim = %s" % (bins, kwargs_['orientation'], kwargs_['xlim']))
+        # logger.log(_loglevel, "    plot.histogram setting bins = %s for orientation = %s from xlim = %s" % (bins, kwargs_['orientation'], kwargs_['xlim']))
+    elif 'bins' in kwargs_:
+        bins = kwargs_['bins']
     else:
         bins = 'auto'
-        logger.log(
-            _loglevel,
-            "    plot.histogram setting bins = %s for orientation = %s from xlim = %s",
-            bins, kwargs_['orientation'], kwargs_['xlim'])
         
+    logger.log(
+        _loglevel,
+        "    plot.histogram setting bins = %s for orientation = %s from xlim = %s",
+        bins, kwargs_['orientation'], kwargs_['xlim'])
+    
     # FIXME: decouple compute histogram; incoming data is bar data
     # already (def bar(...))
     logger.log(_loglevel, "    plot.histogram data = %s", data.shape)
     # if data.shape[-1] > 1:
     for i in range(data.shape[-1]):
+        # compute the histogram for each variable (columns) in the input data
         # (n, bins) = np.histogram(data, bins = bins, **kwargs)
         # (n, bins) = meas_hist(data, bins = bins, **kwargs)
         (n, bins_i) = meas_hist(data[:,[i]], bins = bins, **kwargs)
@@ -854,7 +863,8 @@ def histogram(ax, data, **kwargs):
         elif kwargs_['orientation'] == 'horizontal':
             axbar = ax.barh
             kwargs_b['height'] = binwidth
-        
+
+        # plot the pre-computed histogram with bar plot
         patches = axbar(bincenters, n, **kwargs_b)
 
 @plotfunc()
