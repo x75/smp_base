@@ -25,12 +25,12 @@ def ax_check(ax = None):
         ax = plt.gca()
     return ax
 
-def resize_panel_vert(resize_by = 0.8, ax = None):
+def resize_panel_vert(resize_by = 0.8, ax = None, shift_by=0.2):
     ax = ax_check(ax)
     box = ax.get_position()
-    ax.set_position([box.x0, box.y0, box.width * resize_by, box.height])
+    ax.set_position([box.x0 + (box.width * shift_by), box.y0, box.width * resize_by, box.height])
     
-def resize_panel_horiz(resize_by = 0.8, ax = None):
+def resize_panel_horiz(resize_by = 0.8, ax = None, shift_by=0.2):
     ax = ax_check(ax)
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width, box.height * resize_by])
@@ -63,7 +63,12 @@ def put_legend_out(labels = None, handles=None, resize_by = 0.8, ax = None, loc 
         
 def put_legend_out_right(labels = None, handles=None, resize_by = 0.8, ax = None, right = 'left', lg = None):
     ax = ax_check(ax)
-    resize_panel_vert(resize_by = resize_by, ax = ax)
+    if right == 'right':
+        shift_by = 1 - resize_by
+    else:
+        shift_by = 0
+        
+    resize_panel_vert(resize_by = resize_by, ax = ax, shift_by=shift_by)
     loc = 'upper %s' % (right, )
     if lg is None:
         bboxy = 0.95
@@ -73,7 +78,7 @@ def put_legend_out_right(labels = None, handles=None, resize_by = 0.8, ax = None
     if right == 'left':
         bbox = (1.1, bboxy)
     elif right == 'right':
-        bbox = (-0.25, bboxy)
+        bbox = (-0.15, bboxy)
     # loc = 'center left'
     # bbox = (1.0, 0.5)
     if labels is None and handles is None:

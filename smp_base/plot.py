@@ -847,6 +847,7 @@ def histogram(ax, data, **kwargs):
 
         binwidth = np.mean(np.abs(np.diff(bins_i)))
         bincenters = bins_i[:-1] + binwidth/2.0
+        n = n / float(np.sum(n))
     
         logger.log(_loglevel, "    plot.histogram[%d] n = %s/%s", i, n.shape, n)
         logger.log(_loglevel, "    plot.histogram[%d] binwidth = %s", i, binwidth)
