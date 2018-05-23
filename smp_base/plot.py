@@ -477,7 +477,7 @@ def ax_set_title(ax, **kwargs):
         # ax.title.set_text(kwargs['title'], alpha = 0.65)
         ax.title.set_position((0.5, 0.1))
     else: # top_out
-        ax.title.set_position((0.5, 1.05))
+        ax.title.set_position((0.5, 1.025))
         # ax.title.set_text(kwargs['title'], alpha = 0.65)
 
 class plotfunc(object):

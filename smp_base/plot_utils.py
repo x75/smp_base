@@ -5,6 +5,12 @@ from matplotlib import rc
 from matplotlib import rcParams
 from matplotlib.font_manager import FontProperties
 
+import logging
+from smp_base.common import get_module_logger
+
+loglevel_debug = logging.DEBUG - 1
+logger = get_module_logger(modulename = 'plot_utils', loglevel = logging.DEBUG)
+
 def set_latex_header():
     # plotting parameters
     rc('text', usetex=True)
@@ -40,6 +46,7 @@ def custom_legend(labels = None, handles = None, resize_by = 0.8, ax = None, loc
 
     customize legend position outside of axis
     """
+    logger.debug('custom_legend resize_by = %s, loc = %s', resize_by, loc)
     if loc == 'right' or loc == 'left':
         put_legend_out_right(labels = labels, handles=handles, resize_by = resize_by, ax = ax, right = loc, lg = lg)
     elif loc in ['upper', 'top'] or loc == 'lower':
@@ -48,17 +55,21 @@ def custom_legend(labels = None, handles = None, resize_by = 0.8, ax = None, loc
         put_legend_out(labels = labels, handles=handles, resize_by = resize_by, ax = ax, loc = loc, lg = lg)
 
 def put_legend_out(labels = None, handles=None, resize_by = 0.8, ax = None, loc = None, lg = None):
+    logger.debug('put_legend_out resize_by = %s, loc = %s', resize_by, loc)
     ax = ax_check(ax)
+    shift_by = 1 - resize_by
     if loc[0] < 0.1 or loc[0] > 0.9:
-        resize_panel_vert(resize_by = resize_by, ax = ax)
-    if loc[1] < 0.1 or loc[1] > 0.9:
-        resize_panel_horiz(resize_by = resize_by, ax = ax)
-        
+        resize_panel_vert(resize_by = resize_by, ax = ax, shift_by=shift_by)
+    if loc[1] < (0.1 - 1) or loc[1] > (0.9 - 1):
+        resize_panel_horiz(resize_by = resize_by, ax = ax, shift_by=shift_by)
+
     if labels is None and handles is None:
         ax.legend(loc = loc, ncol=1)
     elif labels is not None and handles is None:
+        if len(labels) < 1: return
         ax.legend(loc = loc, ncol=1, labels = labels)
     else:
+        if len(labels) < 1: return
         ax.legend(loc = loc, ncol=1, labels = labels, handles=handles)
         
 def put_legend_out_right(labels = None, handles=None, resize_by = 0.8, ax = None, right = 'left', lg = None):
