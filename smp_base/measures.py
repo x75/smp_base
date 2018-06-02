@@ -67,7 +67,16 @@ def meas_rmse(x = None, x_ = None, *args, **kwargs):
     return np.sqrt(mse)
 
 def div_kl(h1, h2, *args, **kwargs):
-    """naive kullback leibler divergence for histogram, element-wise
+    """measures.div_kl
+
+    Discrete kullback leibler divergence for histogram.
+
+    Args:
+    - h1(array): histogram 1
+    - h2(array): histogram 2
+
+    Returns:
+    - sum divergence, element-wise divergences
     """
     _loglevel = loglevel_debug - 1
     # print "h1", h1, "h2", h2
