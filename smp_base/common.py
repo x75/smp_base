@@ -6,6 +6,7 @@ TODO: consolidate with :mod:`smp_graphs.common`
 """
 
 import logging
+from functools import reduce
 
 def set_attr_from_dict(obj, dictionary):
     """set object attribute 'k' = v from a dictionary's k, v for all dict items
@@ -13,7 +14,7 @@ def set_attr_from_dict(obj, dictionary):
     Transfer configuration dictionaries into an object's member
     namespace (self.__dict__) with :func:`setattr`.
     """
-    for k,v in dictionary.items():
+    for k,v in list(dictionary.items()):
         setattr(obj, k, v)
 
 def get_module_logger(modulename = 'experiment', loglevel = logging.INFO):

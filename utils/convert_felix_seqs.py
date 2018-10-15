@@ -9,19 +9,19 @@ import matplotlib.pyplot as plt
 
 def main(args):
     assert args.datafile is not None
-    print 'datafile', args.datafile
+    print('datafile', args.datafile)
     data = np.genfromtxt(args.datafile, delimiter = ' ')
     next_hundred_below = (data.shape[0]/100)*100
     data = data[:next_hundred_below]
-    print "    data", data.shape
+    print("    data", data.shape)
 
     # save to ppydata style pickled dict
     ppydata = {}
     ppydata['x'] = np.roll(data, 25, axis = 0).reshape(data.shape + (1, ))
     ppydata['y'] = data.reshape(data.shape + (1, ))
 
-    for k, v in ppydata.items():
-        print '    ppydata.%s = %s' % (k, v.shape)
+    for k, v in list(ppydata.items()):
+        print('    ppydata.%s = %s' % (k, v.shape))
     
     pickle.dump(ppydata, open(args.datafile + '.pickle', 'wb'))
 

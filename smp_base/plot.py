@@ -39,20 +39,20 @@ import colorcet as cc
 
 import numpy as np
 
-from plot_utils import put_legend_out_right
+from .plot_utils import put_legend_out_right
 
 try:
     from pyunicorn.timeseries import RecurrencePlot
     HAVE_PYUNICORN = True
-except ImportError, e:
-    print "Couldn't import RecurrencePlot from pyunicorn.timeseries, make sure pyunicorn is installed", e
+except ImportError as e:
+    print("Couldn't import RecurrencePlot from pyunicorn.timeseries, make sure pyunicorn is installed", e)
     HAVE_PYUNICORN = False
 
 try:
     import seaborn as sns
     HAVE_SEABORN = True
-except ImportError, e:
-    print "Couldn't import seaborn as sns, make sure seaborn is installed", e
+except ImportError as e:
+    print("Couldn't import seaborn as sns, make sure seaborn is installed", e)
     HAVE_SEABORN = False
 
 import pandas as pd
@@ -129,7 +129,7 @@ def test_plot_colors():
     
     # Sort colors by hue, saturation, value and name.
     by_hsv = sorted((tuple(mplcolors.rgb_to_hsv(mplcolors.to_rgba(color)[:3])), name)
-                for name, color in colors.items())
+                for name, color in list(colors.items()))
     sorted_names = [name for hsv, name in by_hsv]
 
     
@@ -449,10 +449,10 @@ def plot_clean_kwargs(clean_type = None, **kwargs):
 
     clean_keys = clean['common']
     if clean_type is not None:
-        if clean.has_key(clean_type):
+        if clean_type in clean:
             clean_keys += clean[clean_type]
     
-    return dict([(k, kwargs[k]) for k in kwargs.keys() if k not in clean_keys])
+    return dict([(k, kwargs[k]) for k in list(kwargs.keys()) if k not in clean_keys])
     
 
 def ax_set_title(ax, **kwargs):
@@ -493,7 +493,7 @@ class plotfunc(object):
                 'linestyle': 'solid',
                 'marker': 'None',
                 'orientation': 'horizontal',
-                'title': '%s of %s-shaped data' % (f.func_name, data.shape,),
+                'title': '%s of %s-shaped data' % (f.__name__, data.shape,),
                 'title_pos': 'top_in',
                 'xinvert': None,
                 'xlabel': 'steps [n]',
@@ -511,29 +511,29 @@ class plotfunc(object):
             kwargsf = {}
             kwargsf.update(**kwargs_)
 
-            logger.log(_loglevel, 'plotfunc f = %s' % (f.func_name, ))
+            logger.log(_loglevel, 'plotfunc f = %s' % (f.__name__, ))
             
             # set axis title
             ax_set_title(ax, **kwargs_)
     
             # x-axis shift / bus delay compensation
-            if kwargs_.has_key('delay'):
+            if 'delay' in kwargs_:
                 data = np.roll(data, kwargs['delay'], axis = 1)
 
-            logger.log(_loglevel, 'plotfunc kwargs_ = %s' % (kwargs_.keys(), ))
+            logger.log(_loglevel, 'plotfunc kwargs_ = %s' % (list(kwargs_.keys()), ))
             # call plotfunc
             fval = f(ax, data, *args, **kwargsf)
 
             if fval is not None:
                 kwargs_.update(**fval)
 
-            logger.log(_loglevel, 'plotfunc kwargs_ = %s' % (kwargs_.keys(), ))
+            logger.log(_loglevel, 'plotfunc kwargs_ = %s' % (list(kwargs_.keys()), ))
             
             # axis labels
-            if kwargs_.has_key('xlabel') and kwargs_['xlabel'] and kwargs_['xlabel'] is not None:
+            if 'xlabel' in kwargs_ and kwargs_['xlabel'] and kwargs_['xlabel'] is not None:
                 ax.set_xlabel('%s' % kwargs_['xlabel'])
 
-            if kwargs_.has_key('ylabel') and kwargs_['ylabel'] and kwargs_['ylabel'] is not None:
+            if 'ylabel' in kwargs_ and kwargs_['ylabel'] and kwargs_['ylabel'] is not None:
                 ax.set_ylabel('%s' % kwargs_['ylabel'])
     
             # axis scale: linear / log
@@ -691,7 +691,7 @@ def timeseries(ax, data, **kwargs):
     # kwargs_ = {} # kwargs_plot_clean(**kwargs)
 
     # x axis (ordinate)
-    if kwargs_.has_key('ordinate'):
+    if 'ordinate' in kwargs_:
         x = kwargs_['ordinate']
     else:
         x = np.arange(0, data.shape[0])
@@ -700,7 +700,7 @@ def timeseries(ax, data, **kwargs):
 
     logger.log(_loglevel, "    timeseries x = %s, y = %s" % (x.shape, y.shape))
     # orientation
-    if kwargs_.has_key('orientation') and kwargs_['orientation'] != 'horizontal':
+    if 'orientation' in kwargs_ and kwargs_['orientation'] != 'horizontal':
         x_ = x.copy()
         x = y
         y = x_
@@ -710,15 +710,15 @@ def timeseries(ax, data, **kwargs):
             # for ax_name in ['x', 'y']:
             ax_key_x = '%s%s' % ('x', ax_key)
             ax_key_y = '%s%s' % ('y', ax_key)
-            if kwargs_.has_key(ax_key_x):
-                if kwargs_.has_key(ax_key_y):
+            if ax_key_x in kwargs_:
+                if ax_key_y in kwargs_:
                     bla_ = copy.copy(kwargs_[ax_key_y])
                     kwargs_[ax_key_y] = kwargs_[ax_key_x]
                     kwargs_[ax_key_x] = bla_
                 else:
                     kwargs_[ax_key_y] = copy.copy(kwargs_[ax_key_x])
                     kwargs_.pop(ax_key_x)
-            elif kwargs_.has_key(ax_key_y):
+            elif ax_key_y in kwargs_:
                 kwargs_[ax_key_x] = copy.copy(kwargs_[ax_key_y])
                 kwargs_.pop(ax_key_y)
 
@@ -736,10 +736,10 @@ def ax_invert(ax, **kwargs):
     kwargs_ = kwargs
     # logger.log(loglevel_debug, "    plot.ax_invert kwargs_ = %s" % (kwargs_, ))
     # axis invert?
-    if kwargs_.has_key('xinvert') and kwargs_['xinvert']: # is not None:
+    if 'xinvert' in kwargs_ and kwargs_['xinvert']: # is not None:
         logger.log(loglevel_debug, "    plot.ax_invert inverting xaxis with xinvert = %s" % (kwargs_['xinvert'], ))
         ax.invert_xaxis()
-    if kwargs_.has_key('yinvert') and kwargs_['yinvert']: # is not None:
+    if 'yinvert' in kwargs_ and kwargs_['yinvert']: # is not None:
         logger.log(loglevel_debug, "    plot.ax_invert inverting yaxis with yinvert = %s" % (kwargs_['yinvert'], ))
         ax.invert_yaxis()
 
@@ -750,7 +750,7 @@ def ax_set_ticks(ax, **kwargs):
     logger.log(loglevel_debug, "    plot.ax_set_ticks ax = %s, yticks = %s" % (ax.get_title(), ax_yticks,))
 
     # logger.log(loglevel_debug, "ax_set_ticks kwargs = %s" % (kwargs.keys(),))
-    if kwargs.has_key('xticks'):
+    if 'xticks' in kwargs:
         if kwargs['xticks'] is None:
             pass
         elif kwargs['xticks'] is False:
@@ -763,7 +763,7 @@ def ax_set_ticks(ax, **kwargs):
             ax.set_xticks(ax_xticks)
         logger.log(loglevel_debug, "    plot.ax_set_ticks     kwargs[xticks] = %s, xticks = %s" % (kwargs['xticks'], ax.get_xticks(),))
                 
-    if kwargs.has_key('xticklabels'):
+    if 'xticklabels' in kwargs:
         if kwargs['xticklabels'] is None:
             pass
         elif kwargs['xticklabels'] is False:
@@ -772,7 +772,7 @@ def ax_set_ticks(ax, **kwargs):
             ax.set_xticklabels(kwargs['xticklabels'])
         logger.log(loglevel_debug, "    plot.ax_set_ticks     kwargs[xticklabels] = %s, xticklabels = %s" % (kwargs['xticklabels'], ax.get_xticklabels(),))
         
-    if kwargs.has_key('yticks'):
+    if 'yticks' in kwargs:
         # logger.log(loglevel_debug, "timeseries kwargs[yticks]", kwargs['yticks'])
         if kwargs['yticks'] is None:
             pass
@@ -786,7 +786,7 @@ def ax_set_ticks(ax, **kwargs):
             ax.set_yticks(ax_yticks)
         logger.log(loglevel_debug, "    plot.ax_set_ticks     kwargs[yticks] = %s, yticks = %s" % (kwargs['yticks'], ax.get_yticks(),))
         
-    if kwargs.has_key('yticklabels'):
+    if 'yticklabels' in kwargs:
         if kwargs['yticklabels'] is None:
             pass
         elif kwargs['yticklabels'] is False:
@@ -815,8 +815,8 @@ def histogram(ax, data, **kwargs):
     # if not kwargs.has_key('histtype'):
     #     kwargs_['histtype'] = kwargs['histtype']
 
-    logger.log(_loglevel, "    plot.histogram kwargs .keys = %s" % (kwargs.keys()))
-    logger.log(_loglevel, "    plot.histogram kwargs_.keys = %s" % (kwargs_.keys()))
+    logger.log(_loglevel, "    plot.histogram kwargs .keys = %s" % (list(kwargs.keys())))
+    logger.log(_loglevel, "    plot.histogram kwargs_.keys = %s" % (list(kwargs_.keys())))
 
     # explicit limits and bins configuration
     if kwargs_['ylim'] is not None and kwargs_['orientation'] == 'horizontal':
@@ -855,7 +855,7 @@ def histogram(ax, data, **kwargs):
     
         # kwargs = kwargs_plot_clean_bar(**kwargs_)
         kwargs_b = plot_clean_kwargs('bar', **kwargs_)
-        logger.log(_loglevel, "    plot.histogram[%d] kwargs = %s", i, kwargs_b.keys())
+        logger.log(_loglevel, "    plot.histogram[%d] kwargs = %s", i, list(kwargs_b.keys()))
     
         # orientation
         if kwargs_['orientation'] == 'vertical':
@@ -882,10 +882,10 @@ def bar(ax, data, **kwargs):
 
     # cleaning smp keywords for mpl plot func
     kwargs = plot_clean_kwargs('bar', **kwargs_)
-    logger.log(_loglevel, "kwargs = %s", kwargs.keys())
+    logger.log(_loglevel, "kwargs = %s", list(kwargs.keys()))
     
     # explicit coordinates
-    if kwargs_.has_key('ordinate'):
+    if 'ordinate' in kwargs_:
         bincenters = kwargs_['ordinate']
         binwidth = np.ones_like(bincenters) * np.mean(np.abs(np.diff(bincenters)))
     # implicit coordinates
@@ -917,10 +917,10 @@ def ax_set_aspect(ax, **kwargs):
     """
     _loglevel = loglevel_debug + 0
     kwargs_ = kwargs
-    logger.log(_loglevel, "   ax_set_aspect ax = %s, kwargs.keys = %s" % (ax.title.get_text(), kwargs_.keys(),))
+    logger.log(_loglevel, "   ax_set_aspect ax = %s, kwargs.keys = %s" % (ax.title.get_text(), list(kwargs_.keys()),))
     
     # axis aspect
-    if kwargs_.has_key('aspect'):
+    if 'aspect' in kwargs_:
         ax_aspect = ax.get_aspect()
         ax_xlim = ax.get_xlim()
         ax_ylim = ax.get_ylim()
@@ -1023,7 +1023,7 @@ def plot_scattermatrix(df, **kwargs):
     plt.ioff()
     # df = pd.DataFrame(scatter_data_raw, columns=["x_%d" % i for i in range(scatter_data_raw.shape[1])])
     sm = scatter_matrix(df, ax = kwargs['ax'], alpha=0.2, figsize=(10, 10), diagonal='hist')
-    print type(sm), sm.shape, sm[0,0]
+    print(type(sm), sm.shape, sm[0,0])
     # fig = sm[0,0].get_figure()
     # if SAVEPLOTS:
     # fig.savefig("fig_%03d_scattermatrix.pdf" % (fig.number), dpi=300)
@@ -1060,10 +1060,10 @@ def plot_img(ax, data, **kwargs):
     #     norm = mplcolors.LogNorm(vmin=data.min(), vmax=data.max())
     
     ax.grid(0)
-    if kwargs.has_key('aspect'):
+    if 'aspect' in kwargs:
         ax.set_aspect(kwargs['aspect'])
 
-    if kwargs.has_key('colorbar'):
+    if 'colorbar' in kwargs:
         if kwargs['colorbar']:
             if 'colorbar_orientation' in kwargs:
                 orientation = kwargs['colorbar_orientation']
@@ -1072,7 +1072,7 @@ def plot_img(ax, data, **kwargs):
             cb = plt.colorbar(mappable = mpl, ax = ax, cax=cax, orientation = orientation)
             kwargs['cax'] = cb.ax
 
-    if kwargs.has_key('title'):
+    if 'title' in kwargs:
         ax.set_title(title) # , fontsize=8)
     else:
         ax.set_title("%s" % ('matrix')) # , fontsize=8)
@@ -1373,8 +1373,8 @@ def custom_colorbar_demo():
         cb1.set_label('Some Units')
         ax_cb.set_aspect(9.0/1.0)
 
-        print ax_im.get_position(), ax_im.get_aspect()
-        print ax_cb.get_position(), ax_cb.get_aspect()
+        print(ax_im.get_position(), ax_im.get_aspect())
+        print(ax_cb.get_position(), ax_cb.get_aspect())
             
         # cbar = plt.colorbar(mappable = img, orientation = "vertical", cax = ax_cb)
         w_im, h_im = get_ax_size(fig, ax_im)
@@ -1414,8 +1414,8 @@ def custom_colorbar_demo():
         cb1.set_label('Some Units')
         # ax_cb.set_aspect(9.0/1.0)
 
-        print ax_im.get_position(), ax_im.get_aspect()
-        print ax_cb.get_position(), ax_cb.get_aspect()
+        print(ax_im.get_position(), ax_im.get_aspect())
+        print(ax_cb.get_position(), ax_cb.get_aspect())
             
         w_im, h_im = get_ax_size(fig, ax_im)
         w_cb, h_cb = get_ax_size(fig, ax_cb)
@@ -1546,5 +1546,5 @@ if __name__ == "__main__":
     elif args.mode == "plot_colors":
         test_plot_colors()
     else:
-        print "Unknown mode %s, exiting" % (args.mode)
+        print("Unknown mode %s, exiting" % (args.mode))
         sys.exit(1)

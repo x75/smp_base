@@ -81,7 +81,7 @@ def main(args):
     e.gen_efunc_table()
 
     x = np.arange(args.length)
-    print x
+    print(x)
     et = e.efunc(x)
     # plot and test with array argument
     cmstr = "ko"
@@ -110,13 +110,13 @@ def main(args):
     for i in range(100):
         for j in range(args.length):
             e.efunc(j)
-    print "table took:", time.time() - now
+    print("table took:", time.time() - now)
 
     now = time.time()
     for i in range(100):
         for j in range(args.length):
             e.efunc_(j)
-    print "feval took:", time.time() - now
+    print("feval took:", time.time() - now)
         
 if __name__ == "__main__":
     modes = ["exp", "dexp", "rect", "ramp"]

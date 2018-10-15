@@ -4,7 +4,7 @@
 # - oneoverfnoise is a python port of gennoise.c by paul bourke
 # - levyflight is homegrown (?)
 
-from __future__ import print_function
+
 
 import argparse
 import numpy as np

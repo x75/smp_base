@@ -44,13 +44,13 @@ try:
     from jpype import JPackage
     HAVE_JPYPE = True
 except ImportError as e:
-    print "Couldn't import jpype, %s" % e
+    print("Couldn't import jpype, %s" % e)
     HAVE_JPYPE = False
     # sys.exit(1)
 
 def init_jpype(jarloc=None, jvmpath=None):
     if not HAVE_JPYPE:
-        print "Cannot initialize jpype because it couldn't be imported. Make sure jpype is installed"
+        print("Cannot initialize jpype because it couldn't be imported. Make sure jpype is installed")
         return
 
     jarloc = jarloc or config.__dict__.get(
@@ -61,8 +61,8 @@ def init_jpype(jarloc=None, jvmpath=None):
 
     jvmpath = jvmpath or config.__dict__.get('JVMPATH', getDefaultJVMPath())
 
-    print("infth.init_jpype: Set jidt jar location to %s" % jarloc)
-    print("infth.init_jpype: Set jidt jvmpath      to %s" % jvmpath)
+    print(("infth.init_jpype: Set jidt jar location to %s" % jarloc))
+    print(("infth.init_jpype: Set jidt jvmpath      to %s" % jvmpath))
 
     # startJVM(getDefaultJVMPath(), "-ea", "-Xmx2048M", "-Djava.class.path=" + jarLocation)
     if not isJVMStarted():
@@ -249,7 +249,7 @@ def infth_mi_multivariate(data = {}, estimator = "kraskov1", normalize = True, d
     # the average global MI between all source channels and all destination channels
     try:
         mimv_avg = mimvCalc.computeAverageLocalOfObservations()
-    except Exception, e:
+    except Exception as e:
         mimv_avg = np.random.uniform(0, 1e-5, (1,1)) # np.zeros((1,1))
         logger.error("Error occured in mimv calc, %s. Setting default mimv_avg = %s" % (e, mimv_avg))
     return mimv_avg
@@ -283,7 +283,7 @@ def compute_cond_mi_multivariate(data = {}, estimator = "kraskov1", normalize = 
     # print "measures_infth: infth_mi_multivariate: calc.timeDiff = %d" % (calc.timeDiff)
 
     # prepare data and attributes
-    assert 'C' in data, 'No condition passed via data, %s' % (data.keys())
+    assert 'C' in data, 'No condition passed via data, %s' % (list(data.keys()))
     src, dst, cond = prepare_data_and_attributes(data)
     # src_ = src.copy()
     # src = dst.copy()
@@ -306,7 +306,7 @@ def compute_cond_mi_multivariate(data = {}, estimator = "kraskov1", normalize = 
     # the average global MI between all source channels and all destination channels
     try:
         mimv_avg = calc.computeAverageLocalOfObservations()
-    except Exception, e:
+    except Exception as e:
         mimv_avg = np.random.uniform(0, 1e-5, (1,1)) # np.zeros((1,1))
         logger.error("Error occured in mimv calc, %s. Setting default mimv_avg = %s" % (e, mimv_avg))
     return mimv_avg
@@ -336,7 +336,7 @@ def compute_transfer_entropy_multivariate(
 @dec_compute_infth()
 def compute_conditional_transfer_entropy_multivariate(src, dst, cond, delay = 0):
     """measures_infth: compute the multivariate conditional transfer entropy from src to dst"""
-    print "This doesn't exist in JIDT yet"""
+    print("This doesn't exist in JIDT yet""")
     return -1
 
 # FIXME: use this one from infth_feature_relevance
@@ -500,7 +500,7 @@ def compute_conditional_transfer_entropy(src, dst, cond, delay = 0, xcond = Fals
             # k, k_tau, l, l_tau, delay,
             # cteCalcC.initialise(1, 1, 1, 1, delay, [1] * numcondvars, [1] * numcondvars, [0] * numcondvars)
 
-            condsl = range(numcondvars)
+            condsl = list(range(numcondvars))
             numcondvars_ = numcondvars
             # cross-condition with src/cond being the same vector, condition on all vector elements besides s
             if xcond:
@@ -539,11 +539,11 @@ def test_compute_mutual_information():
     # stack
     src = np.hstack((src, dst))
     dst = src.copy()
-    print "src.sh = %s, dst.sh = %s" % (src.shape, dst.shape)
+    print("src.sh = %s, dst.sh = %s" % (src.shape, dst.shape))
     jh  = infth_mi_multivariate({'X': src, 'Y': dst})
     result = compute_mutual_information(src, dst)
-    print "result = %s/%s" % (result,result/jh)
-    print "result = %s" % (result,)
+    print("result = %s/%s" % (result,result/jh))
+    print("result = %s" % (result,))
 
 if __name__ == '__main__':
     import argparse

@@ -22,15 +22,15 @@ try:
     from pyemd import emd as pyemd
     from pyemd import emd_with_flow as pyemd_with_flow
     HAVE_PYEMD = True
-except ImportError, e:
-    print "Couldn't import emd from pyemd with %s, make sure pyemd is installed." % (e, )
+except ImportError as e:
+    print("Couldn't import emd from pyemd with %s, make sure pyemd is installed." % (e, ))
     HAVE_PYEMD = False
 
 try:
     from emd import emd
     HAVE_EMD = True
-except ImportError, e:
-    print "Couldn't import emd from emd with %s, make sure emd is installed." % (e, )
+except ImportError as e:
+    print("Couldn't import emd from emd with %s, make sure emd is installed." % (e, ))
     HAVE_EMD = False
 
 loglevel_debug = logging.DEBUG - 0
@@ -135,7 +135,7 @@ def div_pyemd_HAVE_PYEMD(h1, h2, *args, **kwargs):
     Pyemd version requires an explicit distance matrix.
     """
     flow = np.zeros((1,1))
-    if kwargs.has_key('flow') and kwargs['flow']:
+    if 'flow' in kwargs and kwargs['flow']:
         div, flow = pyemd_with_flow(h1, h2, args[0])
     else:
         div = pyemd(h1, h2, args[0])
