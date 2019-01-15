@@ -24,6 +24,7 @@ from functools import partial, wraps
 from collections import OrderedDict
 from cycler import cycler
 import copy
+import numpy as np
 
 import matplotlib.pyplot as plt
 
@@ -32,12 +33,17 @@ import matplotlib.colors as mplcolors
 import matplotlib.patches as mplpatches
 from matplotlib.table import Table as mplTable
 from matplotlib.font_manager import FontManager
-from  matplotlib import rc, rcParams, rc_params
+from matplotlib import rc, rcParams, rc_params
+
+# gridspec = None
+# mplcolors = None
+# mplpatches = None
+# mplTable = None
+# FontManager = None
+# rc = None
 
 # perceptually uniform colormaps
 import colorcet as cc
-
-import numpy as np
 
 from .plot_utils import put_legend_out_right
 
@@ -1334,7 +1340,8 @@ def custom_colorbar_demo():
     # axes_grid, insets, ...
     # http://matplotlib.org/1.5.3/examples/axes_grid/demo_colorbar_with_inset_locator.html
         
-    import matplotlib as mpl
+    # import matplotlib as mpl
+    from matplotlib import colorbar as mplcolorbar
     from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
     numplots = 3
@@ -1357,7 +1364,7 @@ def custom_colorbar_demo():
     # plot the first row
     for i in range(numplots):
         cmap = plt.get_cmap("Reds")
-        norm = mpl.colors.Normalize(vmin=0, vmax=np.max(X[i]))
+        norm = mplcolors.Normalize(vmin=0, vmax=np.max(X[i]))
             
         # ax_im = plt.subplot2grid((1, 2 * numplots), (0, (2 * i)    ))
         # ax_cb = plt.subplot2grid((1, 2 * numplots), (0, (2 * i) + 1))
@@ -1368,7 +1375,7 @@ def custom_colorbar_demo():
         img = ax_im.pcolormesh(X[i], norm = norm, cmap = cmap)
         ax_im.set_aspect(1.0)
 
-        cb1 = mpl.colorbar.ColorbarBase(
+        cb1 = mplcolorbar.ColorbarBase(
             ax_cb, cmap=cmap, norm=norm, orientation='vertical')
         cb1.set_label('Some Units')
         ax_cb.set_aspect(9.0/1.0)
@@ -1386,7 +1393,7 @@ def custom_colorbar_demo():
     # plot the second row
     for i in range(numplots):
         cmap = plt.get_cmap("Reds")
-        norm = mpl.colors.Normalize(vmin=0, vmax=np.max(X[i]))
+        norm = mplcolors.Normalize(vmin=0, vmax=np.max(X[i]))
             
         # ax_im = plt.subplot2grid(gs.get_geometry(), (0, (2 * i)    ), colspan = 2)
         # ax_cb = plt.subplot2grid(gs.get_geometry(), (0, (2 * i) + 1))
@@ -1409,7 +1416,7 @@ def custom_colorbar_demo():
         img = ax_im.pcolormesh(X[i], norm = norm, cmap = cmap)
         ax_im.set_aspect(1.0)
 
-        cb1 = mpl.colorbar.ColorbarBase(
+        cb1 = mplcolorbar.ColorbarBase(
             ax_cb, cmap=cmap, norm=norm, orientation='vertical')
         cb1.set_label('Some Units')
         # ax_cb.set_aspect(9.0/1.0)
