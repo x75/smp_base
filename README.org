@@ -24,28 +24,47 @@ install them via package manager
 
 : apt-get install python-numpy python-scipy python-matplotlib python-sklearn
 
-Optional modules are rlspy (recursive least squares implementation)
-from [fn:2] and jpype [fn:3], a java to python bridge which we use for
-computing information theoretic measures with the java information
-dynamics toolkit [fn:4]. Additional dependencies which might be made
-optional in the future are pandas, ros, pyunicorn, mdp, Oger, and igmm [fn:5].
+Ultimately optional but recommended modules are rlspy for a recursive least
+squares implementation and jpype, a java to python bridge
 
-Additional dependencies which might be made optional in the future are
-/pandas/, /ros/, /pyunicorn/, /mdp/, /Oger/, /pyemd/, /IncSfa/.
+Clone rlspy from https://github.com/bluesquall/rlspy somewhere into your filesystem and
+
+: pip3 install .
+
+from within the rlspy directory or set the RLSPY variable in ~smp_base/config.py~.
+
+Get jpype with ~sudo apt install python3-jpype~ or ~sudo pip3 install jpype1~.
+
+This is needed for computing information theoretic measures with the
+Java Information Dynamics Toolkit available from
+https://github.com/jlizier/jidt. Download the latest distribution zip
+from there, unpack it and set the JARLOC variable in
+~smp_base/config.py~ to point to the infodynamics.jar
+
+Additional packages we depend on at various places are pandas, ros,
+pyunicorn, mdp, Oger, pyemd, IncSfa and igmm, but they can be installed
+later. Pandas and MDP can be had from the distro with
 
 : apt-get install python-pandas python-mdp
 
 For installing a basic ROS stack see the wiki at
-https://www.ros.org/wiki, you need to have the package python-rospy.
+https://www.ros.org/wiki, you need to have the package
+python-rospy (Recently I have been building a minimal py3 version of
+ROS from source).
 
-Pyunicorn does recurrence analysis and can be obtained from
+Pyunicorn is used for recurrence analysis and can be obtained from source at
 https://github.com/pik-copan/pyunicorn or via pip.
 
-Oger is an extension for MDP and can be obtained from http://reservoir-computing.org/installing_oger.
+Oger is an extension for MDP and can be obtained from
+http://reservoir-computing.org/installing_oger.
 
 ** Configuration
 
-The path to some of the libraries can be set in the config file. See config.py.dist for possible options.
+In a freshly cloned repository a local configuration file has to be created from a template. To do this
+
+: cp smp_base/config.py.dist smp_base/config.py
+
+and then edit the file ~smp_base/config.py~ and set the JARLOC and RLSPY variables to matching values.
 
 ** Reservoir lib                                                   :noexport:
 
@@ -69,11 +88,5 @@ to see possible options. Documentation and examples upcoming.
 * Footnotes
 
 [fn:5] https://github.com/x75/igmm/tree/smp
-
-[fn:4] https://github.com/jlizier/jidt
-
-[fn:3] Either python-jpype via apt, or from pip either jpypex or JPype1
-
-[fn:2] https://github.com/bluesquall/rlspy
 
 [fn:1] https://github.com/x75/smp_sphero

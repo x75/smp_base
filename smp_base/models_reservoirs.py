@@ -37,12 +37,14 @@ from matplotlib import gridspec
 
 try:
     try:
-        from config import RLSPY
-    except:
-        pass
+        from smp_base.config import RLSPY
+        print('Imported RLSPY {0}'.format(RLSPY))
+    except Exception as err:
+        print('Import error RLSPY {0}'.format(err))
     else:
         sys.path.append(RLSPY)
     import rlspy
+    
 except ImportError:
     print("ImportError for rlspy")
     rlspy = None

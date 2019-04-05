@@ -1,60 +1,57 @@
+Sensorimotor learning basic lib
+===============================
 
+A python library of code used for sensorimotor learning experiments with simulations, robots, etc. The basic idea is to generate states (sensors) with actions (motors), learn different predictive models from that data to approximate the sensorimotor dynamics and then use the models to infer future actions.
 
-# Sensorimotor learning basic lib
+This repository is in an early stages of release which I push on the occasion of sharing the smp\_sphero code [1]. Still performing incremental clean-up and refactoring plus additions from existing other repositories so a lot of things might still change.
 
-A python library of code used for sensorimotor learning experiments
-with simulations, robots, etc. The basic idea is to generate states
-(sensors) with actions (motors), learn different predictive models
-from that data to approximate the sensorimotor dynamics and then use
-the models to infer future actions.
+Dependencies
+------------
 
-This repository is in an early stages of release which I push on the
-occasion of sharing the smp\_sphero code <sup><a id="fnr.1" class="footref" href="#fn.1">1</a></sup>. Still performing
-incremental clean-up and refactoring plus additions from existing
-other repositories so a lot of things might still change.
+The main dependencies are the standard ones such as numpy, scipy, matplotlib, and sklearn which are needed regardless. You can either install them via package manager
 
+``` example
+apt-get install python-numpy python-scipy python-matplotlib python-sklearn
+```
 
-## Dependencies
+Ultimately optional but recommended modules are rlspy for a recursive least squares implementation and jpype, a java to python bridge
 
-The main dependencies are the standard ones such as numpy, scipy,
-matplotlib, and sklearn which are needed regardless. You can either
-install them via package manager
+Clone rlspy from <https://github.com/bluesquall/rlspy> somewhere into your filesystem and
 
-    apt-get install python-numpy python-scipy python-matplotlib python-sklearn
+``` example
+pip3 install .
+```
 
-Optional modules are rlspy (recursive least squares implementation)
-from <sup><a id="fnr.2" class="footref" href="#fn.2">2</a></sup> and jpype <sup><a id="fnr.3" class="footref" href="#fn.3">3</a></sup>, a java to python bridge which we use for
-computing information theoretic measures with the java information
-dynamics toolkit <sup><a id="fnr.4" class="footref" href="#fn.4">4</a></sup>. Additional dependencies which might be made
-optional in the future are pandas, ros, pyunicorn, mdp, Oger, and igmm <sup><a id="fnr.5" class="footref" href="#fn.5">5</a></sup>.
+from within the rlspy directory or set the RLSPY variable in `smp_base/config.py`.
 
-Additional dependencies which might be made optional in the future are
-*pandas*, *ros*, *pyunicorn*, *mdp*, *Oger*, *pyemd*, *IncSfa*.
+Get jpype with `sudo apt install python3-jpype` or `sudo pip3 install jpype1`.
 
-    apt-get install python-pandas python-mdp
+This is needed for computing information theoretic measures with the Java Information Dynamics Toolkit available from <https://github.com/jlizier/jidt>. Download the latest distribution zip from there, unpack it and set the JARLOC variable in `smp_base/config.py` to point to the infodynamics.jar
 
-For installing a basic ROS stack see the wiki at
-<https://www.ros.org/wiki>, you need to have the package python-rospy.
+Additional packages we depend on at various places are pandas, ros, pyunicorn, mdp, Oger, pyemd, IncSfa and igmm, but they can be installed later. Pandas and MDP can be had from the distro with
 
-Pyunicorn does recurrence analysis and can be obtained from
-<https://github.com/pik-copan/pyunicorn> or via pip.
+``` example
+apt-get install python-pandas python-mdp
+```
+
+For installing a basic ROS stack see the wiki at <https://www.ros.org/wiki>, you need to have the package python-rospy (Recently I have been building a minimal py3 version of ROS from source).
+
+Pyunicorn is used for recurrence analysis and can be obtained from source at <https://github.com/pik-copan/pyunicorn> or via pip.
 
 Oger is an extension for MDP and can be obtained from <http://reservoir-computing.org/installing_oger>.
 
+Configuration
+-------------
 
-## Configuration
+In a freshly cloned repository a local configuration file has to be created from a template. To do this
 
-The path to some of the libraries can be set in the config file. See config.py.dist for possible options.
+``` example
+cp smp_base/config.py.dist smp_base/config.py
+```
 
+and then edit the file `smp_base/config.py` and set the JARLOC and RLSPY variables to matching values.
 
-# Footnotes
+Footnotes
+=========
 
-<sup><a id="fn.1" href="#fnr.1">1</a></sup> <https://github.com/x75/smp_sphero>
-
-<sup><a id="fn.2" href="#fnr.2">2</a></sup> <https://github.com/bluesquall/rlspy>
-
-<sup><a id="fn.3" href="#fnr.3">3</a></sup> Either python-jpype via apt, or from pip either jpypex or JPype1
-
-<sup><a id="fn.4" href="#fnr.4">4</a></sup> <https://github.com/jlizier/jidt>
-
-<sup><a id="fn.5" href="#fnr.5">5</a></sup> <https://github.com/x75/igmm/tree/smp>
+[1] <https://github.com/x75/smp_sphero>
