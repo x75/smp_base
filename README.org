@@ -1,15 +1,17 @@
-#+TITLE: Sensorimotor learning basic lib
+#+TITLE: Sensorimotor primitives basic library
 #+AUTHOR: Oswald Berthold
 
 #+OPTIONS: toc:nil ^:nil
 
-* Sensorimotor learning basic lib
+* Sensorimotor primitives basic library
 
-A python library of code used for sensorimotor learning experiments
-with simulations, robots, etc. The basic idea is to generate states
-(sensors) with actions (motors), learn different predictive models
-from that data to approximate the sensorimotor dynamics and then use
-the models to infer future actions.
+This tries to be the library of basic functions for a set of
+sensorimotor learning experiments with simulators and real robots in
+my thesis project /Robotic self-exploration and acquisition of
+sensorimotor primitives/. The basic idea there is to have states that
+combine sensors with actions and motor signals and learn predictive
+models from incoming data to infer future actions from the
+approximated sensorimotor dynamics.
 
 This repository is in an early stages of release which I push on the
 occasion of sharing the smp_sphero code [fn:1]. Still performing
