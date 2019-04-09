@@ -52,7 +52,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'smp_base'
-copyright = '2017, Oswald Berthold'
+copyright = '2017 - 2019, Oswald Berthold'
 author = 'Oswald Berthold'
 
 # The version info for the project you're documenting, acts as replacement for

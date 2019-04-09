@@ -2,7 +2,7 @@
 
 common frequently required micro patterns and utils
 
-TODO: consolidate with :mod:`smp_graphs.common`
+.. TODO:: consolidate with :mod:`smp_graphs.common`
 """
 
 import logging

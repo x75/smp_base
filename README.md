@@ -1,7 +1,7 @@
-Sensorimotor learning basic lib
-===============================
+Sensorimotor primitives basic library
+=====================================
 
-A python library of code used for sensorimotor learning experiments with simulations, robots, etc. The basic idea is to generate states (sensors) with actions (motors), learn different predictive models from that data to approximate the sensorimotor dynamics and then use the models to infer future actions.
+This tries to be the library of basic functions for a set of sensorimotor learning experiments with simulators and real robots in my thesis project *Robotic self-exploration and acquisition of sensorimotor primitives*. The basic idea there is to have states that combine sensors with actions and motor signals and learn predictive models from incoming data to infer future actions from the approximated sensorimotor dynamics.
 
 This repository is in an early stages of release which I push on the occasion of sharing the smp\_sphero code [1]. Still performing incremental clean-up and refactoring plus additions from existing other repositories so a lot of things might still change.
 
@@ -26,7 +26,7 @@ from within the rlspy directory or set the RLSPY variable in `smp_base/config.py
 
 Get jpype with `sudo apt install python3-jpype` or `sudo pip3 install jpype1`.
 
-This is needed for computing information theoretic measures with the Java Information Dynamics Toolkit available from <https://github.com/jlizier/jidt>. Download the latest distribution zip from there, unpack it and set the JARLOC variable in `smp_base/config.py` to point to the infodynamics.jar
+This is needed for computing information theoretic measures with the Java Information Dynamics Toolkit available from <https://github.com/jlizier/jidt>. Download the latest distribution zip from there, unpack it and set the JARLOC variable in `smp_base/config.py` to point to the absolte path of infodynamics.jar
 
 Additional packages we depend on at various places are pandas, ros, pyunicorn, mdp, Oger, pyemd, IncSfa and igmm, but they can be installed later. Pandas and MDP can be had from the distro with
 
@@ -49,7 +49,12 @@ In a freshly cloned repository a local configuration file has to be created from
 cp smp_base/config.py.dist smp_base/config.py
 ```
 
-and then edit the file `smp_base/config.py` and set the JARLOC and RLSPY variables to matching values.
+and then edit the file `smp_base/config.py` and set the JARLOC and RLSPY variables to matching values. Use the absolute path so they can be found from anywhere.
+
+Development
+-----------
+
+.. todoList::
 
 Footnotes
 =========

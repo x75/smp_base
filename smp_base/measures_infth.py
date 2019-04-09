@@ -9,21 +9,13 @@ on the great java information dynamics toolkit by Joe Lizier [1].
 Current implementation are thin wrappers around jidt calls as
 functions without a class.
 
-TODO: sift, sort and clean-up input from
- - smp/smp/infth.py
- - smp/playground/infth_feature_relevance.py
- - smp/sequence/\*.py
- - smp_sphero (was smp_infth)
- - evoplast/ep3.py
- - smp/infth
- - smp/infth/infth_homeokinesis_analysis_cont.py
- - smp/infth/infth_playground
- - smp/infth/infth_explore.py
- - smp/infth/infth_pointwise_plot.py
- - smp/infth/infth_measures.py: unfinished
- - smp/infth/infth_playground.py
- - smp/infth/infth_EH-2D.py
- - smp/infth/infth_EH-2D_clean.py
+.. TODO:: sift, sort and clean-up input from: smp/smp/infth.py, smp/playground/infth_feature_relevance.py, smp/sequence/\*.py, 
+smp_sphero (was smp_infth), evoplast/ep3.py, smp/infth, 
+smp/infth/infth_homeokinesis_analysis_cont.py, 
+smp/infth/infth_playground, smp/infth/infth_explore.py, 
+smp/infth/infth_pointwise_plot.py, smp/infth/infth_measures.py:
+unfinished, smp/infth/infth_playground.py, smp/infth/infth_EH-2D.py
+- smp/infth/infth_EH-2D_clean.py
 
 [1] https://github.com/jlizier/jidt
 """

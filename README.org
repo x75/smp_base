@@ -20,20 +20,23 @@ other repositories so a lot of things might still change.
 
 ** Dependencies
 
-The main dependencies are the standard ones such as numpy, scipy,
+The first bit are the standard libraries such as numpy, scipy,
 matplotlib, and sklearn which are needed regardless. You can either
 install them via package manager
 
-: apt-get install python-numpy python-scipy python-matplotlib python-sklearn
+: sudo apt install python3-numpy python3-scipy python3-matplotlib python3-sklearn
 
-Ultimately optional but recommended modules are rlspy for a recursive least
-squares implementation and jpype, a java to python bridge
+Ultimately optional but recommended modules are rlspy for a recursive
+least squares implementation and jpype, a java to python bridge.
 
-Clone rlspy from https://github.com/bluesquall/rlspy somewhere into your filesystem and
+rlspy is used as a reference update rule for prediction learning in
+many models. Get it from https://github.com/bluesquall/rlspy by
+cloning into your filesystem and
 
-: pip3 install .
+: cd rlspy
+: sudo pip3 install .
 
-from within the rlspy directory or set the RLSPY variable in ~smp_base/config.py~.
+Then set the RLSPY variable in ~smp_base/config.py~.
 
 Get jpype with ~sudo apt install python3-jpype~ or ~sudo pip3 install jpype1~.
 
@@ -41,7 +44,21 @@ This is needed for computing information theoretic measures with the
 Java Information Dynamics Toolkit available from
 https://github.com/jlizier/jidt. Download the latest distribution zip
 from there, unpack it and set the JARLOC variable in
-~smp_base/config.py~ to point to the infodynamics.jar
+~smp_base/config.py~ to point to the absolte path of infodynamics.jar
+
+Another measure that is used is the earth mover's distance, currently
+there's two different implementations used: emd and pyemd.
+
+emd from https://github.com/garydoranjr/pyemd, that is git clone it,
+
+: cd pyemd
+: sudo pip3 install .
+
+should install package emd.
+
+pyemd via pip
+
+: sudo pip3 install pyemd
 
 Additional packages we depend on at various places are pandas, ros,
 pyunicorn, mdp, Oger, pyemd, IncSfa and igmm, but they can be installed
@@ -66,7 +83,13 @@ In a freshly cloned repository a local configuration file has to be created from
 
 : cp smp_base/config.py.dist smp_base/config.py
 
-and then edit the file ~smp_base/config.py~ and set the JARLOC and RLSPY variables to matching values.
+and then edit the file ~smp_base/config.py~ and set the JARLOC and
+RLSPY variables to matching values. Use the absolute path so they can
+be found from anywhere.
+
+** Development
+
+.. todoList::
 
 ** Reservoir lib                                                   :noexport:
 
