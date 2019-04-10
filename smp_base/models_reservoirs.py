@@ -36,18 +36,20 @@ from matplotlib import gridspec
 
 
 try:
-    try:
-        from smp_base.config import RLSPY
-        print('Imported RLSPY {0}'.format(RLSPY))
-    except Exception as err:
-        print('Import error RLSPY {0}'.format(err))
-    else:
-        sys.path.append(RLSPY)
     import rlspy
     
 except ImportError:
-    print("ImportError for rlspy")
-    rlspy = None
+    print("ImportError for rlspy, trying RLSPY path")
+    
+    try:
+        from smp_base.config import RLSPY
+        print('Imported RLSPY={0}'.format(RLSPY))
+    except Exception as err:
+        print('Import error RLSPY {0}'.format(err))
+        rlspy = None
+    else:
+        sys.path.append(RLSPY)
+        import rlspy
 
 import logging
 from smp_base.common import get_module_logger

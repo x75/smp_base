@@ -8,37 +8,63 @@ This repository is in an early stages of release which I push on the occasion of
 Dependencies
 ------------
 
-The main dependencies are the standard ones such as numpy, scipy, matplotlib, and sklearn which are needed regardless. You can either install them via package manager
+The first bit are the standard libraries such as numpy, scipy, matplotlib, and sklearn which are needed regardless. You can either install them via package manager
 
 ``` example
-apt-get install python-numpy python-scipy python-matplotlib python-sklearn
+sudo apt install python3-numpy python3-scipy python3-matplotlib python3-sklearn
 ```
 
-Ultimately optional but recommended modules are rlspy for a recursive least squares implementation and jpype, a java to python bridge
+Ultimately optional but recommended modules are rlspy for a recursive least squares implementation and jpype, a java to python bridge.
 
-Clone rlspy from <https://github.com/bluesquall/rlspy> somewhere into your filesystem and
+rlspy is used as a reference update rule for prediction learning in many models. Get it from <https://github.com/bluesquall/rlspy> by cloning into your filesystem and
 
 ``` example
-pip3 install .
+cd rlspy
+sudo pip3 install .
 ```
 
-from within the rlspy directory or set the RLSPY variable in `smp_base/config.py`.
+Then set the RLSPY variable in `smp_base/config.py`.
 
 Get jpype with `sudo apt install python3-jpype` or `sudo pip3 install jpype1`.
 
 This is needed for computing information theoretic measures with the Java Information Dynamics Toolkit available from <https://github.com/jlizier/jidt>. Download the latest distribution zip from there, unpack it and set the JARLOC variable in `smp_base/config.py` to point to the absolte path of infodynamics.jar
 
-Additional packages we depend on at various places are pandas, ros, pyunicorn, mdp, Oger, pyemd, IncSfa and igmm, but they can be installed later. Pandas and MDP can be had from the distro with
+Another measure that is used is the earth mover's distance, currently there's two different implementations used: emd and pyemd.
+
+emd from <https://github.com/garydoranjr/pyemd>, that is git clone it,
+
+``` example
+cd pyemd
+sudo pip3 install .
+```
+
+should install package emd.
+
+pyemd comes via pip by running
+
+``` example
+sudo pip3 install pyemd
+```
+
+Additional packages we depend on at various places are pandas, ROS, pyunicorn, mdp, but they can be installed later. Pandas and MDP can be had from the distro with
 
 ``` example
 apt-get install python-pandas python-mdp
 ```
 
+Oger is an extension for MDP and can be obtained from <http://reservoir-computing.org/installing_oger>.
+
 For installing a basic ROS stack see the wiki at <https://www.ros.org/wiki>, you need to have the package python-rospy (Recently I have been building a minimal py3 version of ROS from source).
 
 Pyunicorn is used for recurrence analysis and can be obtained from source at <https://github.com/pik-copan/pyunicorn> or via pip.
 
-Oger is an extension for MDP and can be obtained from <http://reservoir-computing.org/installing_oger>.
+otl: online temporal learning library by harold soh w/ gaussian process reservoir readout, loca fork on <https://github.com/x75/otl>
+
+pypr: gaussian mixture models with conditional inference, local fork on <https://github.com/x75/pypr>
+
+igmm: incremental gaussian mixture models, <https://github.com/yumilceh/igmm>
+
+IncSfa: incremental slow feature analysis, untested <https://github.com/varunrajk/IncSFA>, <https://github.com/Kaixhin/IncSFA>
 
 Configuration
 -------------

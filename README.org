@@ -56,15 +56,18 @@ emd from https://github.com/garydoranjr/pyemd, that is git clone it,
 
 should install package emd.
 
-pyemd via pip
+pyemd comes via pip by running
 
 : sudo pip3 install pyemd
 
-Additional packages we depend on at various places are pandas, ros,
-pyunicorn, mdp, Oger, pyemd, IncSfa and igmm, but they can be installed
+Additional packages we depend on at various places are pandas, ROS,
+pyunicorn, mdp, but they can be installed
 later. Pandas and MDP can be had from the distro with
 
 : apt-get install python-pandas python-mdp
+
+Oger is an extension for MDP and can be obtained from
+http://reservoir-computing.org/installing_oger.
 
 For installing a basic ROS stack see the wiki at
 https://www.ros.org/wiki, you need to have the package
@@ -74,8 +77,13 @@ ROS from source).
 Pyunicorn is used for recurrence analysis and can be obtained from source at
 https://github.com/pik-copan/pyunicorn or via pip.
 
-Oger is an extension for MDP and can be obtained from
-http://reservoir-computing.org/installing_oger.
+otl: online temporal learning library by harold soh w/ gaussian process reservoir readout, loca fork on https://github.com/x75/otl
+
+pypr: gaussian mixture models with conditional inference, local fork on https://github.com/x75/pypr
+
+igmm: incremental gaussian mixture models, https://github.com/yumilceh/igmm
+
+IncSfa: incremental slow feature analysis, untested https://github.com/varunrajk/IncSFA, https://github.com/Kaixhin/IncSFA
 
 ** Configuration
 
