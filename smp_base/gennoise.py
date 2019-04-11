@@ -56,10 +56,11 @@ class Noise(object):
         # initialize complex component vectors
         real = np.zeros((N,))
         imag = np.zeros((N,))
-
+        # Nhalf = int(N/2)
+        
         # iterate FFT bands up to nyquist
         # FIXME: vectorize this
-        for i in range(1, N/2):
+        for i in range(1, N//2):
             # spectrum magnitude from eq. ?
             # mag = (i+1)**(-beta/2.) * np.random.normal(0., 1.)
             mag = np.power(i+1, -beta/2.) * np.random.normal(0., 1.)
@@ -74,7 +75,7 @@ class Noise(object):
             # fix corner case
             real[N-i] = real[i]
             imag[N-i] = -imag[i]
-            imag[N/2] = 0
+            imag[N//2] = 0
 
         # complex array
         compl = real + (imag*1j)
