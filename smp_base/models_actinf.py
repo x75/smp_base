@@ -45,10 +45,6 @@ TODO:
    - som extend sampling to sample actual prediction from gaussian with unit's mu and sigma
 
 """
-
-
-
-
 import numpy as np
 import scipy.sparse as sparse
 import scipy.stats  as stats
@@ -57,8 +53,9 @@ import matplotlib.gridspec as gridspec
 import pickle
 from functools import partial
 
-from .models import smpModelInit, smpModel
-from .models import savefig, plot_nodes_over_data_1d_components_fig, plot_nodes_over_data_1d_components
+from smp_base.models import smpModelInit, smpModel
+from smp_base.plot_utils import savefig
+from smp_base.plot_models import plot_nodes_over_data_1d_components_fig, plot_nodes_over_data_1d_components
 
 # KNN
 from sklearn.neighbors import KNeighborsRegressor

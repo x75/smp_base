@@ -29,17 +29,10 @@ Things:
 """
 import pickle
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib import gridspec
+# import matplotlib.pyplot as plt # visualize
 
 from smp_base.common import set_attr_from_dict
-
-
-def make_figure(*args, **kwargs):
-    return plt.figure()
-
-def make_gridspec(rows = 1, cols = 1):
-    return gridspec.GridSpec(rows, cols)
+# from smp_base.plot_utils import savefig
 
 ################################################################################
 # smpModel decorator init
@@ -141,12 +134,8 @@ class smpModel(object):
         # self.visualize = visualize
 
         if self.visualize:
-            plt.ion()
-            self.figs = []
-            # store data for plotting, another internal model
-            self.Xhist = []
-            self.Yhist = []
-            
+            from smp_base.plot_utils import set_interactive
+            set_interactive(True)
             self.visualize_model_init()
         
     def get_params(self, *args, **kwargs):
@@ -186,6 +175,16 @@ class smpModel(object):
             print(("%s.fit: implement me" % (self.__class__.__name__)))
 
     def visualize_model_init(self):
+        """smpModel.visualize_model_init
+        
+        model initialization code for visualization: set interactive
+        plotting, init model figures and XY history, then call the
+        instance's init implementation.
+        """
+        self.figs = []
+        # store data for plotting, another internal model
+        self.Xhist = []
+        self.Yhist = []
         return
         
     def visualize_model(self):
@@ -256,86 +255,6 @@ class iir_fo(object):
     def predict(self, x):
         self.y = self.b * self.y + self.a * x
         return self.y
-        
-    
-################################################################################
-# plotting utilities
-def savefig(fig, filename):
-    fig_scale_inches = 0.75
-    fig.set_size_inches((16 * fig_scale_inches, 9 * fig_scale_inches))
-    fig.savefig(filename, dpi = 300, bbox_inches = 'tight')
-
-def plot_nodes_over_data_1d_components_fig(title = 'smpModel', numplots = 1):
-    
-    fig = plt.figure()
-    fig.suptitle("One-dimensional breakdown of SOM nodes per input dimension (%s)" % (title,))
-    # fig.suptitle(title)
-    # numplots = idim + odim
-    gs = gridspec.GridSpec(numplots, 1)
-    for i in range(numplots):
-        fig.add_subplot(gs[i,0])
-    return fig
-    
-def plot_nodes_over_data_1d_components(fig, X, Y, mdl, e_nodes, p_nodes, e_nodes_cov, p_nodes_cov, saveplot = False):
-    """one-dimensional plot of each components of X and Y together with those of SOM nodes for all i and o components"""
-
-    idim = X.shape[1]
-    odim = Y.shape[1]
-    numplots = idim + odim
-    
-    for i in range(idim):
-        # ax = fig.add_subplot(gs[i,0])
-        ax = fig.axes[i]
-        ax.clear()
-        ax.hist(X[:,i], bins=20)
-        xlim = ax.get_xlim()
-        ylim = ax.get_ylim()
-        yran = ylim[1] - ylim[0]
-        offset1 = yran * -0.1
-        offset2 = yran * -0.25
-        # print("offsets 1,2 = %f, %f" % (offset1, offset2))
-        ax.plot(X[:,i], np.ones_like(X[:,i]) * offset1, "ko", alpha=0.33)
-        for j,node in enumerate(e_nodes[:,i]):
-            myms = 2 + 30 * np.sqrt(e_nodes_cov[i,i,i])
-            # print("node", j, node, myms)
-            ax.plot([node], [offset2], "ro", alpha=0.33, markersize=10)
-            # ax.plot([node], [offset2], "r.", alpha=0.33, markersize = myms)
-            # x1, x2 = gmm.
-            ax.text(node, offset2, "n%d" % j, fontsize=6)
-        # plt.plot(e_nodes[:,i], np.zeros_like(e_nodes[:,i]), "ro", alpha=0.33, markersize=10)
-        
-    for i in range(idim, numplots):
-        # ax = fig.add_subplot(gs[i,0])
-        ax = fig.axes[i]
-        ax.clear()
-        ax.hist(Y[:,i-idim], bins=20)
-        xlim = ax.get_xlim()
-        ylim = ax.get_ylim()
-        yran = ylim[1] - ylim[0]
-        offset1 = yran * -0.1
-        offset2 = yran * -0.25
-        # print("offsets 1,2 = %f, %f" % (offset1, offset2))
-        ax.plot(Y[:,i-idim], np.ones_like(Y[:,i-idim]) * offset1, "ko", alpha=0.33)
-        for j,node in enumerate(p_nodes[:,i-idim]):
-            myms = 2 + 30 * np.sqrt(p_nodes_cov[i-idim,i-idim,i-idim])
-            # print("node", j, node, myms)
-            ax.plot([node], [offset2], "ro", alpha=0.33, markersize=10)
-            # ax.plot([node], [offset2], "r.", alpha=0.33, markersize = myms)
-            ax.text(node, offset2, "n%d" % j, fontsize=6)
-            
-       # plt.plot(p_nodes[:,i-idim], np.zeros_like(p_nodes[:,i-idim]), "ro", alpha=0.33, markersize=10)
-
-    plt.draw()
-    plt.pause(1e-9)
-            
-    if saveplot:
-        filename = "plot_nodes_over_data_1d_components_%s.jpg" % (mdl.__class__.__name__,)
-        savefig(fig, filename)
-        
-    fig.show()
-    # plt.show()
-
-    
 
 if __name__ == '__main__':
     print("testing iir_firstorder coef/freq conversion")

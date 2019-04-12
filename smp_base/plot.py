@@ -45,7 +45,7 @@ from matplotlib import rc, rcParams, rc_params
 # perceptually uniform colormaps
 import colorcet as cc
 
-from .plot_utils import put_legend_out_right
+from smp_base.plot_utils import put_legend_out_right
 
 try:
     from pyunicorn.timeseries import RecurrencePlot
@@ -286,30 +286,6 @@ def make_fig(rows = 1, cols = 1, wspace = 0.0, hspace = 0.0, axesspec = None, ti
     # plt.subplots_adjust(wspace=0.1, hspace = 0.3)
             
     return fig
-
-def set_interactive(interactive = False):
-    """This function does something.
-
-    Args:
-       name (str):  The name to use.
-
-    Kwargs:
-       state (bool): Current state to be in.
-
-    Returns:
-       int.  The return code::
-
-          0 -- Success!
-          1 -- No good.
-          2 -- Try again.
-
-    Raises:
-       AttributeError, KeyError
-     """
-    if interactive:
-        plt.ion()
-    else:
-        plt.ioff()
 
 def get_ax_size(fig, ax):
     """Get the size of an axis

@@ -1,8 +1,12 @@
-"""Some plotting utils"""
+"""smp_base.plot_utils
+
+basic plotting utilities
+"""
 
 import matplotlib.pyplot as plt
 from matplotlib import rc
 from matplotlib import rcParams
+from matplotlib import gridspec
 from matplotlib.font_manager import FontProperties
 
 import logging
@@ -10,6 +14,28 @@ from smp_base.common import get_module_logger
 
 loglevel_debug = logging.DEBUG - 1
 logger = get_module_logger(modulename = 'plot_utils', loglevel = logging.DEBUG)
+
+def set_interactive(interactive = False):
+    """smp_base.plot_utils.set_interactive
+
+    set interactive plotting to `interactive`, defaults to `False`.
+    """
+    if interactive:
+        plt.ion()
+    else:
+        plt.ioff()
+
+# from models
+def make_figure(*args, **kwargs):
+    return plt.figure()
+
+def make_gridspec(rows = 1, cols = 1):
+    return gridspec.GridSpec(rows, cols)
+
+def savefig(fig, filename):
+    fig_scale_inches = 0.75
+    fig.set_size_inches((16 * fig_scale_inches, 9 * fig_scale_inches))
+    fig.savefig(filename, dpi = 300, bbox_inches = 'tight')
 
 def set_latex_header():
     # plotting parameters
@@ -118,4 +144,3 @@ def put_legend_out_top(labels = None, handles=None, resize_by = 0.8, ax = None, 
         ax.legend(loc = loc, bbox_to_anchor = bbox, ncol=10, labels = labels)
     else:
         ax.legend(loc = loc, bbox_to_anchor = bbox, ncol=10, labels = labels, handles=handles)
-

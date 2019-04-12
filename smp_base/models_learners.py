@@ -22,9 +22,9 @@ import configparser, ast
 
 from smp_base.eligibility import Eligibility
 from smp_base.models import smpModelInit, smpModelStep, smpModel
-from smp_base.models import make_figure, make_gridspec
 from smp_base.models import iir_fo
 from smp_base.models_reservoirs import Reservoir, LearningRules
+from smp_base.plot_utils import make_figure, make_gridspec
 
 import logging
 from smp_base.common import get_module_logger

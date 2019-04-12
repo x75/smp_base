@@ -1,6 +1,6 @@
 """smp_base.common
 
-common frequently required micro patterns and utils
+common and frequently required small patterns and util functions
 
 .. TODO:: consolidate with :mod:`smp_graphs.common`
 """
@@ -82,3 +82,10 @@ def compose(*functions):
 #     # def compose2(f, g):
 #     #     return lambda x: f(g(x))
 #     return reduce(compose2, functions, lambda x: x)
+
+def main():
+    print('smp_base/{0} {1}'.format(__file__, __name__))
+
+if __name__ == '__main__':
+
+    main()
