@@ -72,7 +72,7 @@ def custom_legend(labels = None, handles = None, resize_by = 0.8, ax = None, loc
 
     customize legend position outside of axis
     """
-    logger.debug('custom_legend resize_by = %s, loc = %s', resize_by, loc)
+    # logger.debug('custom_legend resize_by = %s, loc = %s', resize_by, loc)
     if loc == 'right' or loc == 'left':
         put_legend_out_right(labels = labels, handles=handles, resize_by = resize_by, ax = ax, right = loc, lg = lg)
     elif loc in ['upper', 'top'] or loc == 'lower':
@@ -81,7 +81,7 @@ def custom_legend(labels = None, handles = None, resize_by = 0.8, ax = None, loc
         put_legend_out(labels = labels, handles=handles, resize_by = resize_by, ax = ax, loc = loc, lg = lg)
 
 def put_legend_out(labels = None, handles=None, resize_by = 0.8, ax = None, loc = None, lg = None):
-    logger.debug('put_legend_out resize_by = %s, loc = %s', resize_by, loc)
+    # logger.debug('put_legend_out resize_by = %s, loc = %s', resize_by, loc)
     ax = ax_check(ax)
     shift_by = 1 - resize_by
     if loc[0] < 0.1 or loc[0] > 0.9:

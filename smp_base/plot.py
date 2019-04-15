@@ -273,7 +273,7 @@ def make_fig(rows = 1, cols = 1, wspace = 0.0, hspace = 0.0, axesspec = None, ti
     gs = gridspec.GridSpec(rows, cols)
 
     if title is not None:
-        fig.suptitle(title)
+        fig.suptitle(title, horizontalalignment='center', fontweight='normal')
     
     if axesspec is None:
         axes = make_axes_from_grid(fig, gs)
@@ -612,14 +612,14 @@ def linesegments(ax, data, **kwargs):
     """
     kwargs_ = {}
     kwargs_.update(**kwargs)
-    logger.info('kwargs = %s', kwargs)
+    # logger.debug('linesegments kwargs = %s', kwargs)
 
     lineseg_idx = np.array(kwargs['lineseg_idx'])
     lineseg_x   = np.array(kwargs['lineseg_val'][0])
 
     kwargs = plot_clean_kwargs('plot', **kwargs_)
     
-    logger.info('data = %s', data.shape)
+    # logger.debug('linesegments data = %s', data.shape)
     for lineseg_i in lineseg_idx:
         x = list(lineseg_i)
         y = np.hstack((data[lineseg_i[0],[0]], data[lineseg_i[1],[1]]))
