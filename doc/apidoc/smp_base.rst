@@ -1,6 +1,13 @@
 smp\_base package
 =================
 
+Subpackages
+-----------
+
+.. toctree::
+
+    smp_base.impl
+
 Submodules
 ----------
 
@@ -128,6 +135,14 @@ smp\_base.plot module
 ---------------------
 
 .. automodule:: smp_base.plot
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+smp\_base.plot\_models module
+-----------------------------
+
+.. automodule:: smp_base.plot_models
     :members:
     :undoc-members:
     :show-inheritance:

@@ -6,6 +6,20 @@ import matplotlib.pyplot as plt
 
 from smp_base.plot_utils import make_figure, make_gridspec, savefig
 
+def plot_gennoise(plotdict):
+    fig = plt.figure()
+
+    for i,row in enumerate(plotdict):
+        for col in row:
+            ax = fig.add_subplot(len(plotdict),len(row),i+1)
+            ax.set_title(col['title'])
+            for _plot in col['plots']:
+                ax.plot(_plot['x'], label=_plot['label'])
+            ax.legend()
+
+    fig.show()
+    plt.show()
+
 ################################################################################
 # model visualization code, only used in models_actinf.py
 def plot_nodes_over_data_1d_components_fig(title = 'smpModel', numplots = 1):

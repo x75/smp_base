@@ -5,3 +5,4 @@ smp_base
    :maxdepth: 4
 
    smp_base
+   test

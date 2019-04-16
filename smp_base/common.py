@@ -5,17 +5,10 @@ common and frequently required small patterns and util functions
 .. TODO:: consolidate with :mod:`smp_graphs.common`
 """
 
-import logging
-from functools import reduce
+from smp_base.impl import smpi
 
-def set_attr_from_dict(obj, dictionary):
-    """set object attribute 'k' = v from a dictionary's k, v for all dict items
-
-    Transfer configuration dictionaries into an object's member
-    namespace (self.__dict__) with :func:`setattr`.
-    """
-    for k,v in list(dictionary.items()):
-        setattr(obj, k, v)
+logging = smpi('logging')
+reduce = smpi('functools', 'reduce')
 
 def get_module_logger(modulename = 'experiment', loglevel = logging.INFO):
     """get a logging.logger instance with reasonable defaults
@@ -83,6 +76,55 @@ def compose(*functions):
 #     #     return lambda x: f(g(x))
 #     return reduce(compose2, functions, lambda x: x)
 
+################################################################################
+# dictionary helper functions
+def dict_to_attr(obj, dictionary):
+    set_attr_from_dict(obj, dictionary)
+    
+def set_attr_from_dict(obj, dictionary):
+    """set object attribute 'k' = v from a dictionary's k, v for all dict items
+
+    Transfer configuration dictionaries into an object's member
+    namespace (self.__dict__) with :func:`setattr`.
+    """
+    for k,v in list(dictionary.items()):
+        setattr(obj, k, v)
+
+def dict_search_recursive(d, k):
+    """smp_base.common.dict_search_recursive
+
+    From smp_graphs.common.dict_search_recursive
+
+    Search for key `k` recursively over nested smp_graph config dicts
+    """
+    # FIXME: make it generic recursive search over nested graphs and move to smp_base
+
+    # print "#" * 80
+    # print "searching k = %s " % (k,),
+    if k in d:
+        # print "found k = %s, params = %s" % (k, d[k]['params'].keys())
+        return d[k]
+    else:
+        # print "d.keys()", d.keys()
+        for k_, v_ in list(d.items()):
+            # if v_[
+            if 'graph' in v_['params']: #  or v_['params'].has_key('subgraph'):
+                # print "k_", k_, "v_", v_['params'].keys()
+                return dict_search_recursive(v_['params']['graph'], k)
+    # None found
+    return None
+
+def dict_search_value_as_key(d, v):
+    """smp_base.common.dict_search_value_as_key
+
+    Search for value `v` in dict `d` and return its key `k` if found.
+    """
+    for k_, v_ in list(d.items()):
+        if v == v_: return k_
+    return None
+        
+################################################################################
+# main
 def main():
     print('smp_base/{0} {1}'.format(__file__, __name__))
 

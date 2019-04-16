@@ -144,3 +144,30 @@ def put_legend_out_top(labels = None, handles=None, resize_by = 0.8, ax = None, 
         ax.legend(loc = loc, bbox_to_anchor = bbox, ncol=10, labels = labels)
     else:
         ax.legend(loc = loc, bbox_to_anchor = bbox, ncol=10, labels = labels, handles=handles)
+
+# from audio thumbnailing with pyAudioAnalysis
+def getcmap():
+    import colorcet as cc
+    from matplotlib.colors import LinearSegmentedColormap
+    # cmap = LinearSegmentedColormap.from_list("fire", cc.bgy, 256)
+    # cmap = cc.cm['glasbey_bw']
+    # cmap = cc.cm['glasbey_category10']
+    # cmap = cc.cm['CET_D1A']
+    # cmap = cc.cm['CET_L19']
+    # cmap = cc.cm['CET_L17']
+    # cmap = cc.cm['colorwheel']
+    cmap = cc.cm['isolum']
+    return cmap
+
+def savefig_plotonly():
+    plt.axis('off')
+    plt.gca().set_axis_off()
+    plt.subplots_adjust(top = 1, bottom = 0, right = 1, left = 0, 
+            hspace = 0, wspace = 0)
+    plt.margins(0,0)
+    plt.gca().xaxis.set_major_locator(plt.NullLocator())
+    plt.gca().yaxis.set_major_locator(plt.NullLocator())
+    # savefig("filename.pdf", bbox_inches = 'tight', pad_inches = 0)
+    # fig.savefig(inputFile.replace(".wav", "_thumb1.png"), dpi=300)
+    fig.savefig(thumbnailWrapperFileName3Png, bbox_inches = 'tight', pad_inches = 0, dpi=300)
+

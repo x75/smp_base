@@ -308,11 +308,12 @@ def get_ax_size(fig, ax):
 def get_colorcycler(cmap_str = None, cmap_idx = None, c_s = 0, c_e = 255, c_n = 20):
     """get a colorcycler for the cmap 'cmapstr'
 
-    Arguments:
+    Args:
+
      - cmap_str(str): colormap id string ['rainbow']
-     - cmap_idx(array): indices into 0 - 255 to directly select the
+     - cmap_idx(array): indices into 0 - 255 to directly to select the
        colors of the cycle [None]. If None, cmap_idx will be generated
-       with the c_\* parameters.
+       with the c_s, c_e, and c_n parameters.
      - c_s: cmap_idx start
      - c_e: cmap_idx end
      - c_n: cmap_idx numsteps

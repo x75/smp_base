@@ -36,17 +36,19 @@ except ImportError as e:
 loglevel_debug = logging.DEBUG - 0
 logger = get_module_logger(modulename = 'measures', loglevel = logging.DEBUG)
 
-def meas_mse(x = None, x_ = None, *args, **kwargs):
+def meas_mse(x = None, x_2 = None, *args, **kwargs):
     """smp_base.measures.meas_mse
 
-    Compute mean squared error mse = 1/N \sum (x - x_)^2
+    Compute mean squared error MSE :math:`= 1/N \sum (x - x_2)^2`
 
-    Arguments:
-     - x(ndarray): matrix of points $x_1$
-     - x_(ndarray): matrix of point $x_2$
+    Args:
+
+    - `x` (ndarray): matrix of points :math:`x_1`
+    - `x_2` (ndarray): matrix of point :math:`x_2`
 
     Returns:
-     - mse(ndarray): $\text{mse} := 1/N \sum_i^N (x_1_i - x_2_i)^2$
+
+    - mse(ndarray): MSE :math:` := 1/N \sum_i^N (x_1_i - x_2_i)^2`
     """
     axis = 0
     keepdims = True
@@ -55,15 +57,15 @@ def meas_mse(x = None, x_ = None, *args, **kwargs):
     if 'keepdims' in kwargs:
         keepdims = kwargs['keepdims']
         
-    mse = np.mean(np.power(x - x_, 2), axis=axis, keepdims=keepdims)
+    mse = np.mean(np.power(x - x_2, 2), axis=axis, keepdims=keepdims)
     return mse
 
-def meas_rmse(x = None, x_ = None, *args, **kwargs):
+def meas_rmse(x = None, x_2 = None, *args, **kwargs):
     """smp_base.measures.meas_rmse
 
-    Compute root mean squared error $\text{rmse} = \sqrt{1/N \sum(x - x_)^2$}
+    Compute root mean squared error $\text{rmse} = \sqrt{1/N \sum(x - x_2)^2$}
     """
-    mse = meas_mse(x, x_, *args, **kwargs)
+    mse = meas_mse(x, x_2, *args, **kwargs)
     return np.sqrt(mse)
 
 def div_kl(h1, h2, *args, **kwargs):

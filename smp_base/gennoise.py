@@ -1,18 +1,30 @@
-#!/usr/bin/env python
-# Oswald Berthold 2017
-# 
-# - oneoverfnoise is a python port of gennoise.c by paul bourke
-# - levyflight is homegrown (?)
+"""smp_base.gennoise
+
+.. moduleauthor:: Oswald Berthold
+
+Generate special noise distributions: 1/f noise, levyflights
+
+.. note::
+
+   oneoverfnoise is a python port of gennoise.c by paul bourke
+
+   levyflight is homegrown (?)
+"""
+# import argparse
 
 
+#####
+from smp_base.impl import smpcls, smpi
 
-import argparse
-import numpy as np
-import matplotlib.pylab as plt
-from sklearn.preprocessing import normalize
+# required
+argparse = smpi('argparse')
+logging = smpi('logging')
+np = smpi('numpy')
 
-import logging
-from smp_base.common import get_module_logger
+# optional
+normalize = smpi('sklearn.preprocessing', 'normalize')
+get_module_logger = smpi('smp_base.common', 'get_module_logger')
+plot_gennoise = smpi('smp_base.plot_models', 'plot_gennoise')
 
 logger = get_module_logger(modulename = 'gennoise', loglevel = logging.INFO)
 
@@ -21,15 +33,18 @@ TWOPOWER = 13
 TWOPI = 6.283185307179586476925287
 
 def next_point(prev):
-    "choose next destination"
-    mode = "np"
+    """gennoise.next_point
+
+    levy flight next point w/ Gaussian angle and Pareto distance
+    """
+    mode = 'np'
     alpha = 1.5
     # angle = random.uniform(0,(2*math.pi))
-    if mode == "random":
-        angle = random.normalvariate(0,1.8)
+    if mode == 'random':
+        angle = random.normalvariate(0, 1.8)
         distance = 2 * random.paretovariate(alpha)
         # distance = 2 * random.weibullvariate(1.0, 0.9)
-    elif mode == "np":
+    elif mode == 'np':
         angle = np.random.normal(0, 1.8)
         distance = np.random.pareto(alpha)
     # cap distance at DMAX
@@ -143,20 +158,12 @@ if __name__ == "__main__":
     
     print("gennoise.main: real = %s, imag = %s" %(real, imag))
 
-    fig = plt.figure()
-    
-    ax1 = fig.add_subplot(2,1,1)
-    ax1.set_title('Noise spectrum (real/imag)')
-    ax1.plot(real, label = "real")
-    ax1.plot(imag, label = "imag")
-    ax1.legend()
-    # np.fft.ifft()
-
-    # print(ts.real)
-
-    ax2 = fig.add_subplot(2,1,2)
-    ax2.set_title('Noise timeseries (real)')
-    ax2.plot(ts.real)
-
-    fig.show()
-    plt.show()
+    plotdict = [
+        [
+            {'title': 'Noise spectrum', 'plots': [{'x': imag, 'label': 'imag'}, {'x': real, 'label': 'real'}]},
+            ],
+        [
+            {'title': 'Noise timeseries', 'plots': [{'x': ts.real, 'label': 'real ts'}]},
+        ],
+    ]
+    plot_gennoise(plotdict)

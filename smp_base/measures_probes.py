@@ -5,11 +5,13 @@
 Use measures inside a probe [1] to quantify location or time dependent
 model performance. Here we initially use regression rather than
 classification as the measure but the principle is the same:
+
 - create an adequate but simple model (e.g. ridge regression)
 - reuse that same model to compare variations on an equal footing
 - the variations are exclusively input variations, allowing to compare
   different inputs (e.g. data at different stages of processing) based
   on prediction MSE or other measure.
+
 
 [1] Alain, Guillaume, and Yoshua Bengio. "Understanding Intermediate Layers Using Linear Classifier Probes." ArXiv:1610.01644 [Cs, Stat], October 5, 2016. http://arxiv.org/abs/1610.01644.
 """

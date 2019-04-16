@@ -200,8 +200,8 @@ class smpKNN(smpModel):
         """smpKNN.fit
 
         Single fit Y to X step. If the input is a batch of data, fit
-        that entire batch and forgetting existing data in X_ and
-        Y_. If the input is a single data point, append to X_ and Y_
+        that entire batch and forgetting existing data in X' and
+        Y'. If the input is a single data point, append to X' and Y'
         and refit the model to that new data.
         """
         if X.shape[0] > 1: # batch of data

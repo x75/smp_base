@@ -143,13 +143,13 @@ def timeseries_to_temporal_embedding(data, embedding_size, pad=False, padchr=0):
 
 # multi-dimensional MSO
 def msond(sample_len=1000, n_samples = 1, dim = 3):
-    '''
-    mso(sample_len=1000, n_samples = 1) -> input
-    Generate the Multiple Sinewave Oscillator time-series, a sum of two sines
-    with incommensurable periods. Parameters are:
-        - sample_len: length of the time-series in timesteps
-        - n_samples: number of samples to generate
-    '''
+    """msond(sample_len=1000, n_samples = 1) -> input
+
+    Generate the Multiple Sinewave Oscillator time-series, a sum of
+    two sines with incommensurable periods. Parameters are:
+    - sample_len: length of the time-series in timesteps
+    - n_samples: number of samples to generate
+    """
     signals = []
     for _ in range(n_samples):
         phase = np.random.rand()
