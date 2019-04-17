@@ -101,10 +101,33 @@ def smpi(module, name=None):
 
     logger = get_module_logger(modulename = 'gennoise', loglevel = logging.INFO)
     """
-
-    _module = importlib.import_module(module)
-    if name is not None:
-        _attr = getattr(_module, name)
-        return _attr
+    try:
+        _module = importlib.import_module(module)
+        if name is not None:
+            _attr = getattr(_module, name)
+            return _attr
+    except (LookupError, ImportError) as e:
+        print('smpi loading module {0} failed with {1}'.format(module, e))
+        return None
     
     return _module
+
+
+# more import code
+"""
+try:
+    import rlspy
+    
+except ImportError:
+    print("ImportError for rlspy, trying RLSPY path")
+    
+    try:
+        RLSPY = smpi('smp_base.config.RLSPY')
+        print('Imported RLSPY={0}'.format(RLSPY))
+    except Exception as err:
+        print('Import error RLSPY {0}'.format(err))
+        rlspy = None
+    else:
+        sys.path.append(RLSPY)
+        import rlspy
+"""

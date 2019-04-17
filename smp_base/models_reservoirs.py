@@ -23,36 +23,36 @@ TODO
  - x intrinsic plasticity: input layer, reservoir layer: use separate standardization layers for inputs
  - x correlated exploration noise: exploration modules: gaussian, colored gaussian, pareto, homeokinesis, ...
 """
+from smp_base.impl import smpi
 
+sys = smpi('sys')
+time = smpi('time')
+argparse = smpi('argparse')
+from pickle import Pickler
+from pickle import Unpickler
 
-import sys, time, argparse
+np = smpi('numpy')
+LA = smpi('numpy.linalg')
+sp = smpi('scipy')
+spa = smpi('scipy.sparse')
+plt = smpi('matplotlib.pyplot')
 
-import numpy as np
-import numpy.linalg as LA
-import scipy as sp
-import scipy.sparse as spa
-import matplotlib.pyplot as plt
-from matplotlib import gridspec
+gridspec = smpi('matplotlib.gridspec')
 
+ss = smpi('scipy.signal')
+si = smpi('scipy.interpolate')
 
-try:
-    import rlspy
-    
-except ImportError:
-    print("ImportError for rlspy, trying RLSPY path")
-    
-    try:
-        from smp_base.config import RLSPY
-        print('Imported RLSPY={0}'.format(RLSPY))
-    except Exception as err:
-        print('Import error RLSPY {0}'.format(err))
-        rlspy = None
-    else:
-        sys.path.append(RLSPY)
-        import rlspy
+signal = smpi('scipy.signal')
+wavfile = smpi('scipy.io.wavfile')
+# wavdataset = smpi('smp.datasets.wavdataset')
+# SeqData = smpi('models.SeqData')
+# wavfile = smpi('scipy.io.wavfile')
+
+get_mackey_glass = smpi('smp_base.datasets', 'get_mackey_glass')
+rlspy = smpi('rlspy')
 
 import logging
-from smp_base.common import get_module_logger
+get_module_logger = smpi('smp_base.common', 'get_module_logger')
 logger = get_module_logger(modulename = 'models_reservoirs', loglevel = logging.DEBUG)
 
 ############################################################
@@ -230,8 +230,7 @@ def create_matrix_sparse_from_conf(conf):
             
 ################################################################################
 # Standalone class for learning rules
-# - Recursive Least Squares (RLS, depends on rlspy.py): the vanilla online supervised
-#   reservoir training method
+# - Recursive Least Squares (RLS, depends on rlspy.py): the vanilla online supervised reservoir training method
 # - First-order reduced and controlled error or FORCE learning (Sussillo & Abbott, 2012)
 # - FORCEmdn: Mixture density output layer using FORCE rule (Berthold, 2017)
 # - Exploratory Hebbian learning (Legenstein & others, 2010)
@@ -347,25 +346,20 @@ class LearningRules(object):
         Setup RLS variables before applying the RLS learning rule
         """
 
-        #self.rls_E = rlspy.data_matrix.Estimator(np.zeros(shape=(self.N, 1)) ,(1.0/self.alpha)*np.eye(self.N))
-        #self.rls_E = rlspy.data_matrix.Estimator(np.random.uniform(0, 0.0001, size=(self.N, 1)) , np.eye(self.N))
+        # self.rls_estimator = rlspy.data_matrix.Estimator(np.zeros(shape=(self.N, 1)) ,(1.0/self.alpha)*np.eye(self.N))
+        # self.rls_estimator = rlspy.data_matrix.Estimator(np.random.uniform(0, 0.0001, size=(self.N, 1)) , np.eye(self.N))
 
         self.N = modelsize
         self.noise = noise
         
-        if  P0 is None:
+        if P0 is None:
           print ("reservoirs.LearningRules.learnRLSsetup: random initialization for RLS setup ")
-          # self.rls_E = rlspy.data_matrix.Estimator(np.random.uniform(0, 0.1, size=(self.N, 1)) , np.eye(self.N))
+          # self.rls_estimator = rlspy.data_matrix.Estimator(np.random.uniform(0, 0.1, size=(self.N, 1)) , np.eye(self.N))
           self.rls_estimator = rlspy.data_matrix.Estimator(np.random.uniform(0, 0.01, size=(self.N, 1)) , np.eye(self.N))
-          # self.wo = np.random.uniform(-1e-4,1e-4, size=(self.N, self.output_num))
-          # self.wo = np.zeros((self.N, self.output_num))
         else:
           print ('reservoirs.LearningRules.learnRLSsetup: taking arguments as initialization for RLS setup')
           # self.wo = wo_init
           self.rls_estimator = rlspy.data_matrix.Estimator(x0, P0)
-
-        #self.wo = np.random.uniform(-1e-3,1e-3, size=(self.N, self.output_num))
-        #self.wo = np.random.uniform(0,1, size=(self.N, self.output_num))
 
     def learnRLS(self, target, r, noise = None, z = None, x = None):
         """LearningRules.learnRLS
@@ -382,7 +376,7 @@ class LearningRules(object):
         # print "%s.learnRLS, target.shape = %s" % (self.__class__.__name__, target.shape)
         # self.rls_estimator.update(self.r.T, target.T, self.theta_state)
         self.rls_estimator.single_update(r.T, target.T, self.noise)
-        # self.wo = self.rls_E.x
+        # self.wo = self.rls_estimator.x
         self.cnt += 1
         return self.rls_estimator.dx
     
@@ -915,7 +909,6 @@ class Reservoir(object):
     ############################################################
     # save network
     def save(self, filename=""):
-        from pickle import Pickler
         if filename == "":
             timestamp = time.strftime("%Y-%m-%d-%H%M%S")
             filename = "reservoir-%s.bin" % timestamp
@@ -929,7 +922,6 @@ class Reservoir(object):
     # load network (restore from file)
     # @classmethod
     def load(self, filename):
-        from pickle import Unpickler
         print("reservoirs.py: loading %s" % filename)
         f = open(filename,'rb')
         u = Unpickler(f)
@@ -1139,18 +1131,18 @@ class Reservoir(object):
         """
         # Attention! not using function parameters
 
-        #self.rls_E = rlspy.data_matrix.Estimator(np.zeros(shape=(self.N, 1)) ,(1.0/self.alpha)*np.eye(self.N))
-        #self.rls_E = rlspy.data_matrix.Estimator(np.random.uniform(0, 0.0001, size=(self.N, 1)) , np.eye(self.N))
+        #self.rls_estimator = rlspy.data_matrix.Estimator(np.zeros(shape=(self.N, 1)) ,(1.0/self.alpha)*np.eye(self.N))
+        #self.rls_estimator = rlspy.data_matrix.Estimator(np.random.uniform(0, 0.0001, size=(self.N, 1)) , np.eye(self.N))
         if wo_init==None  and   P0_init==None :
           print ("using random initialization for RLS setup ")
-          # self.rls_E = rlspy.data_matrix.Estimator(np.random.uniform(0, 0.1, size=(self.N, 1)) , np.eye(self.N))
-          self.rls_E = rlspy.data_matrix.Estimator(np.random.uniform(0, 0.01, size=(self.N, 1)) , np.eye(self.N))
+          # self.rls_estimator = rlspy.data_matrix.Estimator(np.random.uniform(0, 0.1, size=(self.N, 1)) , np.eye(self.N))
+          self.rls_estimator = rlspy.data_matrix.Estimator(np.random.uniform(0, 0.01, size=(self.N, 1)) , np.eye(self.N))
           # self.wo = np.random.uniform(-1e-4,1e-4, size=(self.N, self.output_num))
           self.wo = np.zeros((self.N, self.output_num))
         else:
           print ('taking arguments as initialization for RLS setup')
           self.wo = wo_init
-          self.rls_E = rlspy.data_matrix.Estimator(P0_init[0], P0_init[1])
+          self.rls_estimator = rlspy.data_matrix.Estimator(P0_init[0], P0_init[1])
 
         #self.wo = np.random.uniform(-1e-3,1e-3, size=(self.N, self.output_num))
         #self.wo = np.random.uniform(0,1, size=(self.N, self.output_num))
@@ -1163,9 +1155,9 @@ class Reservoir(object):
         Reservoir class member
         """
         # print "%s.learnRLS, target.shape = %s" % (self.__class__.__name__, target.shape)
-        self.rls_E.update(self.r.T, target.T, self.theta_state)
+        self.rls_estimator.update(self.r.T, target.T, self.theta_state)
         self.cnt += 1
-        self.wo = self.rls_E.x
+        self.wo = self.rls_estimator.x
 
     def learnEH(self, target):
         """Reservoir.learnEH
@@ -1463,33 +1455,23 @@ def get_data(elen, outdim, mode="MSO_s1"):
         # d_sig_freqs = np.array([0.1, 0.2, 0.3, 0.4]) * 1.
         # d_sig_freqs = np.array([0.01, 1.01, 1.02, 1.03]) * 0.1
     elif mode == "MG": # Mackey-Glass
-        import Oger
-        import scipy.signal as ss
-        import scipy.interpolate as si
-        ds = Oger.datasets.mackey_glass(sample_len=elen/20, n_samples=outdim)
-        # ds = Oger.datasets.mackey_glass(sample_len=elen, n_samples=1)
+        ds = get_mackey_glass(sample_len=elen//20, n_samples=outdim)
         ds_n = []
         for i in range(outdim):
-        # for i in range(1):
-            # ds1 = ds[0][0]
-            # ds2 = ds[1][0]
             # rsmp = ss.resample(ds[i][0].T, elen)
-            # ds_n.append(rsmp)
-            f = si.interp1d(np.arange(0, elen/20), ds[i][0].T)
-            tt = np.linspace(0, elen/20-1, elen)
-            print(f(tt))
+            f = si.interp1d(np.arange(0, elen//20), ds[i][0].T)
+            tt = np.linspace(0, elen//20-1, elen)
+            logger.debug('get_data: appending dataset {0}'.format(f(tt)))
             ds_n.append(f(tt))
-            # ds_n.append(ds[i][0].T)
+            
         # 2 rows, n cols
         # ds_real = np.vstack([ds1.T, ds2.T])
         #    print len(ds_n)
-        # sys.exit()
+        
         ds_real = np.vstack(ds_n)
         return ds_real
+    
     elif mode == "wav":
-        from scipy.io import wavfile
-        # from smp.datasets import wavdataset
-        # from models import SeqData
         rate, data = wavfile.read(args.file)
         # rate, data = wavfile.read("drinksonus_mono_short.wav")
         offset = np.random.randint(0, data.shape[0] - elen)
@@ -1521,7 +1503,6 @@ def get_data(elen, outdim, mode="MSO_s1"):
         print("freq_steps", freq_steps)
         pulse = (np.arange(t.shape[0]) % (2*freq_steps)) > (0.7 * freq_steps) # np.zeros_like(t)
         pulse = pulse * 1.0 - 0.0
-        from scipy import signal
         b, a  = signal.butter(4, 0.5)
         pulse = signal.filtfilt(b, a, pulse)
         print("pulse", pulse)
@@ -1799,7 +1780,6 @@ class ReservoirTest(object):
 
 def save_wavfile(out_t, timestr):
     try:
-        from scipy.io import wavfile
         # wav_out = (out_t.T * 32767).astype(np.int16)
         out_t /= np.max(np.abs(out_t))
         wav_out = (out_t.T * 32767).astype(np.int16)
@@ -1808,7 +1788,7 @@ def save_wavfile(out_t, timestr):
         print("ImportError for scipy.io.wavfile")
 
 def main(args):
-    print("mode", args.mode)
+    logger.debug("mode = {0}".format(args.mode))
     if args.mode == 'ip':
         test_ip(args)
         sys.exit(0)
@@ -1876,7 +1856,7 @@ def main(args):
 
     # get training data
     ds_real = get_data(episode_len+1, outsize, args.target)
-    print("ds_real.shape", ds_real.shape)
+    logger.debug("main: ds_real.shape {0}".format(ds_real.shape))
 
     # compute effective tapping for these timeseries problems
     # non AR regression setup

@@ -27,12 +27,15 @@ Things:
  - merge stray models such as UniformRandomBlock2, iir, CodingBlock2, ...
  - fix visualization
 """
-import pickle
-import numpy as np
-# import matplotlib.pyplot as plt # visualize
+from smp_base.impl import smpi
 
-from smp_base.common import set_attr_from_dict
-# from smp_base.plot_utils import savefig
+# req
+pickle = smpi('pickle')
+np = smpi('numpy')
+
+# smp foo
+set_attr_from_dict = smpi('smp_base.common', 'set_attr_from_dict')
+set_interactive = smpi('smp_base.plot_utils', 'set_interactive')
 
 ################################################################################
 # smpModel decorator init
@@ -134,7 +137,6 @@ class smpModel(object):
         # self.visualize = visualize
 
         if self.visualize:
-            from smp_base.plot_utils import set_interactive
             set_interactive(True)
             self.visualize_model_init()
         

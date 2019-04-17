@@ -10,26 +10,23 @@ imports_req = {
 imports_opt = {
     'matplotlib.pyplot': 'plt',
 }
-        
+
+logging = smpi('logging')
+get_module_logger = smpi('smp_base.common', 'get_module_logger')
+
 # from cloud.serialization.cloudpickle import dumps
 # from collections import OrderedDict
 # from cycler import cycler
 # from emd import emd
-# from functools import partial
-# from functools import partial, wraps
-# from functools import reduce
+# from functools import partial, wraps, reduce
 # from igmm_cond import IGMM_COND
-# from jpype import getDefaultJVMPath, isJVMStarted, startJVM, attachThreadToJVM, isThreadAttachedToJVM
-# from jpype import JPackage
+# from jpype import JPackage, getDefaultJVMPath, isJVMStarted, startJVM, attachThreadToJVM, isThreadAttachedToJVM
 # from kohonen.kohonen import argsample
 # from kohonen.kohonen import Gas, GrowingGas, GrowingGasParameters, Filter
 # from kohonen.kohonen import Map, Parameters, ExponentialTimeseries, ConstantTimeseries
-# from matplotlib.font_manager import FontManager
-# from matplotlib.font_manager import FontProperties
+# from matplotlib.font_manager import FontManager, FontProperties
 # from matplotlib import colorbar as mplcolorbar
 # from matplotlib import gridspec
-# from matplotlib import rc
-# from matplotlib import rcParams
 # from matplotlib import rc, rcParams, rc_params
 # from matplotlib.pyplot import figure
 # from matplotlib.table import Table as mplTable
@@ -147,8 +144,14 @@ class Testimpl(unittest.TestCase):
     def test_smpi(self):
         self.assertEqual(smpi('numpy'), importlib.import_module('numpy'), "Should be numpy")
 
-    # def test_sum_tuple(self):
-    #     self.assertEqual(sum((1, 2, 2)), 6, "Should be 6")
+class Testcommon(unittest.TestCase):
+
+    def test_get_module_logger(self):
+        logger = get_module_logger(modulename=self.__class__.__name__, loglevel=logging.DEBUG)
+        logger.log(logging.DEBUG, 'logger.name = {0}'.format(self.__class__.__name__))
+        self.assertEqual(logger.name, self.__class__.__name__, "Should be {0}".format(self.__class__.__name__))
+        logger.log(logging.DEBUG, 'dir(logger) = {0}'.format(dir(logger)))
+        # print()
 
 if __name__ == '__main__':
     unittest.main()

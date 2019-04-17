@@ -8,6 +8,10 @@ smp_base documentation
 
 .. include:: ../README.rst
 
+
+API Documentation
+=================
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:

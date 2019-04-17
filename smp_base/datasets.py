@@ -3,6 +3,7 @@
 Reusable datasets from different sources (input formats) to different
 destinations (output formats) [WIP].
 """
+from smp_base.impl import smpi
 
 import numpy as np
 from scipy.io import wavfile as wavfile
@@ -13,6 +14,18 @@ from smp_base.common import get_module_logger, compose
 
 loglevel_debug = logging.DEBUG
 logger = get_module_logger(modulename = 'datasets', loglevel = logging.INFO)
+
+Oger = smpi('Oger')
+
+def get_mackey_glass(sample_len=1000, n_samples=1):
+    # check Oger imported by name exists in globals and its value a module
+    if 'Oger' in globals() and Oger is not None:
+        print('get_mackey_glass Oger = {0}'.format(Oger))
+        return Oger.datasets.mackey_glass(sample_len=sample_len, n_samples=n_samples)
+    
+    logger.warn('datasets.get_mackey_glass: Oger not found, returning zeros')
+    # return np.zeros((n_samples, 1, sample_len))
+    return [[np.zeros((sample_len, 1))] for _ in list(range(n_samples))]
 
 def wavdataset(
         sample_len, n_samples, filename, n_offset = None,
@@ -43,6 +56,29 @@ def wavdataset(
         samples.append([inp])
     # return list of n_samples with (sample_len, 1) shaped arrays
     return samples
+
+# multi-dimensional MSO
+def msond(sample_len=1000, n_samples = 1, dim = 3):
+    """msond(sample_len=1000, n_samples = 1) -> input
+
+    Generate the Multiple Sinewave Oscillator time-series, a sum of
+    two sines with incommensurable periods. Parameters are:
+    - sample_len: length of the time-series in timesteps
+    - n_samples: number of samples to generate
+    """
+    signals = []
+    for _ in range(n_samples):
+        phase = np.random.rand()
+        # x = np.atleast_2d(mdp.numx.arange(sample_len)).T
+        x = np.atleast_2d(np.arange(sample_len)).T
+        freqs1 = np.abs(np.random.normal(0.2, 0.01, (1, dim)))
+        phases1 = np.random.uniform(0, 2 * np.pi, (1, dim))
+        freqs2 = np.abs(np.random.normal(0.311, 0.02, (1, dim)))
+        phases2 = np.random.uniform(0, 2 * np.pi, (1, dim))
+        sin = np.sin(freqs1 * x + phases1) + np.sin(freqs2 * x + phases2)
+        logger.debug("sin.shape", sin.shape)
+        signals.append([sin])
+    return signals
 
 # prepare input
 def timeseries_to_prediction_dataset(sample_len, n_samples, data):
@@ -140,30 +176,6 @@ def timeseries_to_temporal_embedding(data, embedding_size, pad=False, padchr=0):
         data_x = data_x.reshape((index.shape[0], embedding_size))
     # return, done
     return data_x
-
-# multi-dimensional MSO
-def msond(sample_len=1000, n_samples = 1, dim = 3):
-    """msond(sample_len=1000, n_samples = 1) -> input
-
-    Generate the Multiple Sinewave Oscillator time-series, a sum of
-    two sines with incommensurable periods. Parameters are:
-    - sample_len: length of the time-series in timesteps
-    - n_samples: number of samples to generate
-    """
-    signals = []
-    for _ in range(n_samples):
-        phase = np.random.rand()
-        # x = np.atleast_2d(mdp.numx.arange(sample_len)).T
-        x = np.atleast_2d(np.arange(sample_len)).T
-        freqs1 = np.abs(np.random.normal(0.2, 0.01, (1, dim)))
-        phases1 = np.random.uniform(0, 2 * np.pi, (1, dim))
-        freqs2 = np.abs(np.random.normal(0.311, 0.02, (1, dim)))
-        phases2 = np.random.uniform(0, 2 * np.pi, (1, dim))
-        sin = np.sin(freqs1 * x + phases1) + np.sin(freqs2 * x + phases2)
-        logger.debug("sin.shape", sin.shape)
-        signals.append([sin])
-    return signals
-
 
 ################################################################################
 # testing
