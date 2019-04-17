@@ -2028,6 +2028,8 @@ def main(args):
             if args.mode.endswith("mdn"):
                 out_t_mdn_sample[:,[j]] = lr.mixture(res.z[:mixcomps,0], np.exp(res.z[mixcomps:(2*mixcomps),0]), lr.softmax(res.z[(2*mixcomps):,0]))
 
+            # logger.debug('main: res.perf shape {0}'.format(res.perf.shape))
+            
             perf_t[:,[j]] = res.perf
             wo_t[:,:,j] = res.wo
             for k in range(outsize_):

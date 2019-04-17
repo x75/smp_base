@@ -24,7 +24,7 @@ Oger = smpi('Oger')
 def get_mackey_glass(sample_len=1000, n_samples=1):
     # check Oger imported by name exists in globals and its value a module
     if 'Oger' in globals() and Oger is not None:
-        print('get_mackey_glass Oger = {0}'.format(Oger))
+        logger.debug('get_mackey_glass Oger = {0}'.format(Oger))
         return Oger.datasets.mackey_glass(sample_len=sample_len, n_samples=n_samples)
     
     logger.warn('datasets.get_mackey_glass: Oger not found, returning zeros')
