@@ -57,7 +57,15 @@ def get_module_logger(modulename = 'experiment', loglevel = logging.INFO):
     # suppress double log output 
     logger.propagate = False
     return logger
-    
+
+# is defined
+def isdefined(obj):
+    """isdefined
+
+    obj is a string actually
+    """
+    return obj in globals() or obj in locals()
+
 # function composition
 # https://mathieularose.com/function-composition-in-python/
 def compose2(f, g):

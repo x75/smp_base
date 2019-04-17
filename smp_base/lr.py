@@ -13,12 +13,24 @@ logger = get_module_logger(modulename = 'lr', loglevel = logging.DEBUG)
 
 np = smpi('numpy')
 rlspy = smpi('rlspy')
-# if rlspy is None:
-#     print("Dont have rlspy, exiting")
-#     sys.exit()
 
-def isdefined(obj):
-    return obj in globals() or obj in locals()
+isdefined = smpi('smp_base.common', 'isdefined')
+
+class rlspyDummy(object):
+    def __init__(self, x0, P0):
+        """Returns new RLS estimator."""
+        self.x = x0
+        self.P = P0
+        self.y = np.zeros((1, x0.shape[1]))
+        self.dx = np.zeros_like(self.y)
+        # identity matrix same size as P for convenience
+        self.I = np.identity(len(x0)) 
+
+    def single_update(self, A, b, v):
+        logger.warn('rlspyDummy.single_update: implement me')
+    
+    def update(self, A, b, V):
+        logger.warn('rlspyDummy.update: implement me')
 
 class smplr(object):
     """smplr
@@ -66,10 +78,10 @@ class smplrRLS(smplr):
             self.rls_estimator = rlspy.data_matrix.Estimator(self.x0, self.P0)
             
     def init_smp(self):
-        self.rls_estimator = rlsEstimator(self.x0, self.P0)
+        self.rls_estimator = rlspyDummy(self.x0, self.P0)
             
     def update_smp(self, target, r, noise, z, x, **kwargs):
-        logger.warn('smplrRLS not implemented')
+        self.rls_estimator.single_update(r.T, target.T, self.noise)
         self.err = self.rls_estimator.y
         return self.rls_estimator.dx
         
@@ -86,20 +98,3 @@ class smplrRLS(smplr):
         self.rls_estimator.single_update(r.T, target.T, self.noise)
         self.err = self.rls_estimator.y
         return self.rls_estimator.dx
-
-
-class rlsEstimator(object):
-    def __init__(self, x0, P0):
-        """Returns new RLS estimator."""
-        self.x = x0
-        self.P = P0
-        self.y = np.zeros((1, x0.shape[1]))
-        self.dx = np.zeros_like(self.y)
-        # identity matrix same size as P for convenience
-        self.I = np.identity(len(x0)) 
-
-    def single_update(self, A, b, v):
-        logger.warn('rlsEstimator.single_update: implement me')
-    
-    def update(self, A, b, V):
-        logger.warn('rlsEstimator.update: implement me')

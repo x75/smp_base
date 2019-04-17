@@ -28,25 +28,23 @@ from smp_base.impl import smpi
 sys = smpi('sys')
 time = smpi('time')
 argparse = smpi('argparse')
-from pickle import Pickler
-from pickle import Unpickler
+Pickler = smpi('pickle', 'Pickler')
+Unpickler = smpi('pickle', 'Unpickler')
 
 np = smpi('numpy')
 LA = smpi('numpy.linalg')
 sp = smpi('scipy')
 spa = smpi('scipy.sparse')
-plt = smpi('matplotlib.pyplot')
-
-gridspec = smpi('matplotlib.gridspec')
-
 ss = smpi('scipy.signal')
 si = smpi('scipy.interpolate')
-
 signal = smpi('scipy.signal')
 wavfile = smpi('scipy.io.wavfile')
 # wavdataset = smpi('smp.datasets.wavdataset')
 # SeqData = smpi('models.SeqData')
 # wavfile = smpi('scipy.io.wavfile')
+
+plt = smpi('matplotlib.pyplot')
+gridspec = smpi('matplotlib.gridspec')
 
 get_mackey_glass = smpi('smp_base.datasets', 'get_mackey_glass')
 smplrRLS = smpi('smp_base.lr', 'smplrRLS')
@@ -1109,20 +1107,18 @@ class Reservoir(object):
 
         Reservoir class member
         """
-        # Attention! not using function parameters
-
-        #self.rls_estimator = rlspy.data_matrix.Estimator(np.zeros(shape=(self.N, 1)) ,(1.0/self.alpha)*np.eye(self.N))
-        #self.rls_estimator = rlspy.data_matrix.Estimator(np.random.uniform(0, 0.0001, size=(self.N, 1)) , np.eye(self.N))
-        if wo_init==None  and   P0_init==None :
-          print ("using random initialization for RLS setup ")
-          # self.rls_estimator = rlspy.data_matrix.Estimator(np.random.uniform(0, 0.1, size=(self.N, 1)) , np.eye(self.N))
-          self.rls_estimator = rlspy.data_matrix.Estimator(np.random.uniform(0, 0.01, size=(self.N, 1)) , np.eye(self.N))
-          # self.wo = np.random.uniform(-1e-4,1e-4, size=(self.N, self.output_num))
-          self.wo = np.zeros((self.N, self.output_num))
-        else:
-          print ('taking arguments as initialization for RLS setup')
-          self.wo = wo_init
-          self.rls_estimator = rlspy.data_matrix.Estimator(P0_init[0], P0_init[1])
+        self.rls = smplrRLS(wo_init, P0_init, modelsize=self.N)
+        
+        # if wo_init==None and P0_init==None:
+        #   print ("using random initialization for RLS setup ")
+        #   # self.rls_estimator = rlspy.data_matrix.Estimator(np.random.uniform(0, 0.1, size=(self.N, 1)) , np.eye(self.N))
+        #   self.rls_estimator = rlspy.data_matrix.Estimator(np.random.uniform(0, 0.01, size=(self.N, 1)) , np.eye(self.N))
+        #   # self.wo = np.random.uniform(-1e-4,1e-4, size=(self.N, self.output_num))
+        #   self.wo = np.zeros((self.N, self.output_num))
+        # else:
+        #   print ('taking arguments as initialization for RLS setup')
+        #   self.wo = wo_init
+        #   self.rls_estimator = rlspy.data_matrix.Estimator(P0_init[0], P0_init[1])
 
         #self.wo = np.random.uniform(-1e-3,1e-3, size=(self.N, self.output_num))
         #self.wo = np.random.uniform(0,1, size=(self.N, self.output_num))
@@ -1135,9 +1131,12 @@ class Reservoir(object):
         Reservoir class member
         """
         # print "%s.learnRLS, target.shape = %s" % (self.__class__.__name__, target.shape)
-        self.rls_estimator.update(self.r.T, target.T, self.theta_state)
+        # self.rls_estimator.update(self.r.T, target.T, self.theta_state)
+        dx = self.rls.update(target, self.r, self.theta_state)
         self.cnt += 1
-        self.wo = self.rls_estimator.x
+        self.wo = self.rls.rls_estimator.x
+        # self.wo += dx
+        # self.wo = self.rls_estimator.x
 
     def learnEH(self, target):
         """Reservoir.learnEH
