@@ -2,6 +2,10 @@
 
 Reusable datasets from different sources (input formats) to different
 destinations (output formats) [WIP].
+
+.. todo:: Almost any other related library has this, for example sklearn, consolidate
+
+.. todo:: Make it a class of @staticmethods
 """
 from smp_base.impl import smpi
 

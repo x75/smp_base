@@ -49,9 +49,9 @@ wavfile = smpi('scipy.io.wavfile')
 # wavfile = smpi('scipy.io.wavfile')
 
 get_mackey_glass = smpi('smp_base.datasets', 'get_mackey_glass')
-rlspy = smpi('rlspy')
+smplrRLS = smpi('smp_base.lr', 'smplrRLS')
 
-import logging
+logging = smpi('logging')
 get_module_logger = smpi('smp_base.common', 'get_module_logger')
 logger = get_module_logger(modulename = 'models_reservoirs', loglevel = logging.DEBUG)
 
@@ -340,45 +340,25 @@ class LearningRules(object):
         self.cnt += 1
         return dw
 
-    def learnRLSsetup(self, x0 = None, P0 = None, modelsize = 1, noise = 1e-2):
+    def learnRLSsetup(self, x0=None, P0=None, modelsize = 1, noise = 1e-2):
         """LearningRules.learnRLSsetup
 
         Setup RLS variables before applying the RLS learning rule
         """
+        # self.N = modelsize
+        # self.noise = noise
 
-        # self.rls_estimator = rlspy.data_matrix.Estimator(np.zeros(shape=(self.N, 1)) ,(1.0/self.alpha)*np.eye(self.N))
-        # self.rls_estimator = rlspy.data_matrix.Estimator(np.random.uniform(0, 0.0001, size=(self.N, 1)) , np.eye(self.N))
-
-        self.N = modelsize
-        self.noise = noise
-        
-        if P0 is None:
-          print ("reservoirs.LearningRules.learnRLSsetup: random initialization for RLS setup ")
-          # self.rls_estimator = rlspy.data_matrix.Estimator(np.random.uniform(0, 0.1, size=(self.N, 1)) , np.eye(self.N))
-          self.rls_estimator = rlspy.data_matrix.Estimator(np.random.uniform(0, 0.01, size=(self.N, 1)) , np.eye(self.N))
-        else:
-          print ('reservoirs.LearningRules.learnRLSsetup: taking arguments as initialization for RLS setup')
-          # self.wo = wo_init
-          self.rls_estimator = rlspy.data_matrix.Estimator(x0, P0)
+        self.rls = smplrRLS(x0, P0, modelsize, noise)        
 
     def learnRLS(self, target, r, noise = None, z = None, x = None):
         """LearningRules.learnRLS
 
         The RLS error-based supervised learning rule
         """
-        if noise is not None:
-            self.noise = noise
-
-        if x is not None and z is not None:
-            e = self.mdn_loss(x, r, z, target)
-            target = z - e
-            
-        # print "%s.learnRLS, target.shape = %s" % (self.__class__.__name__, target.shape)
-        # self.rls_estimator.update(self.r.T, target.T, self.theta_state)
-        self.rls_estimator.single_update(r.T, target.T, self.noise)
+        dx = self.rls.update(target, r, noise, z, x)
         # self.wo = self.rls_estimator.x
         self.cnt += 1
-        return self.rls_estimator.dx
+        return dx # self.rls_estimator.dx
     
     # mixture density stuff
     def mixtureMV(self, mu, sig, ps):
@@ -1925,9 +1905,6 @@ def main(args):
 
         # do some setup
         if ReservoirTest.modes[args.mode] == ReservoirTest.modes["ol_rls"]:
-            if rlspy is None:
-                print("Dont have rlspy, exiting")
-                sys.exit()
             # initialize rlspy
             # res.learnRLSsetup(None, None)
             lr.learnRLSsetup(x0 = res.wo, P0 = np.eye(res.N))
@@ -1978,7 +1955,8 @@ def main(args):
                     # res.learnRLS(target)
                     dw = lr.learnRLS(target = target, r = res.r)
                     res.wo += dw
-                    res.perf = lr.rls_estimator.y.T
+                    # res.perf = lr.rls_estimator.y.T
+                    res.perf = lr.rls.err.T
                     for k in range(outsize_):
                         dw_t_norm[k,j] = LA.norm(dw[:,k])
                         

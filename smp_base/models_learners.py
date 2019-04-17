@@ -1,13 +1,17 @@
-"""smp_base/learners.py
+"""smp_base.models_learners.py
 
-FIXME: models_res
+.. moduleauthor:: Oswald Berthold
 
-learner class using the reservoirs.py model
+Learners and specific models using a Reservoir network
+underneath. Learners consist of specific learning rules and an
+input-output wiring that is the interface to a robot sensorimotor loop
+for doing
 
-interface to the robot sensorimotor loop for doing
- - reward modulated hebbian learning with different noise models (incremental online reinforcement learning)
- - supervised online prediction learning
+- reward-modulated Hebbian learning with different noise models
+  (incremental online reinforcement learning)
+- supervised online prediction learning
 
+.. todo:: models_res (?)
 """
 
 import sys, time
