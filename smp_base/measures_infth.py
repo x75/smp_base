@@ -28,7 +28,7 @@ from smp_base.measures import meas
 import logging
 from smp_base.common import get_module_logger
 
-logger = get_module_logger(modulename = 'measures_infth', loglevel = logging.DEBUG)
+logger = get_module_logger(modulename = 'measures_infth', loglevel = logging.INFO)
 
 try:
     from jpype import getDefaultJVMPath, isJVMStarted, startJVM, attachThreadToJVM, isThreadAttachedToJVM
@@ -52,15 +52,15 @@ def init_jpype(jarloc=None, jvmpath=None):
 
     jvmpath = jvmpath or config.__dict__.get('JVMPATH', getDefaultJVMPath())
 
-    print(("infth.init_jpype: Set jidt jar location to %s" % jarloc))
-    print(("infth.init_jpype: Set jidt jvmpath      to %s" % jvmpath))
+    logger.debug("measures_infth.init_jpype: Setting jpype jvmpath = {0}".format(jvmpath))
+    logger.debug("measures_infth.init_jpype: setting JIDT jar location = {0}".format(jarloc))
 
     # startJVM(getDefaultJVMPath(), "-ea", "-Xmx2048M", "-Djava.class.path=" + jarLocation)
     if not isJVMStarted():
-        print("Starting JVM")
+        logger.debug("Starting JVM")
         startJVM(jvmpath, "-ea", "-Xmx8192M", "-Djava.class.path=" + jarloc)
     else:
-        print("Attaching JVM")
+        logger.debug("Attaching JVM")
         attachThreadToJVM()
 
 # call init_jpype with global effects
@@ -327,7 +327,7 @@ def compute_transfer_entropy_multivariate(
 @dec_compute_infth()
 def compute_conditional_transfer_entropy_multivariate(src, dst, cond, delay = 0):
     """measures_infth: compute the multivariate conditional transfer entropy from src to dst"""
-    print("This doesn't exist in JIDT yet""")
+    logger.debug("This doesn't exist in JIDT yet""")
     return -1
 
 # FIXME: use this one from infth_feature_relevance
@@ -371,7 +371,7 @@ def compute_mutual_information(src, dst, k = 0, tau = 1, delay = 0, norm_in = Tr
         for s in range(numsrcvars):
             # print "compute_mutual_information dst[%d], src[%d]" % (m, s)
 
-            # print("ha", m, motor[:,[m]])
+            # logger.debug("ha", m, motor[:,[m]])
             miCalcC.initialise() # sensor.shape[1], motor.shape[1])
             # print "measures_infth: compute_mutual_information: miCalcC.timeDiff = %d" % (miCalcC.timeDiff)
             # miCalcC.setObservations(src[:,s], dst[:,m])
@@ -415,7 +415,7 @@ def compute_transfer_entropy(src, dst, delay = 0):
     # teCalcC.setProperty(teCalcC.L_PROP_NAME, "1")
     # teCalcC.setProperty(teCalcC.DELAY_PROP_NAME, "0")
     # teCalcC.setProperty(teCalcC.PROP_AUTO_EMBED_METHOD, "AUTO_EMBED_METHOD_NONE")
-    # print("teCalcClassC", teCalcClassC, "teCalcC", teCalcC)
+    # logger.debug("teCalcClassC", teCalcClassC, "teCalcC", teCalcC)
 
     # matrix of measures
     measmat  = np.zeros((numdstvars, numsrcvars))
@@ -430,14 +430,14 @@ def compute_transfer_entropy(src, dst, delay = 0):
     # loop over all combinations
     for m in range(numdstvars):
         for s in range(numsrcvars):
-            # print("m,s", m, s)
+            # logger.debug("m,s", m, s)
             # teCalcC.initialise()
             teCalcC.initialise(k, k_tau, l, l_tau, delay)
             # teCalcC.initialise(1, 1, 1, 1, 1, 1, 0)
             teCalcC.setObservations(src[:,s], dst[:,m])
             te = teCalcC.computeAverageLocalOfObservations()
             # tes = teCalcC.computeSignificance(10)
-            # print("te", te)
+            # logger.debug("te", te)
             measmat[m,s] = te
 
     return measmat
@@ -469,7 +469,7 @@ def compute_conditional_transfer_entropy(src, dst, cond, delay = 0, xcond = Fals
     # cteCalcC.setProperty(cteCalcC.L_PROP_NAME, "1")
     # cteCalcC.setProperty(cteCalcC.DELAY_PROP_NAME, "0")
     # teCalcC.setProperty(teCalcC.PROP_AUTO_EMBED_METHOD, "AUTO_EMBED_METHOD_NONE")
-    # print("teCalcClassC", teCalcClassC, "teCalcC", teCalcC)
+    # logger.debug("teCalcClassC", teCalcClassC, "teCalcC", teCalcC)
 
     # init return container
     measmat  = np.zeros((numdstvars, numsrcvars))
@@ -486,7 +486,7 @@ def compute_conditional_transfer_entropy(src, dst, cond, delay = 0, xcond = Fals
     # loop over all combinations
     for m in range(numdstvars):
         for s in range(numsrcvars):
-            # print("m,s", m, s)
+            # logger.debug("m,s", m, s)
             # cteCalcC.initialise(1, 1, 1, 1, 0, [1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1], [0, 0, 0, 0, 0, 0])
             # k, k_tau, l, l_tau, delay,
             # cteCalcC.initialise(1, 1, 1, 1, delay, [1] * numcondvars, [1] * numcondvars, [0] * numcondvars)
@@ -515,7 +515,7 @@ def compute_conditional_transfer_entropy(src, dst, cond, delay = 0, xcond = Fals
             # compute the measures
             cte = cteCalcC.computeAverageLocalOfObservations()
             # tes = teCalcC.computeSignificance(10)
-            # print("cte", cte)
+            # logger.debug("cte", cte)
             measmat[m,s] = cte
 
     return measmat
@@ -530,11 +530,11 @@ def test_compute_mutual_information():
     # stack
     src = np.hstack((src, dst))
     dst = src.copy()
-    print("src.sh = %s, dst.sh = %s" % (src.shape, dst.shape))
+    logger.info("src.sh = %s, dst.sh = %s" % (src.shape, dst.shape))
     jh  = infth_mi_multivariate({'X': src, 'Y': dst})
     result = compute_mutual_information(src, dst)
-    print("result = %s/%s" % (result,result/jh))
-    print("result = %s" % (result,))
+    logger.info("result = %s/%s" % (result,result/jh))
+    logger.info("result = %s" % (result,))
 
 if __name__ == '__main__':
     import argparse
