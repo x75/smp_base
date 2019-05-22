@@ -273,7 +273,8 @@ def make_fig(rows = 1, cols = 1, wspace = 0.0, hspace = 0.0, axesspec = None, ti
     gs = gridspec.GridSpec(rows, cols)
 
     if title is not None:
-        fig.suptitle(title, horizontalalignment='center', fontweight='normal')
+        # fig.suptitle(title, horizontalalignment='center', fontweight='normal')
+        fig.suptitle(title, horizontalalignment='right', fontweight='normal')
     
     if axesspec is None:
         axes = make_axes_from_grid(fig, gs)
