@@ -115,7 +115,7 @@ def put_legend_out_right(labels = None, handles=None, resize_by = 0.8, ax = None
     if right == 'left':
         bbox = (1.1, bboxy)
     elif right == 'right':
-        bbox = (-0.15, bboxy)
+        bbox = (-0.25, bboxy)
     # loc = 'center left'
     # bbox = (1.0, 0.5)
     if labels is None and handles is None:
