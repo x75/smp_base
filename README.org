@@ -3,6 +3,9 @@
 
 #+OPTIONS: toc:nil ^:nil
 
+# pandoc -f org -t markdown_github -o README.md README.org
+# pandoc -f org -t rst -o README.rst README.org
+
 * Sensorimotor primitives basic library
 
 This is a library of basic functions for sensorimotor learning
@@ -96,6 +99,11 @@ In a freshly cloned repository a local configuration file has to be created from
 and then edit the file ~smp_base/config.py~ and set the JARLOC and
 RLSPY variables to matching values. Use the absolute path so they can
 be found from anywhere.
+
+** Tests
+
+Non stringent unit testing implemented yet. Most libary files have a
+main method that runs some test. Work-in-progress.
 
 ** Development
 

@@ -1,18 +1,19 @@
 Sensorimotor primitives basic library
 =====================================
 
-This tries to be the library of basic functions for a set of
-sensorimotor learning experiments with simulators and real robots in my
-thesis project *Robotic self-exploration and acquisition of sensorimotor
-primitives*. The basic idea there is to have states that combine sensors
-with actions and motor signals and learn predictive models from incoming
-data to infer future actions from the approximated sensorimotor
-dynamics.
+This is a library of basic functions for sensorimotor learning
+experiments using simulators and real robots for my thesis project
+*Robotic self-exploration and acquisition of sensorimotor primitives*.
+The basic idea there is to have states that combine sensors, actions,
+motor signals and inferred intermediate states into a unified space and
+learn predictive models from incoming data in that space to infer
+predictive actions from the approximated sensorimotor dynamics.
 
-This repository is in an early stages of release which I push on the
-occasion of sharing the smp\_sphero code  [1]_. Still performing
-incremental clean-up and refactoring plus additions from existing other
-repositories so a lot of things might still change.
+This repository is still in an early stage of release. Originally pushed
+on the occasion of sharing the *smp\_sphero* code  [1]_ which depends on
+this. Incremental clean-up and refactoring as well as consolidating with
+other existing repositories in smp land. Available functions, naming and
+API all subject to change.
 
 Dependencies
 ------------
@@ -110,6 +111,12 @@ created from a template. To do this
 and then edit the file ``smp_base/config.py`` and set the JARLOC and
 RLSPY variables to matching values. Use the absolute path so they can be
 found from anywhere.
+
+Tests
+-----
+
+Non stringent unit testing implemented yet. Most libary files have a
+main method that runs some test. Work-in-progress.
 
 Development
 -----------
