@@ -262,8 +262,10 @@ def div_cbemd_HAVE_CBEMD(h1, h2, x1=None, x2=None, *args, **kwargs):
 
     cbemd.cbemd requires original observation, thus measure
     """
-    # logger.debug('div_cbemd_HAVE_CBEMD h1 = {0}, h2 = {1}'.format(h1, h2))
-    # logger.debug('div_cbemd_HAVE_CBEMD x1 = {0}, x2 = {1}'.format(x1, x2))
+    logger.debug('div_cbemd_HAVE_CBEMD h1 = {0}, h2 = {1}'.format(h1.shape, h2.shape))
+    logger.debug('div_cbemd_HAVE_CBEMD h1 = {0}, h2 = {1}'.format(h1.dtype, h2.dtype))
+    logger.debug('div_cbemd_HAVE_CBEMD x1 = {0}, x2 = {1}'.format(x1.shape, x2.shape))
+    logger.debug('div_cbemd_HAVE_CBEMD x1 = {0}, x2 = {1}'.format(x1.dtype, x2.dtype))
 
     # flow = np.zeros((1,1))
     # if 'flow' in kwargs and kwargs['flow']:
@@ -271,7 +273,7 @@ def div_cbemd_HAVE_CBEMD(h1, h2, x1=None, x2=None, *args, **kwargs):
     # else:
     
     div = cbemd(x1, x2, h1.tolist(), h1.tolist())
-    # logger.debug('div_cbemd_HAVE_CBEMD div {0}'.format(div))
+    logger.debug('div_cbemd_HAVE_CBEMD div {0}'.format(div))
     
     # flow = np.array(flow)
     # flow_zero_diag = flow - np.diag(np.diag(flow))
@@ -285,8 +287,6 @@ def div_cbemd_(h1, h2, *args, **kwargs):
 
 if HAVE_CBEMD: div_cbemd = div_cbemd_HAVE_CBEMD
 else: div_cbemd = div_cbemd_
-
-# def div_cbemd
 
 def div_wasserstein(h1, h2, x1=None, x2=None, *args, **kwargs):
 
@@ -466,12 +466,13 @@ def test_divergence_1(*args, **kwargs):
                 logger.info('{0}, {1} = {2}'.format(testset, testfunc, testdata_div[testset][testfunc]))
 
 def test_divergence_2(*args, **kwargs):
+    numbins = 10
     # divergence
     testdata_div = {}
     x1 = np.random.uniform(0, 1, (N, 1))
     x2 = np.random.uniform(0, 1, (N, 1))
-    x1h = np.histogram(x1, density=True)
-    x2h = np.histogram(x2, density=True)
+    x1h = np.histogram(x1, density=True, bins=numbins)
+    x2h = np.histogram(x2, density=True, bins=numbins)
     testdata_div['t1'] = {
         'h1': x1h[0],
         'h2': x2h[0],
@@ -487,8 +488,8 @@ def test_divergence_2(*args, **kwargs):
     
     x1 = np.random.uniform(0, 1, (N, 1))
     x2 = np.random.normal(0, 1, (N, 1))
-    x1h = np.histogram(x1, density=True)
-    x2h = np.histogram(x2, density=True)
+    x1h = np.histogram(x1, density=True, bins=numbins)
+    x2h = np.histogram(x2, density=True, bins=numbins)
     testdata_div['t2'] = {
         'h1': x1h[0],
         'h2': x2h[0],
@@ -504,8 +505,8 @@ def test_divergence_2(*args, **kwargs):
 
     x1 = np.random.uniform(0, 1, (N, 1))
     x2 = np.random.normal(0, 1, (N, 1))
-    x1h = np.histogram(x1, density=True)
-    x2h = np.histogram(x2, density=True)
+    x1h = np.histogram(x1, density=True, bins=numbins)
+    x2h = np.histogram(x2, density=True, bins=numbins)
     testdata_div['t3'] = {
         'h1': x1h[0],
         'h2': x2h[0],
