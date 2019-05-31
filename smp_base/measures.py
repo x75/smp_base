@@ -40,6 +40,23 @@ except ImportError as e:
     print("Couldn't import emd from emd with %s, make sure emd is installed." % (e, ))
     HAVE_EMD = False
 
+try:
+    from cbemd import cbemd
+    HAVE_CBEMD = True
+except ImportError as e:
+    print("Couldn't import cbemd from cbemd with %s, make sure cbemd is installed." % (e, ))
+    HAVE_CBEMD = False
+
+# TODO: cbemd, wasserstein
+
+def htofloat(h):
+    if h.dtype == np.int:
+        return h.astype(np.float)
+    return h
+
+################################################################################
+# distance measures
+
 # def meas_mse(x = None, x_2 = None, *args, **kwargs):
 def meas_mse(x_1 = None, x_2 = None, *args, **kwargs):
     """smp_base.measures.meas_mse
@@ -76,30 +93,27 @@ def meas_rmse(x = None, x_2 = None, *args, **kwargs):
     mse = meas_mse(x, x_2, *args, **kwargs)
     return np.sqrt(mse)
 
-def div_wasserstein(h1, h2, w1=None, w2=None):
-    # logger.debug('{0}, {1}'.format(h1.shape, h2.shape))
-    d = wasserstein_distance(h1, h2, w1, w2)
-    return d
+################################################################################
+# divergence measures
 
-def htofloat(h):
-    if h.dtype == np.int:
-        return h.astype(np.float)
-    return h
-
-def div_kl(h1, h2, *args, **kwargs):
+def div_kl(h1, h2, x1=None, x2=None, *args, **kwargs):
     """measures.div_kl
 
     Discrete kullback leibler divergence for histogram.
 
+    .. TODO:: fix KLD for arbitrary support?
+
     Args:
-    - h1(array): histogram 1
-    - h2(array): histogram 2
+    - h1(np.ndarray): histogram 1
+    - h2(np.ndarray): histogram 2
+    - x1(np.ndarray): support values 1
+    - x2(np.ndarray): support values 2
 
     Returns:
-    - sum divergence, element-wise divergences
+    - ret(tuple): sum divergence, element-wise divergences
     """
     _loglevel = loglevel_debug - 1
-    logger.log(_loglevel, "h1 = {0}, h2 = {1}".format(h1, h2))
+    logger.log(_loglevel, "div_kld: h1 = {0}, h2 = {1}".format(h1, h2))
 
     h1 = htofloat(h1)
     h2 = htofloat(h2)
@@ -137,7 +151,7 @@ def div_kl(h1, h2, *args, **kwargs):
     # logger.debug('div_kl sum(div) = %s, div = %s', np.sum(div), div)
     return np.sum(div), div
 
-def div_chisquare(h1, h2, *args, **kwargs):
+def div_chisquare(h1, h2, x1=None, x2=None, *args, **kwargs):
     """chi-square divergence of two histograms
 
     Arguments:
@@ -157,7 +171,7 @@ def div_chisquare(h1, h2, *args, **kwargs):
     return np.sum(div), div
 
 # earth mover's distance 'pyemd'
-def div_pyemd_HAVE_PYEMD(h1, h2, *args, **kwargs):
+def div_pyemd_HAVE_PYEMD(h1, h2, x1=None, x2=None, *args, **kwargs):
     """earth movers distance using pyemd
 
     Earth movers distance between two distributions of n-dimensional
@@ -165,50 +179,58 @@ def div_pyemd_HAVE_PYEMD(h1, h2, *args, **kwargs):
 
     Pyemd version requires an explicit distance matrix.
     """
-    h1 = htofloat(h1)
-    h2 = htofloat(h2)
-    logger.debug('    len(h1) = {0}'.format(len(h1)))
+    h1 = htofloat(h1)[:]
+    h2 = htofloat(h2)[:]
+
+    # logger.debug('    len(h1) = {0}'.format(len(h1)))
+    # logger.debug('div_pyemd_HAVE_PYEMD: h1 = {0}, h2 = {1}'.format(h1, h2))
+    # logger.debug('div_pyemd_HAVE_PYEMD: x1 = {0}, x2 = {1}'.format(x1, x2))
     
     flow = np.zeros((1,1))
     
     # compute distance matrix (pyemd only?)
     if 'x1_x' in kwargs and 'x2_x' in kwargs:
-        distmat = kwargs['x1_x'][None,:] - kwargs['x2_x'][:,None]
-        logger.debug('    distmat = %s' % (distmat.shape, ))
-    else:
-        distmat = np.ones((len(h1), len(h2)))
+        x1 = kwargs['x1_x']
+        x2 = kwargs['x2_x']
+    # else:
+    #     distmat = np.ones((len(h1), len(h2)))
     
+    distmat = x1[None,:] - x2[:,None]
+    # logger.debug('    distmat = %s' % (distmat.shape, ))
+        
     if 'flow' in kwargs and kwargs['flow']:
         div, flow = pyemd_with_flow(h1, h2, distmat)
     else:
-        # div = pyemd(h1, h2, distmat)
-        div = pyemd_samples(h1, h2, bins=len(h1))
+        div = pyemd(h1, h2, distmat)
+        
+    # div = pyemd_samples(h1, h2, bins=len(h1))
     flow = np.array(flow)
     flow_zero_diag = flow - np.diag(np.diag(flow))
     flow_ = np.sum(flow_zero_diag, axis = 1, keepdims = True).T/2.0
     # logger.debug('div_pyemd_HAVE_PYEMD sum(div) = %s, flow_ = %s, flow = %s', np.sum(div), flow_.shape, flow)
     return div, flow_
     
-def div_pyemd_(h1, h2, *args, **kwargs):
+def div_pyemd_(h1, h2, x1=None, x2=None, *args, **kwargs):
     logger.warning('pyemd could not be imported.')
-    return -1
+    return -1, None
 
 if HAVE_PYEMD: div_pyemd = div_pyemd_HAVE_PYEMD
 else: div_pyemd = div_pyemd_
 
 # earth mover's distance 'emd'
-def meas_emd_HAVE_EMD(h1, h2, *args, **kwargs):
+def div_emd_HAVE_EMD(h1, h2, x1=None, x2=None, *args, **kwargs):
     """earth movers distance using emd
 
     Earth movers distance between two distributions of n-dimensional
     points is a work measure from the product ground distance x mass.
 
-    Emd version requires an explicit distance matrix.
+    emd.emd requires original observation, thus measure
     """
     h1 = np.atleast_2d(h1)
     h2 = np.atleast_2d(h2)
     
-    logger.debug('meas_emd_HAVE_EMD h1 = {0}, h2 = {1}'.format(h1.shape, h2.shape))
+    # logger.debug('div_emd_HAVE_EMD h1 = {0}, h2 = {1}'.format(h1, h2))
+    # logger.debug('div_emd_HAVE_EMD x1 = {0}, x2 = {1}'.format(x1, x2))
 
     # flow = np.zeros((1,1))
     # if 'flow' in kwargs and kwargs['flow']:
@@ -216,20 +238,84 @@ def meas_emd_HAVE_EMD(h1, h2, *args, **kwargs):
     # else:
     
     div = emd.emd(h1, h2)
-    logger.debug('meas_emd_HAVE_EMD div {0}'.format(div))
+    logger.debug('div_emd_HAVE_EMD div {0}'.format(div))
     
     flow = np.array(flow)
     flow_zero_diag = flow - np.diag(np.diag(flow))
     flow_ = np.sum(flow_zero_diag, axis = 1, keepdims = True).T/2.0
-    # logger.debug('meas_emd_HAVE_EMD sum(div) = %s, flow_ = %s, flow = %s', np.sum(div), flow_.shape, flow)
+    # logger.debug('div_emd_HAVE_EMD sum(div) = %s, flow_ = %s, flow = %s', np.sum(div), flow_.shape, flow)
     return div, flow_
     
-def meas_emd_(h1, h2, *args, **kwargs):
+def div_emd_(h1, h2, *args, **kwargs):
     logger.warning('emd could not be imported.')
     return -1
 
-if HAVE_EMD: meas_emd = meas_emd_HAVE_EMD
-else: meas_emd = meas_emd_
+if HAVE_EMD: div_emd = div_emd_HAVE_EMD
+else: div_emd = div_emd_
+
+# earth mover's distance 'cbemd'
+def div_cbemd_HAVE_CBEMD(h1, h2, x1=None, x2=None, *args, **kwargs):
+    """earth movers distance using cbemd
+
+    Earth movers distance between two distributions of n-dimensional
+    points is a work measure from the product ground distance x mass.
+
+    cbemd.cbemd requires original observation, thus measure
+    """
+    # logger.debug('div_cbemd_HAVE_CBEMD h1 = {0}, h2 = {1}'.format(h1, h2))
+    # logger.debug('div_cbemd_HAVE_CBEMD x1 = {0}, x2 = {1}'.format(x1, x2))
+
+    # flow = np.zeros((1,1))
+    # if 'flow' in kwargs and kwargs['flow']:
+    #     div, flow = cbemd.cbemd(h1, h2, return_flows=True)
+    # else:
+    
+    div = cbemd(x1, x2, h1.tolist(), h1.tolist())
+    # logger.debug('div_cbemd_HAVE_CBEMD div {0}'.format(div))
+    
+    # flow = np.array(flow)
+    # flow_zero_diag = flow - np.diag(np.diag(flow))
+    # flow_ = np.sum(flow_zero_diag, axis = 1, keepdims = True).T/2.0
+    # logger.debug('div_cbemd_HAVE_CBEMD sum(div) = %s, flow_ = %s, flow = %s', np.sum(div), flow_.shape, flow)
+    return div, None
+    
+def div_cbemd_(h1, h2, *args, **kwargs):
+    logger.warning('cbemd could not be imported.')
+    return -1
+
+if HAVE_CBEMD: div_cbemd = div_cbemd_HAVE_CBEMD
+else: div_cbemd = div_cbemd_
+
+# def div_cbemd
+
+def div_wasserstein(h1, h2, x1=None, x2=None, *args, **kwargs):
+
+    if 'x1_x' in kwargs:
+        x1 = kwargs['x1_x']
+    if 'x2_x' in kwargs:
+        x2 = kwargs['x2_x']
+
+    if 'x1w' in kwargs:
+        x1 = kwargs['x1w']
+    if 'x2w' in kwargs:
+        x2 = kwargs['x2w']
+
+    if 'w1' in kwargs:
+        x1 = kwargs['w1']
+    if 'w2' in kwargs:
+        x2 = kwargs['w2']
+
+    if x1 is None:
+        x1 = np.linspace(0, 1, h1.shape[0])
+    if x2 is None:
+        x2 = np.linspace(0, 1, h2.shape[0])
+
+    # logger.debug('weights: h1 {0}, h2 {1}'.format(h1, h2))
+    # logger.debug(' values: x1 {0}, x2 {1}'.format(x1, x2))
+        
+    # u,v values, u,v weights
+    d = wasserstein_distance(x1, x2, h1.tolist(), h2.tolist())
+    return d, np.random.uniform(size=h1.shape)
 
 def meas_hist(x = None, bins = None, *args, **kwargs):
     """smp_base.measures.meas_hist
@@ -238,6 +324,7 @@ def meas_hist(x = None, bins = None, *args, **kwargs):
     """
     return np.histogram(x, bins, **kwargs)
 
+# meas class approach
 class meas(object):
     def __init__(self):
         pass
@@ -284,52 +371,28 @@ class meas(object):
         return np.sign(err) * acc
         # self.perf = np.sign(err) * np.sign(acc) * acc**2
 
-measures = {
-    'sub': {'func': np.subtract},
-    'abs': {'func': compose(np.abs, np.subtract)},
-    'mse': {'func': meas_mse},
-    'rmse': {'func': meas_rmse},
-    'hist': {'func': meas_hist}, # compute histogram
-    'kld':  {'func': div_kl},
-    'chisq':  {'func': div_chisquare},
-}
-
-if HAVE_PYEMD:
-    measures['pyemd'] = {'func': div_pyemd}
-
-if HAVE_EMD:
-    measures['emd'] = {'func': meas_emd}
-
-if __name__ == '__main__':
-
-    from functools import partial
-    # run tests
-
-    # fix the seed
-    N = 1000
-    np.random.seed(19847)
-    
+def test_measures(*args, **kwargs):
     # generate test data
     testdata = {}
-    # testdata['t1'] = {
-    #     'x1': np.zeros((100, 1)),
-    #     'x2': np.ones((100, 1)),
-    #     'mse_target': np.ones((1,1)),
-    #     'rmse_target': np.ones((1,1)),
-    #     'emd_target': (np.array([[72.0]]), np.zeros((N,1))),
-    # }
-    # testdata['t2'] = {
-    #     'x1': np.zeros((100, 1)),
-    #     'x2': np.random.uniform(-1, 1, (100, 1)),
-    #     'mse_target': np.array([[0.29175371]]),
-    #     'rmse_target': np.array([[0.54014231]]),
-    # }
+    testdata['t1'] = {
+        'x1': np.zeros((100, 1)),
+        'x2': np.ones((100, 1)),
+        'mse_target': np.ones((1,1)),
+        'rmse_target': np.ones((1,1)),
+        'emd_target': (np.array([[72.0]]), np.zeros((N,1))),
+    }
+    testdata['t2'] = {
+        'x1': np.zeros((100, 1)),
+        'x2': np.random.uniform(-1, 1, (100, 1)),
+        'mse_target': np.array([[0.29175371]]),
+        'rmse_target': np.array([[0.54014231]]),
+    }
     testdata['t3'] = {
         'x1': np.random.uniform(0, 1, (N, 1)),
         'x2': np.random.uniform(2, 3, (N, 1)),
-        'mse_target': np.array([[4.1946]]),
+        'mse_target': np.array([[4.1823]]),
         'rmse_target': np.array([[2.0481]]),
-        'emd_target': (np.array([[72.0]]), np.zeros((N,1))),
+        # 'emd_target': (np.array([[72.0]]), np.zeros((N,1))),
     }
 
     testfuncs_meas = {
@@ -338,6 +401,7 @@ if __name__ == '__main__':
         # 'emd': meas_emd,
     }
     
+    logger.info('#### testing distance measures')
     for testset in testdata:
         for testfunc in testfuncs_meas:
             testdata[testset][testfunc] = testfuncs_meas[testfunc](testdata[testset]['x1'], testdata[testset]['x2'])
@@ -347,34 +411,35 @@ if __name__ == '__main__':
             assert error <= 0.01, 'Test {0} failed for {1}: {2} {3}'.format(testset, testfunc, testdata[testset]['{0}_target'.format(testfunc)], testdata[testset][testfunc])
             logger.info('{0}, {1} = {2}'.format(testset, testfunc, testdata[testset][testfunc]))
 
+def test_divergence_1(*args, **kwargs):
     # divergence
     testdata_div = {}
     testdata_div['t1'] = {
         'x1': np.histogram(np.random.uniform(0, 1, (N, 1)))[0],
         'x2': np.histogram(np.random.uniform(0, 1, (N, 1)))[0],
         'kld_target': (np.array([[0.0118]]), np.zeros((N,1))),
-        'chisq_target': (np.array([[10.8331]]), np.zeros((N,1))),
-        'pyemd_target': (np.array([[4.1999]]), np.zeros((N,1))),
-        'pyemd_flow_target': (np.array([[59.0]]), np.zeros((N,1))),
-        'wasserstein_target': np.array([[3.99]]),
+        'chisq_target': (np.array([[14.9508]]), np.zeros((N,1))),
+        'pyemd_target': (np.array([[3.84]]), np.zeros((N,1))),
+        'pyemd_flow_target': (np.array([[63.0]]), np.zeros((N,1))),
+        'wasserstein_target': np.array([[0.01322]]),
     }
     testdata_div['t2'] = {
         'x1': np.histogram(np.random.uniform(0, 1, (N, 1)))[0],
         'x2': np.histogram(np.random.normal(0, 1, (N, 1)))[0],
-        'kld_target': (np.array([[0.6278]]), np.zeros((N,1))),
-        'chisq_target': (np.array([[406.1133]]), np.zeros((N,1))),
-        'pyemd_target': (np.array([[69.66]]), np.zeros((N,1))),
-        'pyemd_flow_target': (np.array([[390.0]]), np.zeros((N,1))),
-        'wasserstein_target': np.array([[70.6]]),
+        'kld_target': (np.array([[0.6022]]), np.zeros((N,1))),
+        'chisq_target': (np.array([[396.472]]), np.zeros((N,1))),
+        'pyemd_target': (np.array([[71.28]]), np.zeros((N,1))),
+        'pyemd_flow_target': (np.array([[381.0]]), np.zeros((N,1))),
+        'wasserstein_target': np.array([[0.1375]]),
     }
     testdata_div['t3'] = {
         'x1': np.histogram(np.random.uniform(0, 1, (N, 1)), density=True)[0],
         'x2': np.histogram(np.random.normal(0, 1, (N, 1)), density=True)[0],
         'kld_target': (np.array([[0.8630]]), np.zeros((N,1))),
-        'chisq_target': (np.array([[0.5057]]), np.zeros((N,1))),
+        'chisq_target': (np.array([[0.4863]]), np.zeros((N,1))),
         'pyemd_target': (np.array([[0.0768]]), np.zeros((N,1))),
-        'pyemd_flow_target': (np.array([[0.4439]]), np.zeros((N,1))),
-        'wasserstein_target': np.array([[0.0771]]),
+        'pyemd_flow_target': (np.array([[0.43]]), np.zeros((N,1))),
+        'wasserstein_target': np.array([[0.15533333333333335]]),
     }
 
     testfuncs_div = {
@@ -383,6 +448,7 @@ if __name__ == '__main__':
         'wasserstein': div_wasserstein
     }
             
+    logger.info('#### testing divergence measures')
     for testset in testdata_div:
         for testfunc in testfuncs_div:
             testdata_div[testset][testfunc] = testfuncs_div[testfunc](testdata_div[testset]['x1'], testdata_div[testset]['x2'])
@@ -398,3 +464,130 @@ if __name__ == '__main__':
                 error = np.sum(np.abs(testdata_div[testset]['{0}_target'.format(testfunc)] - testdata_div[testset][testfunc]))
                 assert error <= 0.01, 'Test {0} failed for {1}: {2} {3}'.format(testset, testfunc, testdata_div[testset]['{0}_target'.format(testfunc)], testdata_div[testset][testfunc])
                 logger.info('{0}, {1} = {2}'.format(testset, testfunc, testdata_div[testset][testfunc]))
+
+def test_divergence_2(*args, **kwargs):
+    # divergence
+    testdata_div = {}
+    x1 = np.random.uniform(0, 1, (N, 1))
+    x2 = np.random.uniform(0, 1, (N, 1))
+    x1h = np.histogram(x1, density=True)
+    x2h = np.histogram(x2, density=True)
+    testdata_div['t1'] = {
+        'h1': x1h[0],
+        'h2': x2h[0],
+        'x1': x1h[1][:-1],
+        'x2': x2h[1][:-1],
+        'kld_target': (np.array([[0.0092]]), np.zeros((N,1))),
+        'chisq_target': (np.array([[0.0092]]), np.zeros((N,1))),
+        'pyemd_target': (np.array([[0.0051]]), np.zeros((N,1))),
+        'pyemd_flow_target': (np.array([[0.0052]]), np.zeros((N,1))),
+        'cbemd_target': (np.array([[0.00125]]), np.zeros((N,1))),
+        'wasserstein_target': np.array([[0.0123]]),
+    }
+    
+    x1 = np.random.uniform(0, 1, (N, 1))
+    x2 = np.random.normal(0, 1, (N, 1))
+    x1h = np.histogram(x1, density=True)
+    x2h = np.histogram(x2, density=True)
+    testdata_div['t2'] = {
+        'h1': x1h[0],
+        'h2': x2h[0],
+        'x1': x1h[1][:-1],
+        'x2': x2h[1][:-1],
+        'kld_target': (np.array([[0.565]]), np.zeros((N,1))),
+        'chisq_target': (np.array([[0.394]]), np.zeros((N,1))),
+        'pyemd_target': (np.array([[0.176]]), np.zeros((N,1))),
+        'pyemd_flow_target': (np.array([[0.176]]), np.zeros((N,1))),
+        'cbemd_target': (np.array([[1.2524]]), np.zeros((N,1))),
+        'wasserstein_target': np.array([[0.769]]),
+    }
+
+    x1 = np.random.uniform(0, 1, (N, 1))
+    x2 = np.random.normal(0, 1, (N, 1))
+    x1h = np.histogram(x1, density=True)
+    x2h = np.histogram(x2, density=True)
+    testdata_div['t3'] = {
+        'h1': x1h[0],
+        'h2': x2h[0],
+        'x1': x1h[1][:-1],
+        'x2': x2h[1][:-1],
+        'kld_target': (np.array([[0.561]]), np.zeros((N,1))),
+        'chisq_target': (np.array([[0.372]]), np.zeros((N,1))),
+        'pyemd_target': (np.array([[0.1215]]), np.zeros((N,1))),
+        'pyemd_flow_target': (np.array([[0.1215]]), np.zeros((N,1))),
+        'cbemd_target': (np.array([[1.32]]), np.zeros((N,1))),
+        'wasserstein_target': np.array([[0.868]]),
+    }
+
+    testfuncs_div = {
+        'kld': div_kl,
+        'chisq': div_chisquare,
+        'pyemd': div_pyemd,
+        'pyemd_flow': partial(div_pyemd, flow=True),
+        # 'emd': div_emd,
+        'cbemd': div_cbemd,
+        'wasserstein': div_wasserstein
+    }
+            
+    logger.info('#' * 80)
+    logger.info('# testing emd')
+    for testset in testdata_div:
+        for testfunc in testfuncs_div:
+            testdata_div[testset][testfunc] = testfuncs_div[testfunc](
+                testdata_div[testset]['h1'],
+                testdata_div[testset]['h2'],
+                testdata_div[testset]['x1'],
+                testdata_div[testset]['x2'],
+            )
+            # assert testdata_div[testset]['mse_target'] == testdata_div[testset]['mse'], 'Test {0} failed for {1}: {2} {3}'.format(testset, 'mse', testdata_div[testset]['mse_target'], testdata_div[testset]['mse'])
+            # error = np.sum(np.abs(testdata_div[testset]['{0}_target'.format(testfunc)] - testdata_div[testset][testfunc]))
+            ret = testdata_div[testset][testfunc]
+            if type(ret) is tuple:
+                # logger.info('{0}, {1} = {2}'.format(testset, testfunc, testdata_div[testset][testfunc][0]))
+                error = np.sum(np.abs(testdata_div[testset]['{0}_target'.format(testfunc)][0] - testdata_div[testset][testfunc][0]))
+                assert error <= 0.01, 'Test {0} failed for {1}: {2} {3}'.format(testset, testfunc, testdata_div[testset]['{0}_target'.format(testfunc)][0], testdata_div[testset][testfunc][0])
+                logger.info('{0}, {1} = {2}'.format(testset, testfunc, testdata_div[testset][testfunc][0]))
+            else:
+                error = np.sum(np.abs(testdata_div[testset]['{0}_target'.format(testfunc)] - testdata_div[testset][testfunc]))
+                assert error <= 0.01, 'Test {0} failed for {1}: {2} {3}'.format(testset, testfunc, testdata_div[testset]['{0}_target'.format(testfunc)], testdata_div[testset][testfunc])
+                logger.info('{0}, {1} = {2}'.format(testset, testfunc, testdata_div[testset][testfunc]))
+                
+        
+measures = {
+    'sub': {'func': np.subtract},
+    'abs': {'func': compose(np.abs, np.subtract)},
+    'mse': {'func': meas_mse},
+    'rmse': {'func': meas_rmse},
+    'hist': {'func': meas_hist}, # compute histogram
+    'kld':  {'func': div_kl},
+    'chisq':  {'func': div_chisquare},
+    'wasserstein': {'func': div_wasserstein},
+}
+
+if HAVE_PYEMD:
+    measures['pyemd'] = {'func': div_pyemd}
+
+if HAVE_EMD:
+    measures['emd'] = {'func': div_emd}
+    
+if HAVE_CBEMD:
+    measures['cbemd'] = {'func': div_cbemd}
+    
+if __name__ == '__main__':
+
+    from functools import partial
+    # run tests
+
+    # fix the seed
+    N = 1000
+    np.random.seed(19847)
+    
+    # # meas test
+    # test_measures(N)
+    
+    # # old div test
+    # test_divergence_1(N)
+
+    # new div test
+    test_divergence_2(N)
+                
