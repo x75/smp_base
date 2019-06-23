@@ -427,7 +427,7 @@ def plot_clean_kwargs(clean_type = None, **kwargs):
     ]}
     clean['plot'] = ['orientation']
     clean['histogram'] = ['orientation', 'marker', 'alpha', 'linestyle', 'histtype', 'color']
-    clean['bar'] = ['orientation', 'marker', 'histtype', 'normed']
+    clean['bar'] = ['orientation', 'marker', 'histtype', 'normed', 'width']
     clean['pcolor'] = ['colorbar']
     # clean['linesegments'] = ['lineseg_val', 'lineseg_idx']
 

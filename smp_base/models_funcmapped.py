@@ -978,8 +978,8 @@ def init_actinf(ref, mref, conf, mconf):
 
     ref.laglen_past = ref.lag_past[1] - ref.lag_past[0]
     ref.laglen_future = ref.lag_future[1] - ref.lag_future[0]
-    ref.pre_l1_tm1 = np.zeros((mconf['idim']/2/ref.laglen_past, 1))
-    ref.pre_l1_tm2 = np.zeros((mconf['idim']/2/ref.laglen_past, 1))
+    ref.pre_l1_tm1 = np.zeros((int(mconf['idim']/2/ref.laglen_past), 1))
+    ref.pre_l1_tm2 = np.zeros((int(mconf['idim']/2/ref.laglen_past), 1))
 
     # reservoir extras
     mconf.update({'memory': ref.laglen})

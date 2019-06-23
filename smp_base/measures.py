@@ -81,6 +81,9 @@ def meas_mse(x_1 = None, x_2 = None, *args, **kwargs):
     # legacy argname
     if 'x' in kwargs:
         x_1 = kwargs['x']
+    if 'x_' in kwargs:
+        x_2 = kwargs['x_']
+        
         
     mse = np.mean(np.power(x_1 - x_2, 2), axis=axis, keepdims=keepdims)
     return mse
