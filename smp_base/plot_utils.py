@@ -160,8 +160,8 @@ def getcmap():
     return cmap
 
 def savefig_plotonly():
-    plt.axis('off')
-    plt.gca().set_axis_off()
+    # plt.axis('off')
+    # plt.gca().set_axis_off()
     plt.subplots_adjust(top = 1, bottom = 0, right = 1, left = 0, 
             hspace = 0, wspace = 0)
     plt.margins(0,0)
