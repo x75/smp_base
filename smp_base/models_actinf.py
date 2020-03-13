@@ -45,13 +45,16 @@ TODO:
    - som extend sampling to sample actual prediction from gaussian with unit's mu and sigma
 
 """
+import pickle
+from functools import partial
+
 import numpy as np
 import scipy.sparse as sparse
 import scipy.stats  as stats
 import pylab as pl
 import matplotlib.gridspec as gridspec
-import pickle
-from functools import partial
+import pandas as pd
+from pandas.plotting import scatter_matrix
 
 from smp_base.models import smpModelInit, smpModel
 from smp_base.plot_utils import savefig
@@ -1654,9 +1657,6 @@ def plot_nodes_over_data_scattermatrix(X, Y, mdl, e_nodes, p_nodes, e_nodes_cov,
     comps over all Y comps.
     """
     
-    import pandas as pd
-    from pandas.tools.plotting import scatter_matrix
-
     idim = X.shape[1]
     odim = Y.shape[1]
     numplots = idim + odim

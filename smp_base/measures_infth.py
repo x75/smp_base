@@ -142,6 +142,20 @@ def prepare_data_and_attributes(data, check_shape = False): # False
 # wrap these into a thin class
 @dec_compute_infth()
 def compute_entropy(src):
+    """compute entropy
+
+    Compute the global average entropy of the `src` data
+
+    Wrapper for `compute_entropy_univariate` or
+    `compute_entropy_multivariate`
+
+    Args:
+    - src(np.ndarray, tuple): entropy source data
+
+    Returns:
+    - h(float): the average entropy over the `src` episode
+
+    """
     if src.shape[1] > 1:
         return compute_entropy_multivariate(src)
     else:

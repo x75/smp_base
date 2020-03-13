@@ -62,7 +62,7 @@ except ImportError as e:
     HAVE_SEABORN = False
 
 import pandas as pd
-from pandas.tools.plotting import scatter_matrix
+from pandas.plotting import scatter_matrix
 
 import logging
 from smp_base.common import get_module_logger

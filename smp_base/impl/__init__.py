@@ -1,3 +1,7 @@
+"""dynamic imports
+
+
+"""
 import importlib
 
 # from smp_base.common import dict_search_value_as_key
@@ -111,7 +115,6 @@ def smpi(module, name=None):
         return None
     
     return _module
-
 
 # more import code
 """
