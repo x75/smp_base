@@ -273,8 +273,8 @@ def make_fig(rows = 1, cols = 1, wspace = 0.0, hspace = 0.0, axesspec = None, ti
     gs = gridspec.GridSpec(rows, cols)
 
     if title is not None:
-        # fig.suptitle(title, horizontalalignment='center', fontweight='normal')
-        fig.suptitle(title, horizontalalignment='right', fontweight='normal')
+        fig.suptitle(title, horizontalalignment='center', fontweight='normal')
+        # fig.suptitle(title, horizontalalignment='right', fontweight='normal')
     
     if axesspec is None:
         axes = make_axes_from_grid(fig, gs)
@@ -442,6 +442,7 @@ def plot_clean_kwargs(clean_type = None, **kwargs):
 def ax_set_title(ax, **kwargs):
     ax.title.set_text(kwargs['title'])
     ax.title.set_alpha(0.65)
+    # ax.title.set_alpha(0.65)
 
     # axis title and fontsize
     if kwargs['title_pos'] == 'top_in':

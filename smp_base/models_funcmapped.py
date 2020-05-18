@@ -2398,6 +2398,13 @@ def step_qtap(ref, mref, *args, **kwargs):
     """qtap step
 
     qtap's computation step
+
+    adding 2020-05-10
+    quantitative tapping is computed by 
+    1. sorting the input by index, input assumed to be infoscan output
+    2. computing the cumulative sum of the sorted input
+    3. selecting first n input elements up to threshold applied to the cumulative sum
+
     """
     qtap = np.atleast_2d(ref.get_input('qtap')).T
     qtap_idx_sorted = np.argsort(qtap, axis = 0)[::-1]

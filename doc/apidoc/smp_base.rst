@@ -11,6 +11,14 @@ Subpackages
 Submodules
 ----------
 
+smp\_base.codeops module
+------------------------
+
+.. automodule:: smp_base.codeops
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 smp\_base.common module
 -----------------------
 
@@ -67,6 +75,14 @@ smp\_base.gennoise module
     :undoc-members:
     :show-inheritance:
 
+smp\_base.lr module
+-------------------
+
+.. automodule:: smp_base.lr
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 smp\_base.measures module
 -------------------------
 
@@ -107,6 +123,14 @@ smp\_base.models\_actinf module
     :undoc-members:
     :show-inheritance:
 
+smp\_base.models\_funcmapped module
+-----------------------------------
+
+.. automodule:: smp_base.models_funcmapped
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 smp\_base.models\_learners module
 ---------------------------------
 
@@ -127,6 +151,14 @@ smp\_base.models\_selforg module
 --------------------------------
 
 .. automodule:: smp_base.models_selforg
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+smp\_base.models\_tapping module
+--------------------------------
+
+.. automodule:: smp_base.models_tapping
     :members:
     :undoc-members:
     :show-inheritance:

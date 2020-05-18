@@ -98,9 +98,9 @@ def tap_unflat(tap_flat, tap_len = 1):
 def tap_stack(channels, channel_keys, flat=True):
     channel_keys = fix_channels(channel_keys)
     if flat:
-        return np.vstack((channels['%s_flat' % channel_key[0]] for channel_key in channel_keys))
+        return np.vstack([channels['%s_flat' % channel_key[0]] for channel_key in channel_keys])
     else:
-        return np.vstack((channels[channel_key[0]] for channel_key in channel_keys))
+        return np.vstack([channels[channel_key[0]] for channel_key in channel_keys])
         
 ################################################################################
 # legacy tappings from funcs_models.py

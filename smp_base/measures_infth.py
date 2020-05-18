@@ -1,34 +1,38 @@
-"""measures_infth
+"""smp_base.measures_infth
 
 .. moduleauthor:: Oswald Berthold, 2017
 
 Information theoretic measures: entropy, mutual information,
 conditional mutual information, and derived aggregate measures based
-on the great java information dynamics toolkit by Joe Lizier [1].
+on the java information dynamics toolkit (jidt) by Joe Lizier [1].
 
-Current implementation are thin wrappers around jidt calls as
+Current implementation consists of thin wrappers around jidt calls as
 functions without a class.
 
-.. TODO:: sift, sort and clean-up input from: smp/smp/infth.py, smp/playground/infth_feature_relevance.py, smp/sequence/\*.py, 
-   smp_sphero (was smp_infth), evoplast/ep3.py, smp/infth, 
-   smp/infth/infth_homeokinesis_analysis_cont.py, 
-   smp/infth/infth_playground, smp/infth/infth_explore.py, 
+.. TODO:: sift, sort and clean-up input from: smp/smp/infth.py,
+   smp/playground/infth_feature_relevance.py, smp/sequence/\*.py,
+   smp_sphero (was smp_infth), evoplast/ep3.py, smp/infth,
+   smp/infth/infth_homeokinesis_analysis_cont.py,
+   smp/infth/infth_playground, smp/infth/infth_explore.py,
    smp/infth/infth_pointwise_plot.py, smp/infth/infth_measures.py:
-   unfinished, smp/infth/infth_playground.py, smp/infth/infth_EH-2D.py, smp/infth/infth_EH-2D_clean.py
+   unfinished, smp/infth/infth_playground.py,
+   smp/infth/infth_EH-2D.py, smp/infth/infth_EH-2D_clean.py
 
 [1] https://github.com/jlizier/jidt
 """
 import sys, os
+from pprint import pformat
 import numpy as np
-import smp_base.config as config
 
+
+import smp_base.config as config
 # from smp_base.measures import meas
 from smp_base.measures import meas
 
 import logging
 from smp_base.common import get_module_logger
 
-logger = get_module_logger(modulename = 'measures_infth', loglevel = logging.INFO)
+logger = get_module_logger(modulename = 'measures_infth', loglevel = logging.DEBUG)
 
 try:
     from jpype import getDefaultJVMPath, isJVMStarted, startJVM, attachThreadToJVM, isThreadAttachedToJVM
@@ -90,7 +94,8 @@ init_jpype()
 #         return compute_mutual_information(src = x, dst = y)
 
 class dec_compute_infth_soft(object):
-    """wrap infth calls and fail softly"""
+    """wrap infth calls and fail softly
+    """
     def __call__(self, f):
         def wrap(*args, **kwargs):
             # assert HAVE_JPYPE
@@ -114,7 +119,19 @@ class dec_compute_infth(object):
         return wrap
 
 def prepare_data_and_attributes(data, check_shape = False): # False
-    """take dict with keys 'X','Y' and copy the into src,dst variables respectively"""
+    """smp_base.prepare_data_and_attributes
+
+    Take a dict with keys 'X','Y' and copy each into src, dst
+    variables respectively.
+
+    Args:
+
+    - data(dict): dictionary with 'X' and 'Y' np.ndarray
+
+    Returns:
+
+    - tuple: src, dst
+    """
     # prepare data and attributes
     src = np.atleast_2d(data["X"])
     dst = np.atleast_2d(data["Y"])
@@ -140,7 +157,7 @@ def prepare_data_and_attributes(data, check_shape = False): # False
 
 ################################################################################
 # wrap these into a thin class
-@dec_compute_infth()
+# @dec_compute_infth()
 def compute_entropy(src):
     """compute entropy
 
@@ -150,28 +167,31 @@ def compute_entropy(src):
     `compute_entropy_multivariate`
 
     Args:
+
     - src(np.ndarray, tuple): entropy source data
 
     Returns:
+
     - h(float): the average entropy over the `src` episode
 
     """
     if src.shape[1] > 1:
         return compute_entropy_multivariate(src)
     else:
-        return compute_entropy_univariate(src)
+        return compute_entropy_multivariate(src)
 
-@dec_compute_infth()
+# @dec_compute_infth()
 def compute_entropy_univariate(src):
     ent_class = JPackage('infodynamics.measures.continuous.kernel').EntropyCalculatorKernel
     ent = ent_class()
     ent.setProperty("NORMALISE", "true")
+    # what's that?
     ent.initialise(0.1)
     ent.setObservations(src)
     h = ent.computeAverageLocalOfObservations()
     return h
 
-@dec_compute_infth()
+# @dec_compute_infth()
 def compute_entropy_multivariate(src, delay = 0):
     """compute_entropy_multivariate
 
@@ -283,7 +303,8 @@ def compute_cond_mi_multivariate(data = {}, estimator = "kraskov1", normalize = 
 
     # print "measures_infth: infth_mi_multivariate: calc.timeDiff = %d" % (calc.timeDiff)
 
-    calc.timeDiff = delay
+    if hasattr(calc, 'timeDiff'):
+        calc.timeDiff = delay
 
     # print "measures_infth: infth_mi_multivariate: calc.timeDiff = %d" % (calc.timeDiff)
 
@@ -293,7 +314,7 @@ def compute_cond_mi_multivariate(data = {}, estimator = "kraskov1", normalize = 
     # src_ = src.copy()
     # src = dst.copy()
 
-    # logger.debug('src = %s, dst = %s, cond = %s', src.shape, dst.shape, cond)
+    # print('src = %s, dst = %s, cond = %s' % (src.shape, dst.shape, cond.shape))
     
     # pl.hist(src[0], bins=255)
     # pl.show()
@@ -302,6 +323,7 @@ def compute_cond_mi_multivariate(data = {}, estimator = "kraskov1", normalize = 
     # print "infth_mi_multivariate src/dst shapes", src.shape, dst.shape
     # print "infth_mi_multivariate src/dst dtypes", src.dtype, dst.dtype
 
+    # expecting: observations on rows, variables on columns
     dim_src, dim_dst, dim_cond = src.shape[1], dst.shape[1], cond.shape[1]
 
     # compute stuff
@@ -348,10 +370,14 @@ def compute_conditional_transfer_entropy_multivariate(src, dst, cond, delay = 0)
 # def infth_mi_multivariate(self, data, estimator = "kraskov1", normalize = True):
 @dec_compute_infth()
 def compute_mutual_information(src, dst, k = 0, tau = 1, delay = 0, norm_in = True, norm_out = None):
-    """taken from smp/im/im_quadrotor_plot.py
+    """compute_mutual_information
 
-    computes a matrix of pairwise MI for all pairs of src_i,dst_j
-    (elementwise)
+    Compute the matrix of pairwise mutual information (MI) for all
+    pairs of (src_i, dst_j)
+
+    ..note::
+    
+    taken from smp/im/im_quadrotor_plot.py
     """
 
     # src - dest is symmetric for MI but hey ...
@@ -360,12 +386,12 @@ def compute_mutual_information(src, dst, k = 0, tau = 1, delay = 0, norm_in = Tr
 
     # init_jpype()
     assert len(src.shape) == 2 and len(dst.shape) == 2, "src %s, dst %s" % (src.shape, dst.shape)
+    # rows observations, columns variables
     numsrcvars, numdestvars = (src.shape[1], dst.shape[1])
 
     # miCalcClassC = JPackage("infodynamics.measures.continuous.kernel").MutualInfoCalculatorMultiVariateKernel
-    miCalcClassC = JPackage("infodynamics.measures.continuous.kraskov").MutualInfoCalculatorMultiVariateKraskov1
-    # miCalcClassC = JPackage("infodynamics.measures.continuous.kraskov").MutualInfoCalculatorMultiVariateKraskov2
-    # miCalcClassC = JPackage("infodynamics.measures.continuous.kraskov").MutualInfoCalculatorMultiVariateKraskov2
+    # miCalcClassC = JPackage("infodynamics.measures.continuous.kraskov").MutualInfoCalculatorMultiVariateKraskov1
+    miCalcClassC = JPackage("infodynamics.measures.continuous.kraskov").MutualInfoCalculatorMultiVariateKraskov2
     # miCalcClassC = JPackage("infodynamics.measures.continuous.kraskov").MultiInfoCalculatorKraskov2
     miCalcC = miCalcClassC()
     miCalcC.setProperty("NORMALISE", str(norm_in).lower())
@@ -383,18 +409,18 @@ def compute_mutual_information(src, dst, k = 0, tau = 1, delay = 0, norm_in = Tr
 
     for m in range(numdestvars):
         for s in range(numsrcvars):
-            # print "compute_mutual_information dst[%d], src[%d]" % (m, s)
+            print("compute_mutual_information dst[%d], src[%d]" % (m, s))
 
             # logger.debug("ha", m, motor[:,[m]])
             miCalcC.initialise() # sensor.shape[1], motor.shape[1])
             # print "measures_infth: compute_mutual_information: miCalcC.timeDiff = %d" % (miCalcC.timeDiff)
             # miCalcC.setObservations(src[:,s], dst[:,m])
             # print "compute_mutual_information src[%s] = %s, dst[%s] = %s" % (s, src[:,[s]].shape, m, dst[:,[m]].shape)
-            # logger.debug('isnan(src) = %s, isnan(dst) = %s' % (np.isnan(src[:,[s]]), np.isnan(dst[:,[m]])))
-            # logger.debug('var(src) = %s, var(dst) = %s' % (np.var(src[:,[s]]), np.var(dst[:,[m]])))
+            logger.debug('isnan(src) = %s, isnan(dst) = %s' % (np.isnan(src[:,[s]]).sum(), np.isnan(dst[:,[m]]).sum()))
+            logger.info('var(src) = %s, var(dst) = %s' % (np.var(src[:,[s]]), np.var(dst[:,[m]])))
             miCalcC.setObservations(src[:,[s]], dst[:,[m]])
             mi = miCalcC.computeAverageLocalOfObservations()
-            # print "mi", mi
+            print(f'mi = {mi}')
             measmat[m,s] = mi
 
     return measmat * norm_out_
@@ -463,6 +489,7 @@ def compute_conditional_transfer_entropy(src, dst, cond, delay = 0, xcond = Fals
     Compute the conditional transfer entropy using jidt
 
     Args:
+
      - src(ndarray): source variables
      - dst(ndarray): destination variables
      - cond(ndarray): conditioning vars
@@ -542,7 +569,7 @@ def test_compute_mutual_information():
     src = np.atleast_2d(src).T
     dst = np.atleast_2d(dst).T
     # stack
-    src = np.hstack((src, dst))
+    src = np.hstack((src, dst, dst))
     dst = src.copy()
     logger.info("src.sh = %s, dst.sh = %s" % (src.shape, dst.shape))
     jh  = infth_mi_multivariate({'X': src, 'Y': dst})
@@ -555,4 +582,5 @@ if __name__ == '__main__':
     # parser = argparse.ArgumentParser()
     # parser.add_argument()
 
+    print('in main, running test_compute_mutual_information')
     test_compute_mutual_information()
